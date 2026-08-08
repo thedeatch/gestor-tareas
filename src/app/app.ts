@@ -9,4 +9,12 @@ import { RouterOutlet } from '@angular/router';
 })
 export class App {
   protected readonly title = signal('Gestor de tareas');
+
+  protected readonly tasks = signal([
+    'Aprender componentes Angular',
+    'Practicar TypeScript',
+    'Instalar Angular'
+  ]);
+
 }
+
