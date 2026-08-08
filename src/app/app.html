@@ -3,8 +3,12 @@
 
   <p>Mi primera aplicación con Angular</p>
   <section>
-    <h2>Primera tarea</h2>
-
-    <p>{{ tasks()[0] }}</p>
+    <h2>Lista de tareas</h2>
+  
+    <ul>
+      @for (task of tasks(); track $index) {
+        <li>{{ task }}</li>
+      }
+    </ul>
   </section>
 </main>
