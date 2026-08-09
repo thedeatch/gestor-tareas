@@ -1,0 +1,17 @@
+<input
+  type="checkbox"
+  [checked]="task().completed"
+  (change)="taskToggled.emit(task().id)"
+>
+
+<span [class.completed]="task().completed">
+  {{ task().description }}
+</span>
+
+<button
+  type="button"
+  class="delete-button"
+  (click)="taskDeleted.emit(task().id)"
+>
+  Eliminar
+</button>

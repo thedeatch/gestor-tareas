@@ -1,0 +1,29 @@
+:host {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  
+  span {
+    min-width: 210px;
+  }
+  
+  .completed {
+    color: #777;
+    text-decoration: line-through;
+  }
+  
+  .delete-button {
+    padding: 4px 8px;
+    color: #b42318;
+    background-color: transparent;
+    border: 1px solid #b42318;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .delete-button:hover {
+    color: white;
+    background-color: #b42318;
+  }

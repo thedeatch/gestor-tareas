@@ -2,21 +2,42 @@
   <h1>{{ title() }}</h1>
 
   <p>Mi primera aplicación con Angular</p>
+  <app-task-form
+  (taskAdded)="addTask($event)"
+></app-task-form>
   <section>
-    <h2>Lista de tareas</h2>
+    <h2>Pendientes ({{ pendingTasks().length }})</h2>
   
-    <ul>
-      @for (task of tasks(); track task.id) {
-        <li>
-          <input
-          type="checkbox"
-          [checked]="task.completed"
-          (change)="toggleTask(task.id)"
-           >
-    
-          <span>{{ task.description }}</span>
-        </li>
+    <div class="task-list">
+      @for (task of pendingTasks(); track task.id) {
+        <app-task-item
+          [task]="task"
+          (taskToggled)="toggleTask($event)"
+          (taskDeleted)="deleteTask($event)"
+        ></app-task-item>
+      } @empty {
+        <p class="empty-message">
+          No hay tareas pendientes.
+        </p>
       }
-    </ul>
+    </div>
+  </section>
+  
+  <section>
+    <h2>Completadas ({{ completedTasks().length }})</h2>
+  
+    <div class="task-list">
+      @for (task of completedTasks(); track task.id) {
+        <app-task-item
+          [task]="task"
+          (taskToggled)="toggleTask($event)"
+          (taskDeleted)="deleteTask($event)"
+        ></app-task-item>
+      } @empty {
+        <p class="empty-message">
+          No hay tareas completadas.
+        </p>
+      }
+    </div>
   </section>
 </main>

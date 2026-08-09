@@ -1,0 +1,12 @@
+<form (ngSubmit)="addTask()">
+    <input
+      type="text"
+      name="newTask"
+      placeholder="Escribe una nueva tarea..."
+      [(ngModel)]="newTaskDescription"
+    >
+  
+    <button type="submit">
+      Agregar
+    </button>
+  </form>
