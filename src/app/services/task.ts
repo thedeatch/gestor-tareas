@@ -1,9 +1,11 @@
-import { computed, Service, signal } from '@angular/core';
+import { computed, effect, Service, signal } from '@angular/core';
 import { Task } from '../models/task.model';
 
 @Service()
 export class TaskService {
-  readonly tasks = signal<Task[]>([
+  private readonly storageKey = 'gestor-tareas.tasks';
+
+  private readonly initialTasks: Task[] = [
     {
       id: 1,
       description: 'Aprender componentes Angular',
@@ -19,7 +21,16 @@ export class TaskService {
       description: 'Instalar Angular',
       completed: true
     }
-  ]);
+  ];
+
+  readonly tasks = signal<Task[]>(this.loadTasks());
+
+  constructor() {
+    effect(() => {
+      const tasks = this.tasks();
+      localStorage.setItem(this.storageKey, JSON.stringify(tasks));
+    });
+  }
 
   readonly pendingTasks = computed(() =>
     this.tasks().filter(task => !task.completed)
@@ -54,5 +65,19 @@ export class TaskService {
     this.tasks.update(tasks =>
       tasks.filter(task => task.id !== id)
     );
+  }
+
+  private loadTasks(): Task[] {
+    const storedTasks = localStorage.getItem(this.storageKey);
+
+    if (!storedTasks) {
+      return this.initialTasks;
+    }
+
+    try {
+      return JSON.parse(storedTasks) as Task[];
+    } catch {
+      return this.initialTasks;
+    }
   }
 }
