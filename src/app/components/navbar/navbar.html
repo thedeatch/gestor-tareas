@@ -1,19 +1,31 @@
 <mat-toolbar class="navbar">
-  <div class="brand">
+  <a
+    class="brand"
+    routerLink="/tareas"
+    aria-label="Ir a tareas"
+  >
     <mat-icon>task_alt</mat-icon>
     <span>GestorTareas</span>
-  </div>
+  </a>
 
   <span class="spacer"></span>
 
   <nav aria-label="Navegación principal">
-    <button matButton type="button">
+    <a
+      matButton
+      routerLink="/tareas"
+      routerLinkActive="active-link"
+    >
       Tareas
-    </button>
+    </a>
 
-    <button matButton type="button">
+    <a
+      matButton
+      routerLink="/acerca-de"
+      routerLinkActive="active-link"
+    >
       Acerca de
-    </button>
+    </a>
 
     <button matButton type="button">
       Iniciar sesión
