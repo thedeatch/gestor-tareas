@@ -24,6 +24,7 @@
               <app-task-item
                 [task]="task"
                 (taskToggled)="toggleTask($event)"
+                (taskEdited)="editTask($event)"
                 (taskDeleted)="deleteTask($event)"
               ></app-task-item>
             } @empty {
@@ -42,6 +43,7 @@
               <app-task-item
                 [task]="task"
                 (taskToggled)="toggleTask($event)"
+                (taskEdited)="editTask($event)"
                 (taskDeleted)="deleteTask($event)"
               ></app-task-item>
             } @empty {

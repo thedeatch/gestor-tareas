@@ -13,6 +13,12 @@ import {
   MatSnackBar,
   MatSnackBarModule
 } from '@angular/material/snack-bar';
+import {
+  EditTaskDialog,
+  EditTaskDialogData
+} from '../../components/edit-task-dialog/edit-task-dialog';
+
+
 
 @Component({
   selector: 'app-tasks-page',
@@ -54,7 +60,43 @@ export class TasksPage {
 
     this.showMessage(message);
   }
+  protected editTask(id: number): void {
+    const task = this.taskService.tasks()
+      .find(currentTask => currentTask.id === id);
 
+    if (!task) {
+      return;
+    }
+
+    const data: EditTaskDialogData = {
+      description: task.description
+    };
+
+    const dialogReference = this.dialog.open(
+      EditTaskDialog,
+      {
+        data,
+        width: '440px'
+      }
+    );
+
+    dialogReference.afterClosed().subscribe(description => {
+      if (
+        typeof description !== 'string' ||
+        !description.trim() ||
+        description === task.description
+      ) {
+        return;
+      }
+
+      this.taskService.updateTaskDescription(
+        id,
+        description.trim()
+      );
+
+      this.showMessage('Tarea actualizada correctamente.');
+    });
+  }
   protected deleteTask(id: number): void {
     const task = this.taskService.tasks()
       .find(currentTask => currentTask.id === id);

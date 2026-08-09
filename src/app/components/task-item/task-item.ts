@@ -19,5 +19,6 @@ export class TaskItem {
   readonly task = input.required<Task>();
 
   readonly taskToggled = output<number>();
+  readonly taskEdited = output<number>();
   readonly taskDeleted = output<number>();
 }

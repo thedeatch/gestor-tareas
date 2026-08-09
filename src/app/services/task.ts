@@ -64,7 +64,18 @@ export class TaskService {
       )
     );
   }
-
+    updateTaskDescription(
+    id: number,
+    description: string
+    ): void {
+    this.tasks.update(tasks =>
+        tasks.map(task =>
+        task.id === id
+            ? { ...task, description }
+            : task
+        )
+    );
+    }
   deleteTask(id: number): void {
     this.tasks.update(tasks =>
       tasks.filter(task => task.id !== id)

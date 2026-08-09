@@ -24,3 +24,11 @@
 .delete-button {
   color: var(--mat-sys-error);
 }
+.actions {
+  display: flex;
+  align-items: center;
+}
+
+.edit-button {
+  color: var(--mat-sys-primary);
+}

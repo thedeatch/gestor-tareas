@@ -11,12 +11,24 @@
   {{ task().description }}
 </span>
 
-<button
-  mat-icon-button
-  type="button"
-  class="delete-button"
-  [attr.aria-label]="'Eliminar ' + task().description"
-  (click)="taskDeleted.emit(task().id)"
->
-  <mat-icon>delete</mat-icon>
-</button>
+<div class="actions">
+  <button
+    mat-icon-button
+    type="button"
+    class="edit-button"
+    [attr.aria-label]="'Editar ' + task().description"
+    (click)="taskEdited.emit(task().id)"
+  >
+    <mat-icon>edit</mat-icon>
+  </button>
+
+  <button
+    mat-icon-button
+    type="button"
+    class="delete-button"
+    [attr.aria-label]="'Eliminar ' + task().description"
+    (click)="taskDeleted.emit(task().id)"
+  >
+    <mat-icon>delete</mat-icon>
+  </button>
+</div>
