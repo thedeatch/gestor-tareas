@@ -25,12 +25,16 @@ export class TaskService {
 
   readonly tasks = signal<Task[]>(this.loadTasks());
 
-  constructor() {
+    constructor() {
     effect(() => {
-      const tasks = this.tasks();
-      localStorage.setItem(this.storageKey, JSON.stringify(tasks));
+        if (typeof localStorage === 'undefined') {
+        return;
+        }
+
+        const tasks = this.tasks();
+        localStorage.setItem(this.storageKey, JSON.stringify(tasks));
     });
-  }
+    }
 
   readonly pendingTasks = computed(() =>
     this.tasks().filter(task => !task.completed)
@@ -67,17 +71,21 @@ export class TaskService {
     );
   }
 
-  private loadTasks(): Task[] {
-    const storedTasks = localStorage.getItem(this.storageKey);
-
-    if (!storedTasks) {
-      return this.initialTasks;
-    }
-
-    try {
-      return JSON.parse(storedTasks) as Task[];
-    } catch {
-      return this.initialTasks;
-    }
+private loadTasks(): Task[] {
+  if (typeof localStorage === 'undefined') {
+    return this.initialTasks;
   }
+
+  const storedTasks = localStorage.getItem(this.storageKey);
+
+  if (!storedTasks) {
+    return this.initialTasks;
+  }
+
+  try {
+    return JSON.parse(storedTasks) as Task[];
+  } catch {
+    return this.initialTasks;
+  }
+}
 }

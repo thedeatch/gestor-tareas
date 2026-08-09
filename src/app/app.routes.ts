@@ -1,8 +1,5 @@
 import { Routes } from '@angular/router';
 
-import { AboutPage } from './pages/about-page/about-page';
-import { TasksPage } from './pages/tasks-page/tasks-page';
-
 export const routes: Routes = [
   {
     path: '',
@@ -11,11 +8,15 @@ export const routes: Routes = [
   },
   {
     path: 'tareas',
-    component: TasksPage
+    loadComponent: () =>
+      import('./pages/tasks-page/tasks-page')
+        .then(module => module.TasksPage)
   },
   {
     path: 'acerca-de',
-    component: AboutPage
+    loadComponent: () =>
+      import('./pages/about-page/about-page')
+        .then(module => module.AboutPage)
   },
   {
     path: '**',
