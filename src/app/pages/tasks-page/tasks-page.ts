@@ -9,11 +9,16 @@ import {
   ConfirmDialog,
   ConfirmDialogData
 } from '../../components/confirm-dialog/confirm-dialog';
+import {
+  MatSnackBar,
+  MatSnackBarModule
+} from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-tasks-page',
   imports: [
     MatCardModule,
+    MatSnackBarModule,
     TaskForm,
     TaskItem
   ],
@@ -22,18 +27,32 @@ import {
 })
 export class TasksPage {
   protected readonly title = signal('Gestor de tareas');
-
+  private readonly snackBar = inject(MatSnackBar);
   private readonly taskService = inject(TaskService);
-private readonly dialog = inject(MatDialog);
+  private readonly dialog = inject(MatDialog);
   protected readonly pendingTasks = this.taskService.pendingTasks;
   protected readonly completedTasks = this.taskService.completedTasks;
 
   protected addTask(description: string): void {
     this.taskService.addTask(description);
+    this.showMessage('Tarea agregada correctamente.');
   }
 
   protected toggleTask(id: number): void {
+    const task = this.taskService.tasks()
+      .find(currentTask => currentTask.id === id);
+
+    if (!task) {
+      return;
+    }
+
     this.taskService.toggleTask(id);
+
+    const message = task.completed
+      ? 'Tarea movida a pendientes.'
+      : 'Tarea marcada como completada.';
+
+    this.showMessage(message);
   }
 
   protected deleteTask(id: number): void {
@@ -58,7 +77,19 @@ private readonly dialog = inject(MatDialog);
     dialogReference.afterClosed().subscribe(confirmed => {
       if (confirmed) {
         this.taskService.deleteTask(id);
+        this.showMessage('Tarea eliminada.');
       }
     });
+  }
+  private showMessage(message: string): void {
+    this.snackBar.open(
+      message,
+      'Cerrar',
+      {
+        duration: 2500,
+        horizontalPosition: 'end',
+        verticalPosition: 'bottom'
+      }
+    );
   }
 }
