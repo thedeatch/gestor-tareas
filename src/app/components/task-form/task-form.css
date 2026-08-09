@@ -1,15 +1,26 @@
 form {
-    display: flex;
-    gap: 8px;
-    margin: 24px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+}
+
+mat-form-field {
+  width: 100%;
+  max-width: 500px;
+}
+
+button {
+  margin-bottom: 20px;
+}
+
+@media (max-width: 600px) {
+  form {
+    align-items: stretch;
+    flex-direction: column;
   }
-  
-  input {
-    min-width: 250px;
-    padding: 8px;
-  }
-  
+
   button {
-    padding: 8px 16px;
-    cursor: pointer;
+    margin-bottom: 0;
   }
+}

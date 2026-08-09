@@ -3,10 +3,10 @@ import { Component, inject, signal } from '@angular/core';
 import { TaskForm } from './components/task-form/task-form';
 import { TaskItem } from './components/task-item/task-item';
 import { TaskService } from './services/task';
-
+import { Navbar } from './components/navbar/navbar';
 @Component({
   selector: 'app-root',
-  imports: [TaskForm, TaskItem],
+  imports: [Navbar, TaskForm, TaskItem],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

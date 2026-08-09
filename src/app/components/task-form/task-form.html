@@ -1,12 +1,22 @@
 <form (ngSubmit)="addTask()">
+  <mat-form-field appearance="outline">
+    <mat-label>Nueva tarea</mat-label>
+
     <input
+      matInput
       type="text"
       name="newTask"
       placeholder="Escribe una nueva tarea..."
       [(ngModel)]="newTaskDescription"
     >
-  
-    <button type="submit">
-      Agregar
-    </button>
-  </form>
+  </mat-form-field>
+
+  <button
+    mat-flat-button
+    type="submit"
+    [disabled]="!newTaskDescription.trim()"
+  >
+    <mat-icon>add</mat-icon>
+    Agregar
+  </button>
+</form>
