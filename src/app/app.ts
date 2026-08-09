@@ -4,9 +4,11 @@ import { TaskForm } from './components/task-form/task-form';
 import { TaskItem } from './components/task-item/task-item';
 import { TaskService } from './services/task';
 import { Navbar } from './components/navbar/navbar';
+import { MatCardModule } from '@angular/material/card';
+
 @Component({
   selector: 'app-root',
-  imports: [Navbar, TaskForm, TaskItem],
+  imports: [MatCardModule, Navbar, TaskForm, TaskItem],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

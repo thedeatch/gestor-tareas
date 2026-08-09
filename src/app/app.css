@@ -1,47 +1,67 @@
-form {
-    display: flex;
-    gap: 8px;
-    margin: 24px 0;
-  }
-  
-  form input {
-    padding: 8px;
-    min-width: 250px;
-  }
-  
-  form button {
-    padding: 8px 16px;
-    cursor: pointer;
-  }
-ul {
-  padding: 0;
+:host {
+  display: block;
+  min-height: 100%;
 }
-.delete-button {
-    margin-left: 8px;
-    padding: 4px 8px;
-    color: #b42318;
-    background-color: transparent;
-    border: 1px solid #b42318;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  
-  .delete-button:hover {
-    color: white;
-    background-color: #b42318;
-  }
-  .empty-message {
-    color: #777;
-    font-style: italic;
-  }
-li {
+
+.page-container {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  list-style: none;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 32px 16px;
 }
-.completed {
-    color: #777;
-    text-decoration: line-through;
+
+.task-card {
+  width: 100%;
+  max-width: 900px;
+}
+
+mat-card-header {
+  margin-bottom: 8px;
+}
+
+mat-card-title {
+  font-size: 28px;
+  font-weight: 500;
+}
+
+mat-card-content {
+  padding-top: 8px;
+}
+
+.task-sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px;
+}
+
+section {
+  min-width: 0;
+}
+
+section h2 {
+  margin: 8px 0 16px;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.empty-message {
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+}
+
+@media (max-width: 700px) {
+  .page-container {
+    padding: 16px 8px;
   }
+
+  .task-sections {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
