@@ -1,5 +1,4 @@
 import { Component, inject, signal } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
 
 import { TaskForm } from './components/task-form/task-form';
 import { TaskItem } from './components/task-item/task-item';
@@ -7,7 +6,7 @@ import { TaskService } from './services/task';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, TaskForm, TaskItem],
+  imports: [TaskForm, TaskItem],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
