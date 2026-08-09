@@ -1,17 +1,22 @@
-<input
-  type="checkbox"
+<mat-checkbox
   [checked]="task().completed"
   (change)="taskToggled.emit(task().id)"
->
+  [aria-label]="'Cambiar estado de ' + task().description"
+></mat-checkbox>
 
-<span [class.completed]="task().completed">
+<span
+  class="task-description"
+  [class.completed]="task().completed"
+>
   {{ task().description }}
 </span>
 
 <button
+  mat-icon-button
   type="button"
   class="delete-button"
+  [attr.aria-label]="'Eliminar ' + task().description"
   (click)="taskDeleted.emit(task().id)"
 >
-  Eliminar
+  <mat-icon>delete</mat-icon>
 </button>
