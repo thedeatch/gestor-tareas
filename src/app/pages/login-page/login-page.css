@@ -1,0 +1,42 @@
+.login-container {
+  display: flex;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 48px 16px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 440px;
+}
+
+.login-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mat-sys-on-primary-container);
+  background-color: var(--mat-sys-primary-container);
+}
+
+mat-card-content {
+  padding-top: 24px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+form > button {
+  align-self: stretch;
+  min-height: 44px;
+}
+
+.demo-message {
+  margin-top: 20px;
+  padding: 12px;
+  color: var(--mat-sys-on-primary-container);
+  background-color: var(--mat-sys-primary-container);
+  border-radius: 8px;
+}
