@@ -4,6 +4,11 @@ import { MatCardModule } from '@angular/material/card';
 import { TaskForm } from '../../components/task-form/task-form';
 import { TaskItem } from '../../components/task-item/task-item';
 import { TaskService } from '../../services/task';
+import { MatDialog } from '@angular/material/dialog';
+import {
+  ConfirmDialog,
+  ConfirmDialogData
+} from '../../components/confirm-dialog/confirm-dialog';
 
 @Component({
   selector: 'app-tasks-page',
@@ -19,7 +24,7 @@ export class TasksPage {
   protected readonly title = signal('Gestor de tareas');
 
   private readonly taskService = inject(TaskService);
-
+private readonly dialog = inject(MatDialog);
   protected readonly pendingTasks = this.taskService.pendingTasks;
   protected readonly completedTasks = this.taskService.completedTasks;
 
@@ -32,6 +37,28 @@ export class TasksPage {
   }
 
   protected deleteTask(id: number): void {
-    this.taskService.deleteTask(id);
+    const task = this.taskService.tasks()
+      .find(currentTask => currentTask.id === id);
+
+    if (!task) {
+      return;
+    }
+
+    const data: ConfirmDialogData = {
+      taskDescription: task.description
+    };
+
+    const dialogReference = this.dialog.open(
+      ConfirmDialog,
+      {
+        data
+      }
+    );
+
+    dialogReference.afterClosed().subscribe(confirmed => {
+      if (confirmed) {
+        this.taskService.deleteTask(id);
+      }
+    });
   }
 }

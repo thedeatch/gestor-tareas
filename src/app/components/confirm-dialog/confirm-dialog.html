@@ -1,0 +1,33 @@
+<h2 mat-dialog-title>
+  Eliminar tarea
+</h2>
+
+<mat-dialog-content>
+  <p>
+    ¿Deseas eliminar la tarea
+    <strong>{{ data.taskDescription }}</strong>?
+  </p>
+
+  <p class="warning">
+    Esta acción no se puede deshacer.
+  </p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button
+    matButton
+    type="button"
+    mat-dialog-close
+  >
+    Cancelar
+  </button>
+
+  <button
+    mat-flat-button
+    type="button"
+    class="confirm-button"
+    [mat-dialog-close]="true"
+  >
+    Eliminar
+  </button>
+</mat-dialog-actions>
