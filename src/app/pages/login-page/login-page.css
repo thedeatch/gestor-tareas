@@ -33,10 +33,3 @@ form > button {
   min-height: 44px;
 }
 
-.demo-message {
-  margin-top: 20px;
-  padding: 12px;
-  color: var(--mat-sys-on-primary-container);
-  background-color: var(--mat-sys-primary-container);
-  border-radius: 8px;
-}

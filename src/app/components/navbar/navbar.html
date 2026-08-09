@@ -11,28 +11,27 @@
   <span class="spacer"></span>
 
   <nav aria-label="Navegación principal">
-    <a
-      matButton
-      routerLink="/tareas"
-      routerLinkActive="active-link"
-    >
-      Tareas
-    </a>
+@if (isAuthenticated()) {
+  <span class="user-email">
+    {{ userEmail() }}
+  </span>
 
-    <a
-      matButton
-      routerLink="/acerca-de"
-      routerLinkActive="active-link"
-    >
-      Acerca de
-    </a>
-
-    <a
+  <button
+    matButton
+    type="button"
+    (click)="logout()"
+  >
+    <mat-icon>logout</mat-icon>
+    Cerrar sesión
+  </button>
+} @else {
+  <a
     matButton
     routerLink="/login"
     routerLinkActive="active-link"
-    >
+  >
     Iniciar sesión
-    </a>
+  </a>
+}
   </nav>
 </mat-toolbar>
