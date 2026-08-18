@@ -8,13 +8,18 @@
       name="newTask"
       placeholder="Escribe una nueva tarea..."
       [(ngModel)]="newTaskDescription"
+      [maxLength]="maxDescriptionLength"
+      [disabled]="isSubmitting()"
     >
+    <mat-hint align="end">
+      {{ newTaskDescription.length }}/{{ maxDescriptionLength }}
+    </mat-hint>
   </mat-form-field>
 
   <button
     mat-flat-button
     type="submit"
-    [disabled]="!newTaskDescription.trim()"
+    [disabled]="!newTaskDescription.trim()||isSubmitting()"
   >
     <mat-icon>add</mat-icon>
     Agregar

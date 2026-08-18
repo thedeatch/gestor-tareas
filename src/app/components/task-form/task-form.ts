@@ -1,4 +1,4 @@
-import { Component, output } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { MatButtonModule } from '@angular/material/button';
@@ -20,9 +20,9 @@ import { MatInputModule } from '@angular/material/input';
 })
 export class TaskForm {
   protected newTaskDescription = '';
-
+  protected readonly maxDescriptionLength = 150;
   readonly taskAdded = output<string>();
-
+  readonly isSubmitting = input(false);
   protected addTask(): void {
     const description = this.newTaskDescription.trim();
 

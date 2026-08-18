@@ -15,6 +15,10 @@ import cl.gestortareas.api.model.Task;
 import cl.gestortareas.api.service.TaskService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.CrossOrigin;
+
+@CrossOrigin(origins = "http://localhost:4200")
 @RestController
 @RequestMapping("/api/tasks")
 public class TaskController {

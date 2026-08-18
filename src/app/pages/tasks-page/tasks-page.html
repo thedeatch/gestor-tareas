@@ -11,7 +11,25 @@
     </mat-card-header>
 
     <mat-card-content>
+      @if (isLoading()) {
+        <p class="status-message">
+          Cargando tareas...
+        </p>
+    } @else if (loadError()) {
+      <div class="error-message">
+        <span>{{ loadError() }}</span>
+
+        <button
+          mat-stroked-button
+          type="button"
+          (click)="retryLoad()"
+        >
+          Reintentar
+        </button>
+      </div>
+      } @else {
       <app-task-form
+        [isSubmitting]="isCreating()"
         (taskAdded)="addTask($event)"
       ></app-task-form>
 
@@ -52,8 +70,9 @@
               </p>
             }
           </div>
-        </section>
-      </div>
+          </section>
+        </div>
+      }
     </mat-card-content>
   </mat-card>
 </main>

@@ -1,40 +1,23 @@
-import { computed, effect, Service, signal } from '@angular/core';
-import { Task } from '../models/task.model';
+import {
+  computed,
+  inject,
+  Service,
+  signal
+} from '@angular/core';
 
+import { HttpClient } from '@angular/common/http';
+import { Task } from '../models/task.model';
+import { Observable, finalize, tap } from 'rxjs';
 @Service()
 export class TaskService {
-  private readonly storageKey = 'gestor-tareas.tasks';
+  private readonly http = inject(HttpClient);
 
-  private readonly initialTasks: Task[] = [
-    {
-      id: 1,
-      description: 'Aprender componentes Angular',
-      completed: false
-    },
-    {
-      id: 2,
-      description: 'Practicar TypeScript',
-      completed: false
-    },
-    {
-      id: 3,
-      description: 'Instalar Angular',
-      completed: true
-    }
-  ];
+  private readonly apiUrl =
+    'http://localhost:8081/api/tasks';
 
-  readonly tasks = signal<Task[]>(this.loadTasks());
-
-    constructor() {
-    effect(() => {
-        if (typeof localStorage === 'undefined') {
-        return;
-        }
-
-        const tasks = this.tasks();
-        localStorage.setItem(this.storageKey, JSON.stringify(tasks));
-    });
-    }
+  readonly tasks = signal<Task[]>([]);
+  readonly isLoading = signal(false);
+  readonly loadError = signal<string | null>(null);
 
   readonly pendingTasks = computed(() =>
     this.tasks().filter(task => !task.completed)
@@ -43,60 +26,129 @@ export class TaskService {
   readonly completedTasks = computed(() =>
     this.tasks().filter(task => task.completed)
   );
+    constructor() {
+      this.loadTasks();
+    }
 
-  addTask(description: string): void {
-    this.tasks.update(tasks => [
-      ...tasks,
-      {
-        id: Date.now(),
-        description,
-        completed: false
-      }
-    ]);
-  }
+    loadTasks(): void {
+    this.isLoading.set(true);
+    this.loadError.set(null);
 
-  toggleTask(id: number): void {
-    this.tasks.update(tasks =>
-      tasks.map(task =>
-        task.id === id
-          ? { ...task, completed: !task.completed }
-          : task
+    this.http.get<Task[]>(this.apiUrl)
+      .pipe(
+        finalize(() => {
+          this.isLoading.set(false);
+        })
       )
+      .subscribe({
+        next: tasks => {
+          this.tasks.set(tasks);
+        },
+        error: error => {
+          console.error(
+            'No fue posible cargar las tareas desde la API.',
+            error
+          );
+
+          this.loadError.set(
+            'No fue posible cargar las tareas. Verifica que el servidor esté funcionando.'
+          );
+        }
+      });
+  }
+  addTask(description: string): Observable<Task> {
+    const newTask: Omit<Task, 'id'> = {
+      description,
+      completed: false
+    };
+
+    return this.http.post<Task>(
+      this.apiUrl,
+      newTask
+    ).pipe(
+      tap(createdTask => {
+        this.tasks.update(tasks => [
+          ...tasks,
+          createdTask
+        ]);
+      })
     );
   }
-    updateTaskDescription(
+
+  toggleTask(id: number): Observable<Task> {
+    const currentTask = this.tasks()
+      .find(task => task.id === id);
+
+    if (!currentTask) {
+      throw new Error(
+        `No se encontró la tarea con id ${id}`
+      );
+    }
+
+    const updatedTask: Task = {
+      ...currentTask,
+      completed: !currentTask.completed
+    };
+
+    return this.http.put<Task>(
+      `${this.apiUrl}/${id}`,
+      updatedTask
+    ).pipe(
+      tap(savedTask => {
+        this.tasks.update(tasks =>
+          tasks.map(task =>
+            task.id === id
+              ? savedTask
+              : task
+          )
+        );
+      })
+    );
+  }
+  updateTaskDescription(
     id: number,
     description: string
-    ): void {
-    this.tasks.update(tasks =>
-        tasks.map(task =>
-        task.id === id
-            ? { ...task, description }
-            : task
-        )
-    );
+  ): Observable<Task> {
+    const currentTask = this.tasks()
+      .find(task => task.id === id);
+
+    if (!currentTask) {
+      throw new Error(
+        `No se encontró la tarea con id ${id}`
+      );
     }
-  deleteTask(id: number): void {
-    this.tasks.update(tasks =>
-      tasks.filter(task => task.id !== id)
+
+    const updatedTask: Task = {
+      ...currentTask,
+      description
+    };
+
+    return this.http.put<Task>(
+      `${this.apiUrl}/${id}`,
+      updatedTask
+    ).pipe(
+      tap(savedTask => {
+        this.tasks.update(tasks =>
+          tasks.map(task =>
+            task.id === id
+              ? savedTask
+              : task
+          )
+        );
+      })
+    );
+  }
+  deleteTask(id: number): Observable<void> {
+    return this.http.delete<void>(
+      `${this.apiUrl}/${id}`
+    ).pipe(
+      tap(() => {
+        this.tasks.update(tasks =>
+          tasks.filter(task => task.id !== id)
+        );
+      })
     );
   }
 
-private loadTasks(): Task[] {
-  if (typeof localStorage === 'undefined') {
-    return this.initialTasks;
-  }
 
-  const storedTasks = localStorage.getItem(this.storageKey);
-
-  if (!storedTasks) {
-    return this.initialTasks;
-  }
-
-  try {
-    return JSON.parse(storedTasks) as Task[];
-  } catch {
-    return this.initialTasks;
-  }
-}
 }

@@ -17,14 +17,15 @@ import {
   EditTaskDialog,
   EditTaskDialogData
 } from '../../components/edit-task-dialog/edit-task-dialog';
-
-
+import { MatButtonModule } from '@angular/material/button';
+import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-tasks-page',
   imports: [
     MatCardModule,
     MatSnackBarModule,
+    MatButtonModule,
     TaskForm,
     TaskItem
   ],
@@ -38,10 +39,36 @@ export class TasksPage {
   private readonly dialog = inject(MatDialog);
   protected readonly pendingTasks = this.taskService.pendingTasks;
   protected readonly completedTasks = this.taskService.completedTasks;
-
+  protected readonly isLoading =  this.taskService.isLoading;
+  protected readonly loadError =  this.taskService.loadError;
+  protected readonly isCreating = signal(false);
+  
   protected addTask(description: string): void {
-    this.taskService.addTask(description);
-    this.showMessage('Tarea agregada correctamente.');
+    this.isCreating.set(true);
+
+    this.taskService.addTask(description)
+      .pipe(
+        finalize(() => {
+          this.isCreating.set(false);
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.showMessage(
+            'Tarea agregada correctamente.'
+          );
+        },
+        error: error => {
+          console.error(
+            'Error al agregar la tarea.',
+            error
+          );
+
+          this.showMessage(
+            'No fue posible agregar la tarea.'
+          );
+        }
+      });
   }
 
   protected toggleTask(id: number): void {
@@ -52,13 +79,25 @@ export class TasksPage {
       return;
     }
 
-    this.taskService.toggleTask(id);
-
-    const message = task.completed
+    const successMessage = task.completed
       ? 'Tarea movida a pendientes.'
       : 'Tarea marcada como completada.';
 
-    this.showMessage(message);
+    this.taskService.toggleTask(id).subscribe({
+      next: () => {
+        this.showMessage(successMessage);
+      },
+      error: error => {
+        console.error(
+          'Error al actualizar la tarea.',
+          error
+        );
+
+        this.showMessage(
+          'No fue posible actualizar la tarea.'
+        );
+      }
+    });
   }
   protected editTask(id: number): void {
     const task = this.taskService.tasks()
@@ -89,12 +128,26 @@ export class TasksPage {
         return;
       }
 
-      this.taskService.updateTaskDescription(
-        id,
-        description.trim()
-      );
+    this.taskService.updateTaskDescription(
+      id,
+      description.trim()
+    ).subscribe({
+      next: () => {
+        this.showMessage(
+          'Tarea actualizada correctamente.'
+        );
+      },
+      error: error => {
+        console.error(
+          'Error al editar la tarea.',
+          error
+        );
 
-      this.showMessage('Tarea actualizada correctamente.');
+        this.showMessage(
+          'No fue posible editar la tarea.'
+        );
+      }
+    });
     });
   }
   protected deleteTask(id: number): void {
@@ -118,20 +171,38 @@ export class TasksPage {
 
     dialogReference.afterClosed().subscribe(confirmed => {
       if (confirmed) {
-        this.taskService.deleteTask(id);
-        this.showMessage('Tarea eliminada.');
+        this.taskService.deleteTask(id).subscribe({
+          next: () => {
+            this.showMessage(
+              'Tarea eliminada correctamente.'
+            );
+          },
+          error: error => {
+            console.error(
+              'Error al eliminar la tarea.',
+              error
+            );
+
+            this.showMessage(
+              'No fue posible eliminar la tarea.'
+            );
+          }
+        });
       }
     });
   }
   private showMessage(message: string): void {
-    this.snackBar.open(
-      message,
-      'Cerrar',
-      {
-        duration: 2500,
-        horizontalPosition: 'end',
-        verticalPosition: 'bottom'
-      }
-    );
+      this.snackBar.open(
+        message,
+        'Cerrar',
+        {
+          duration: 2500,
+          horizontalPosition: 'end',
+          verticalPosition: 'bottom'
+        }
+      );
+    }
+    protected retryLoad(): void {
+    this.taskService.loadTasks();
   }
 }
