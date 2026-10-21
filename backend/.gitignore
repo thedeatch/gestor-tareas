@@ -34,3 +34,5 @@ build/
 
 # Base de datos local H2
 data/
+# Variables locales y credenciales
+.env
