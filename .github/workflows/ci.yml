@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - Dev
+      - main
+  pull_request:
+    branches:
+      - Dev
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Angular - pruebas y build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Ejecutar pruebas
+        run: npm test -- --watch=false
+
+      - name: Compilar Angular
+        run: npm run build
+
+  backend:
+    name: Spring Boot - pruebas y build
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+
+      - name: Dar permisos al Maven Wrapper
+        run: chmod +x mvnw
+
+      - name: Ejecutar pruebas y construir el backend
+        run: ./mvnw clean verify
+
+  docker:
+    name: Validar imágenes Docker
+    runs-on: ubuntu-latest
+    needs:
+      - frontend
+      - backend
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Construir imagen del backend
+        run: docker build --tag gestor-tareas-api:ci ./backend
+
+      - name: Construir imagen del frontend
+        run: docker build --tag gestor-tareas-frontend:ci .
