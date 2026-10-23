@@ -7,23 +7,41 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import io.swagger.v3.oas.annotations.media.Schema;
 
+@Schema(
+    name = "Task",
+    description = "Tarea administrada por la aplicación"
+)
 @Entity
 @Table(name = "tasks")
 public class Task {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Schema(
+		description = "Identificador único generado por el servidor",
+		example = "1",
+		accessMode = Schema.AccessMode.READ_ONLY
+	)
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @NotBlank(message = "La descripción es obligatoria")
-    @Size(
-        max = 150,
-        message = "La descripción no puede superar los 150 caracteres"
-    )
-    private String description;
-
-    private boolean completed;
+	@Schema(
+		description = "Descripción de la tarea",
+		example = "Documentar la API con Swagger",
+		maxLength = 150
+	)
+	@NotBlank(message = "La descripción es obligatoria")
+	@Size(
+		max = 150,
+		message = "La descripción no puede superar los 150 caracteres"
+	)
+	private String description;
+	@Schema(
+		description = "Indica si la tarea está completada",
+		example = "false"
+	)
+	private boolean completed;
 
     public Task() {
     }
