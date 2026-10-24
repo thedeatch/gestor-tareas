@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { Router } from '@angular/router';
+import { finalize } from 'rxjs';
 
 import { AuthService } from '../../services/auth';
 @Component({
@@ -30,13 +31,40 @@ export class LoginPage {
   };
 
   protected readonly hidePassword = signal(true);
+  protected readonly isSubmitting = signal(false);
+  protected readonly errorMessage = signal<string | null>(null);
 
   protected togglePasswordVisibility(): void {
     this.hidePassword.update(hidden => !hidden);
   }
 
   protected login(): void {
-    this.authService.login(this.credentials.email);
-    void this.router.navigateByUrl('/tareas');
+    this.submit('login');
+  }
+
+  protected register(): void {
+    this.submit('register');
+  }
+
+  private submit(action: 'login' | 'register'): void {
+    this.isSubmitting.set(true);
+    this.errorMessage.set(null);
+
+    this.authService[action](this.credentials)
+      .pipe(finalize(() => this.isSubmitting.set(false)))
+      .subscribe({
+        next: () => {
+          void this.router.navigateByUrl('/tareas');
+        },
+        error: error => {
+          this.errorMessage.set(
+            error.status === 409
+              ? 'El correo ya está registrado.'
+              : action === 'login'
+                ? 'Correo o contraseña incorrectos.'
+                : 'No fue posible crear la cuenta.'
+          );
+        }
+      });
   }
 }

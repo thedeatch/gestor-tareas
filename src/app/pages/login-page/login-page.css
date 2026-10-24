@@ -33,3 +33,9 @@ form > button {
   min-height: 44px;
 }
 
+.auth-error {
+  margin: 8px 0 0;
+  color: var(--mat-sys-error);
+  text-align: center;
+}
+

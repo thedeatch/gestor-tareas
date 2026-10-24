@@ -81,11 +81,27 @@
         <button
           mat-flat-button
           type="submit"
-          [disabled]="loginForm.invalid"
+          [disabled]="loginForm.invalid || isSubmitting()"
         >
           <mat-icon>login</mat-icon>
           Iniciar sesión
         </button>
+
+        <button
+          mat-stroked-button
+          type="button"
+          [disabled]="loginForm.invalid || isSubmitting()"
+          (click)="register()"
+        >
+          <mat-icon>person_add</mat-icon>
+          Crear cuenta
+        </button>
+
+        @if (errorMessage()) {
+          <p class="auth-error" role="alert">
+            {{ errorMessage() }}
+          </p>
+        }
       </form>
 
 

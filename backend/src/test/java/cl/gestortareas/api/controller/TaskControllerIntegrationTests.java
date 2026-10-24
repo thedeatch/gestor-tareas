@@ -17,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 @SpringBootTest
 @AutoConfigureMockMvc
 class TaskControllerIntegrationTests {
@@ -40,7 +41,7 @@ class TaskControllerIntegrationTests {
 
     @Test
     void shouldReturnEmptyTaskList() throws Exception {
-        mockMvc.perform(get("/api/tasks"))
+        mockMvc.perform(get("/api/tasks").with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(content().json("[]"));
     }
@@ -55,6 +56,7 @@ class TaskControllerIntegrationTests {
                 """;
 
         mockMvc.perform(post("/api/tasks")
+                        .with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated())
@@ -75,6 +77,7 @@ class TaskControllerIntegrationTests {
                 """;
 
             mockMvc.perform(post("/api/tasks")
+                    .with(jwt())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(createBody))
             .andExpect(status().isCreated());
@@ -89,6 +92,7 @@ class TaskControllerIntegrationTests {
                 """;
 
         mockMvc.perform(put("/api/tasks/{id}", taskId)
+                        .with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateBody))
                 .andExpect(status().isOk())
@@ -109,13 +113,14 @@ class TaskControllerIntegrationTests {
                 """;
 
         mockMvc.perform(post("/api/tasks")
+                        .with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody))
                 .andExpect(status().isCreated());
 
         Long taskId = taskRepository.findAll().get(0).getId();
 
-        mockMvc.perform(delete("/api/tasks/{id}", taskId))
+        mockMvc.perform(delete("/api/tasks/{id}", taskId).with(jwt()))
                 .andExpect(status().isNoContent());
 
         assertEquals(0, taskRepository.count());
