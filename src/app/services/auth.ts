@@ -10,7 +10,7 @@ import {
 @Service()
 export class AuthService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:8081/api/auth';
+  private readonly apiUrl = '/api/auth';
   private readonly tokenStorageKey = 'gestor-tareas.token';
   private readonly emailStorageKey = 'gestor-tareas.email';
   private readonly storedToken = this.loadStoredValue(

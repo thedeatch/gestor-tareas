@@ -16,7 +16,7 @@ describe('TasksPage', () => {
   let httpTesting: HttpTestingController;
 
   const apiUrl =
-    'http://localhost:8081/api/tasks';
+    '/api/tasks';
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({

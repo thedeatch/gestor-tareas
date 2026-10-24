@@ -7,7 +7,7 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const authService = inject(AuthService);
   const token = authService.getToken();
 
-  if (!token || !request.url.startsWith('http://localhost:8081/api/')) {
+  if (!token || !request.url.startsWith('/api/')) {
     return next(request);
   }
 

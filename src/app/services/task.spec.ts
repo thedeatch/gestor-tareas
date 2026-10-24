@@ -177,7 +177,7 @@ describe('TaskService', () => {
     expect(service.tasks()).toEqual([]);
   });
   const apiUrl =
-    'http://localhost:8081/api/tasks';
+    '/api/tasks';
 
   beforeEach(() => {
     TestBed.configureTestingModule({

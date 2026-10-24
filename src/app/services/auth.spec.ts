@@ -39,7 +39,7 @@ describe('AuthService', () => {
     }).subscribe();
 
     const request = httpTesting.expectOne(
-      'http://localhost:8081/api/auth/login'
+      '/api/auth/login'
     );
     expect(request.request.method).toBe('POST');
 

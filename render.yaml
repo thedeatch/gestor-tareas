@@ -1,0 +1,58 @@
+services:
+  - type: web
+    name: gestor-tareas-api-thedeatch
+    runtime: docker
+    plan: free
+    region: oregon
+    branch: Dev
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /v3/api-docs
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: DB_HOST
+        fromDatabase:
+          name: gestor-tareas-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: gestor-tareas-db
+          property: port
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: gestor-tareas-db
+          property: database
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: gestor-tareas-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: gestor-tareas-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+
+  - type: web
+    name: gestor-tareas-web-thedeatch
+    runtime: static
+    branch: Dev
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist/gestor-tareas/browser
+    autoDeployTrigger: checksPass
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://gestor-tareas-api-thedeatch.onrender.com/api/*
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+databases:
+  - name: gestor-tareas-db
+    plan: free
+    region: oregon
+    ipAllowList: []
+    postgresMajorVersion: "17"
+    databaseName: gestor_tareas
+    user: gestor_tareas

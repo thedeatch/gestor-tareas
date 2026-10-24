@@ -12,8 +12,7 @@ import { Observable, finalize, tap } from 'rxjs';
 export class TaskService {
   private readonly http = inject(HttpClient);
 
-  private readonly apiUrl =
-    'http://localhost:8081/api/tasks';
+  private readonly apiUrl = '/api/tasks';
 
   readonly tasks = signal<Task[]>([]);
   readonly isLoading = signal(false);
