@@ -1,6 +1,8 @@
 package cl.gestortareas.api.controller;
 
 import cl.gestortareas.api.repository.TaskRepository;
+import cl.gestortareas.api.model.AppUser;
+import cl.gestortareas.api.repository.AppUserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,26 +24,34 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 @AutoConfigureMockMvc
 class TaskControllerIntegrationTests {
 
+    private static final String USER_EMAIL = "test@gestor.cl";
+
     private final MockMvc mockMvc;
     private final TaskRepository taskRepository;
+    private final AppUserRepository userRepository;
 
     @Autowired
     TaskControllerIntegrationTests(
             MockMvc mockMvc,
-            TaskRepository taskRepository
+            TaskRepository taskRepository,
+            AppUserRepository userRepository
     ) {
         this.mockMvc = mockMvc;
         this.taskRepository = taskRepository;
+        this.userRepository = userRepository;
     }
 
     @BeforeEach
     void cleanDatabase() {
         taskRepository.deleteAll();
+        userRepository.deleteAll();
+        userRepository.save(new AppUser(USER_EMAIL, "hash-de-prueba"));
     }
 
     @Test
     void shouldReturnEmptyTaskList() throws Exception {
-        mockMvc.perform(get("/api/tasks").with(jwt()))
+        mockMvc.perform(get("/api/tasks").with(
+                jwt().jwt(token -> token.subject(USER_EMAIL))))
                 .andExpect(status().isOk())
                 .andExpect(content().json("[]"));
     }
@@ -56,7 +66,7 @@ class TaskControllerIntegrationTests {
                 """;
 
         mockMvc.perform(post("/api/tasks")
-                        .with(jwt())
+                        .with(jwt().jwt(token -> token.subject(USER_EMAIL)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated())
@@ -77,7 +87,7 @@ class TaskControllerIntegrationTests {
                 """;
 
             mockMvc.perform(post("/api/tasks")
-                    .with(jwt())
+                    .with(jwt().jwt(token -> token.subject(USER_EMAIL)))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(createBody))
             .andExpect(status().isCreated());
@@ -92,7 +102,7 @@ class TaskControllerIntegrationTests {
                 """;
 
         mockMvc.perform(put("/api/tasks/{id}", taskId)
-                        .with(jwt())
+                        .with(jwt().jwt(token -> token.subject(USER_EMAIL)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateBody))
                 .andExpect(status().isOk())
@@ -113,14 +123,15 @@ class TaskControllerIntegrationTests {
                 """;
 
         mockMvc.perform(post("/api/tasks")
-                        .with(jwt())
+                        .with(jwt().jwt(token -> token.subject(USER_EMAIL)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody))
                 .andExpect(status().isCreated());
 
         Long taskId = taskRepository.findAll().get(0).getId();
 
-        mockMvc.perform(delete("/api/tasks/{id}", taskId).with(jwt()))
+        mockMvc.perform(delete("/api/tasks/{id}", taskId).with(
+                jwt().jwt(token -> token.subject(USER_EMAIL))))
                 .andExpect(status().isNoContent());
 
         assertEquals(0, taskRepository.count());

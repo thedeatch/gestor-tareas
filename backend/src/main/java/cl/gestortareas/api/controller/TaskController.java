@@ -3,6 +3,7 @@ package cl.gestortareas.api.controller;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -41,8 +42,8 @@ public class TaskController {
         description = "Listado de tareas obtenido correctamente"
     )
     @GetMapping
-    public List<Task> findAll() {
-        return taskService.findAll();
+    public List<Task> findAll(Authentication authentication) {
+        return taskService.findAll(authentication.getName());
     }
 
     @Operation(summary = "Obtener una tarea por su identificador")
@@ -58,9 +59,10 @@ public class TaskController {
     })
     @GetMapping("/{id}")
     public Task findById(
-        @PathVariable Long id
+        @PathVariable Long id,
+        Authentication authentication
     ) {
-        return taskService.findById(id);
+        return taskService.findById(id, authentication.getName());
     }
 
     @Operation(summary = "Crear una nueva tarea")
@@ -77,9 +79,10 @@ public class TaskController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Task create(
-        @Valid @RequestBody Task task
+        @Valid @RequestBody Task task,
+        Authentication authentication
     ) {
-        return taskService.create(task);
+        return taskService.create(task, authentication.getName());
     }
 
     @Operation(summary = "Actualizar una tarea existente")
@@ -100,9 +103,10 @@ public class TaskController {
     @PutMapping("/{id}")
     public Task update(
         @PathVariable Long id,
-        @Valid @RequestBody Task task
+        @Valid @RequestBody Task task,
+        Authentication authentication
     ) {
-        return taskService.update(id, task);
+        return taskService.update(id, task, authentication.getName());
     }
 
     @Operation(summary = "Eliminar una tarea")
@@ -119,8 +123,9 @@ public class TaskController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(
-        @PathVariable Long id
+        @PathVariable Long id,
+        Authentication authentication
     ) {
-        taskService.delete(id);
+        taskService.delete(id, authentication.getName());
     }
 }
