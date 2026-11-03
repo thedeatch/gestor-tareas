@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -30,8 +30,36 @@ export class Navbar {
   protected readonly userName =
     this.authService.userName;
 
+  protected readonly avatarUrl = signal<string | null>(null);
+
+  constructor() {
+    effect(() => {
+      this.authService.avatarRevision();
+      if (this.isAuthenticated()) {
+        this.loadAvatar();
+      } else {
+        this.replaceAvatarUrl(null);
+      }
+    });
+  }
+
   protected logout(): void {
     this.authService.logout();
     void this.router.navigateByUrl('/login');
+  }
+
+  private loadAvatar(): void {
+    this.authService.getAvatar().subscribe({
+      next: blob => this.replaceAvatarUrl(URL.createObjectURL(blob)),
+      error: () => this.replaceAvatarUrl(null)
+    });
+  }
+
+  private replaceAvatarUrl(url: string | null): void {
+    const previousUrl = this.avatarUrl();
+    if (previousUrl) {
+      URL.revokeObjectURL(previousUrl);
+    }
+    this.avatarUrl.set(url);
   }
 }

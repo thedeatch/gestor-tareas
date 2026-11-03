@@ -5,13 +5,17 @@ import { Observable, map, tap } from 'rxjs';
 import {
   AuthCredentials,
   AuthResponse,
-  RegistrationData
+  PasswordChangeData,
+  ProfileUpdateData,
+  RegistrationData,
+  UserProfile
 } from '../models/auth.model';
 
 @Service()
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = '/api/auth';
+  private readonly profileApiUrl = '/api/users/me';
   private readonly tokenStorageKey = 'gestor-tareas.token';
   private readonly emailStorageKey = 'gestor-tareas.email';
   private readonly nameStorageKey = 'gestor-tareas.name';
@@ -37,6 +41,8 @@ export class AuthService {
     this.storedName ?? this.storedEmail
   );
 
+  private readonly avatarRevisionState = signal(0);
+
   readonly isAuthenticated =
     this.authenticatedState.asReadonly();
 
@@ -45,6 +51,9 @@ export class AuthService {
 
   readonly userName =
     this.userNameState.asReadonly();
+
+  readonly avatarRevision =
+    this.avatarRevisionState.asReadonly();
 
   login(credentials: AuthCredentials): Observable<void> {
     return this.authenticate('/login', credentials);
@@ -68,6 +77,41 @@ export class AuthService {
     );
   }
 
+  getProfile(): Observable<UserProfile> {
+    return this.http.get<UserProfile>(this.profileApiUrl);
+  }
+
+  updateProfile(data: ProfileUpdateData): Observable<void> {
+    return this.http.patch<AuthResponse>(this.profileApiUrl, data).pipe(
+      tap(response => this.storeSession(response)),
+      map(() => undefined)
+    );
+  }
+
+  changePassword(data: PasswordChangeData): Observable<void> {
+    return this.http.post<void>(`${this.profileApiUrl}/password`, data);
+  }
+
+  getAvatar(): Observable<Blob> {
+    return this.http.get(`${this.profileApiUrl}/avatar`, {
+      responseType: 'blob'
+    });
+  }
+
+  updateAvatar(file: File): Observable<void> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<void>(`${this.profileApiUrl}/avatar`, formData).pipe(
+      tap(() => this.avatarRevisionState.update(value => value + 1))
+    );
+  }
+
+  removeAvatar(): Observable<void> {
+    return this.http.delete<void>(`${this.profileApiUrl}/avatar`).pipe(
+      tap(() => this.avatarRevisionState.update(value => value + 1))
+    );
+  }
+
   getToken(): string | null {
     return this.loadStoredValue(this.tokenStorageKey);
   }
@@ -76,6 +120,7 @@ export class AuthService {
     this.userEmailState.set(null);
     this.userNameState.set(null);
     this.authenticatedState.set(false);
+    this.avatarRevisionState.update(value => value + 1);
 
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.removeItem(this.tokenStorageKey);
@@ -101,6 +146,7 @@ export class AuthService {
     this.userEmailState.set(response.email);
     this.userNameState.set(response.name);
     this.authenticatedState.set(true);
+    this.avatarRevisionState.update(value => value + 1);
 
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.setItem(this.tokenStorageKey, response.token);

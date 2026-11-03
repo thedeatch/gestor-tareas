@@ -36,6 +36,11 @@ export class LoginPage {
   protected readonly hidePassword = signal(true);
   protected readonly isSubmitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly successMessage = signal<string | null>(
+    this.router.getCurrentNavigation()?.extras.state?.['passwordChanged']
+      ? 'Contraseña actualizada. Inicia sesión nuevamente.'
+      : null
+  );
 
   protected togglePasswordVisibility(): void {
     this.hidePassword.update(hidden => !hidden);
@@ -48,6 +53,7 @@ export class LoginPage {
   private submit(action: 'login'): void {
     this.isSubmitting.set(true);
     this.errorMessage.set(null);
+    this.successMessage.set(null);
 
     this.authService[action](this.credentials)
       .pipe(finalize(() => this.isSubmitting.set(false)))

@@ -117,6 +117,12 @@
             {{ errorMessage() }}
           </p>
         }
+
+        @if (successMessage()) {
+          <p class="auth-success" role="status">
+            {{ successMessage() }}
+          </p>
+        }
       </form>
 
 

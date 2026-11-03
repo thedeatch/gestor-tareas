@@ -57,6 +57,7 @@ public class SecurityConfig {
         configuration.setAllowedMethods(List.of(
             "GET",
             "POST",
+            "PATCH",
             "PUT",
             "DELETE",
             "OPTIONS"

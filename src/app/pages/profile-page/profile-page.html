@@ -1,0 +1,238 @@
+<main class="profile-container">
+  <header>
+    <h1>Mi perfil</h1>
+    <p>Administra tus datos personales y credenciales.</p>
+  </header>
+
+  @if (isLoading()) {
+    <div class="loading" aria-label="Cargando perfil">
+      <mat-spinner diameter="42"></mat-spinner>
+    </div>
+  } @else {
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Foto de perfil</mat-card-title>
+        <mat-card-subtitle>JPEG, PNG o WebP de hasta 2 MB</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content class="avatar-section">
+        <div class="avatar-preview">
+          @if (avatarUrl()) {
+            <img [src]="avatarUrl()" alt="Foto de perfil">
+          } @else {
+            <mat-icon>person</mat-icon>
+          }
+        </div>
+
+        <div class="avatar-actions">
+          <button
+            mat-flat-button
+            type="button"
+            [disabled]="isUploadingAvatar()"
+            (click)="avatarInput.click()"
+          >
+            <mat-icon>upload</mat-icon>
+            Elegir imagen
+          </button>
+          <input
+            #avatarInput
+            class="file-input"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            [disabled]="isUploadingAvatar()"
+            (change)="selectAvatar($event)"
+          >
+
+          @if (avatarUrl()) {
+            <button
+              mat-stroked-button
+              type="button"
+              [disabled]="isUploadingAvatar()"
+              (click)="removeAvatar()"
+            >
+              <mat-icon>delete</mat-icon>
+              Eliminar foto
+            </button>
+          }
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Datos personales</mat-card-title>
+        <mat-card-subtitle>
+          Confirma tu contraseña para guardar cambios
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <form #profileForm="ngForm" (ngSubmit)="saveProfile()">
+          <mat-form-field appearance="outline">
+            <mat-label>Nombre</mat-label>
+            <input
+              matInput
+              name="name"
+              required
+              minlength="2"
+              maxlength="100"
+              [(ngModel)]="profile.name"
+            >
+            <mat-icon matPrefix>person</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Correo electrónico</mat-label>
+            <input
+              matInput
+              type="email"
+              name="email"
+              required
+              email
+              [(ngModel)]="profile.email"
+            >
+            <mat-icon matPrefix>email</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Contraseña actual</mat-label>
+            <input
+              matInput
+              [type]="hideCurrentPassword() ? 'password' : 'text'"
+              name="profileCurrentPassword"
+              required
+              autocomplete="current-password"
+              [(ngModel)]="profile.currentPassword"
+            >
+            <mat-icon matPrefix>lock</mat-icon>
+            <button
+              mat-icon-button
+              matSuffix
+              type="button"
+              aria-label="Mostrar u ocultar contraseña actual"
+              (click)="toggleCurrentPasswordVisibility()"
+            >
+              <mat-icon>
+                {{ hideCurrentPassword() ? 'visibility' : 'visibility_off' }}
+              </mat-icon>
+            </button>
+          </mat-form-field>
+
+          <button
+            mat-flat-button
+            type="submit"
+            [disabled]="profileForm.invalid || isSavingProfile()"
+          >
+            @if (isSavingProfile()) {
+              <span class="button-content">
+                <mat-spinner diameter="20"></mat-spinner>
+                Guardando…
+              </span>
+            } @else {
+              <span class="button-content">
+                <mat-icon>save</mat-icon>
+                Guardar perfil
+              </span>
+            }
+          </button>
+        </form>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Cambiar contraseña</mat-card-title>
+        <mat-card-subtitle>
+          Se cerrará tu sesión después del cambio
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <form #passwordForm="ngForm" (ngSubmit)="changePassword()">
+          <mat-form-field appearance="outline">
+            <mat-label>Contraseña actual</mat-label>
+            <input
+              matInput
+              type="password"
+              name="currentPassword"
+              required
+              autocomplete="current-password"
+              [(ngModel)]="password.currentPassword"
+            >
+            <mat-icon matPrefix>lock</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Nueva contraseña</mat-label>
+            <input
+              matInput
+              [type]="hideNewPassword() ? 'password' : 'text'"
+              name="newPassword"
+              required
+              minlength="8"
+              maxlength="72"
+              autocomplete="new-password"
+              [(ngModel)]="password.newPassword"
+            >
+            <mat-icon matPrefix>password</mat-icon>
+            <button
+              mat-icon-button
+              matSuffix
+              type="button"
+              aria-label="Mostrar u ocultar contraseña nueva"
+              (click)="toggleNewPasswordVisibility()"
+            >
+              <mat-icon>
+                {{ hideNewPassword() ? 'visibility' : 'visibility_off' }}
+              </mat-icon>
+            </button>
+            <mat-hint>Utiliza entre 8 y 72 caracteres.</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Confirmar contraseña nueva</mat-label>
+            <input
+              matInput
+              [type]="hideNewPassword() ? 'password' : 'text'"
+              name="confirmation"
+              required
+              autocomplete="new-password"
+              [(ngModel)]="password.confirmation"
+            >
+            <mat-icon matPrefix>lock_reset</mat-icon>
+          </mat-form-field>
+
+          @if (password.confirmation && !passwordsMatch()) {
+            <p class="error" role="alert">Las contraseñas no coinciden.</p>
+          }
+
+          <button
+            mat-flat-button
+            type="submit"
+            [disabled]="
+              passwordForm.invalid ||
+              !passwordsMatch() ||
+              isChangingPassword()
+            "
+          >
+            @if (isChangingPassword()) {
+              <span class="button-content">
+                <mat-spinner diameter="20"></mat-spinner>
+                Cambiando…
+              </span>
+            } @else {
+              <span class="button-content">
+                <mat-icon>password</mat-icon>
+                Cambiar contraseña
+              </span>
+            }
+          </button>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (message()) {
+    <p class="success" role="status">{{ message() }}</p>
+  }
+  @if (errorMessage()) {
+    <p class="error" role="alert">{{ errorMessage() }}</p>
+  }
+</main>

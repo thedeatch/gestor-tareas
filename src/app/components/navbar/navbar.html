@@ -28,12 +28,29 @@
     </a>
 
     @if (isAuthenticated()) {
-      <span class="user-email">
-        {{ userName() }}
-      </span>
+      <a
+        class="user-profile-link"
+        routerLink="/perfil"
+        routerLinkActive="active-link"
+        aria-label="Abrir mi perfil"
+      >
+        <span class="user-profile-content">
+          @if (avatarUrl()) {
+            <img
+              class="navbar-avatar"
+              [src]="avatarUrl()"
+              alt=""
+            >
+          } @else {
+            <mat-icon>account_circle</mat-icon>
+          }
+          <span class="user-name">{{ userName() }}</span>
+        </span>
+      </a>
 
       <button
         matButton
+        class="logout-button"
         type="button"
         (click)="logout()"
       >

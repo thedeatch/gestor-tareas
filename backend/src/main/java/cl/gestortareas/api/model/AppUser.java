@@ -26,6 +26,12 @@ public class AppUser {
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
+    @Column(name = "avatar_data")
+    private byte[] avatarData;
+
+    @Column(name = "avatar_content_type", length = 50)
+    private String avatarContentType;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -56,6 +62,33 @@ public class AppUser {
 
     public void changePassword(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    public void updateProfile(String name, String email) {
+        this.name = name;
+        this.email = email;
+    }
+
+    public byte[] getAvatarData() {
+        return avatarData;
+    }
+
+    public String getAvatarContentType() {
+        return avatarContentType;
+    }
+
+    public boolean hasAvatar() {
+        return avatarData != null && avatarData.length > 0;
+    }
+
+    public void updateAvatar(byte[] data, String contentType) {
+        this.avatarData = data;
+        this.avatarContentType = contentType;
+    }
+
+    public void removeAvatar() {
+        this.avatarData = null;
+        this.avatarContentType = null;
     }
 
     public Instant getCreatedAt() {

@@ -53,6 +53,12 @@ form > a {
   text-align: center;
 }
 
+.auth-success {
+  margin: 8px 0 0;
+  color: var(--mat-sys-primary);
+  text-align: center;
+}
+
 .auth-action {
   align-self: center;
 }
