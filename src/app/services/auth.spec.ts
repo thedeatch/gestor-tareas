@@ -45,11 +45,34 @@ describe('AuthService', () => {
 
     request.flush({
       token: 'jwt-de-prueba',
-      email: 'usuario@ejemplo.cl'
+      email: 'usuario@ejemplo.cl',
+      name: 'Usuario de prueba'
     });
 
     expect(service.isAuthenticated()).toBe(true);
     expect(service.userEmail()).toBe('usuario@ejemplo.cl');
+    expect(service.userName()).toBe('Usuario de prueba');
     expect(service.getToken()).toBe('jwt-de-prueba');
+  });
+
+  it('should send the name when registering', () => {
+    service.register({
+      name: 'Nueva usuaria',
+      email: 'nueva@ejemplo.cl',
+      password: 'secreto123'
+    }).subscribe();
+
+    const request = httpTesting.expectOne('/api/auth/register');
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body.name).toBe('Nueva usuaria');
+
+    request.flush({
+      token: 'otro-jwt',
+      email: 'nueva@ejemplo.cl',
+      name: 'Nueva usuaria'
+    });
+
+    expect(service.userName()).toBe('Nueva usuaria');
   });
 });

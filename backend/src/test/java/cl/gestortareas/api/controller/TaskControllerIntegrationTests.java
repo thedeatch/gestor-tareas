@@ -45,7 +45,11 @@ class TaskControllerIntegrationTests {
     void cleanDatabase() {
         taskRepository.deleteAll();
         userRepository.deleteAll();
-        userRepository.save(new AppUser(USER_EMAIL, "hash-de-prueba"));
+        userRepository.save(new AppUser(
+            "Usuario de prueba",
+            USER_EMAIL,
+            "hash-de-prueba"
+        ));
     }
 
     @Test

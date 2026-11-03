@@ -43,12 +43,17 @@ public class AuthService {
         }
 
         AppUser user = new AppUser(
+            request.name().trim(),
             email,
             passwordEncoder.encode(request.password())
         );
         userRepository.save(user);
 
-        return new AuthResponse(jwtService.generateToken(email), email);
+        return new AuthResponse(
+            jwtService.generateToken(email),
+            email,
+            user.getName()
+        );
     }
 
     @Transactional(readOnly = true)
@@ -61,7 +66,11 @@ public class AuthService {
             throw invalidCredentials();
         }
 
-        return new AuthResponse(jwtService.generateToken(email), email);
+        return new AuthResponse(
+            jwtService.generateToken(email),
+            email,
+            user.getName()
+        );
     }
 
     private String normalizeEmail(String email) {

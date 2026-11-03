@@ -24,7 +24,13 @@ export const routes: Routes = [
     loadComponent: () =>
         import('./pages/login-page/login-page')
         .then(module => module.LoginPage)
-    },
+  },
+  {
+    path: 'registro',
+    loadComponent: () =>
+      import('./pages/register-page/register-page')
+        .then(module => module.RegisterPage)
+  },
   {
     path: '**',
     redirectTo: 'tareas'

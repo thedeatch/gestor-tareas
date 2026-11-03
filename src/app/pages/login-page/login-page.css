@@ -28,14 +28,32 @@ form {
   gap: 8px;
 }
 
-form > button {
+form > button,
+form > a {
   align-self: stretch;
   min-height: 44px;
+}
+
+form > a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .auth-error {
   margin: 8px 0 0;
   color: var(--mat-sys-error);
   text-align: center;
+}
+
+.auth-action {
+  align-self: center;
 }
 

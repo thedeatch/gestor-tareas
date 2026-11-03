@@ -5,7 +5,8 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { Router } from '@angular/router';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../services/auth';
@@ -17,7 +18,9 @@ import { AuthService } from '../../services/auth';
     MatCardModule,
     MatFormFieldModule,
     MatIconModule,
-    MatInputModule
+    MatInputModule,
+    MatProgressSpinnerModule,
+    RouterLink
   ],
   templateUrl: './login-page.html',
   styleUrl: './login-page.css'
@@ -42,11 +45,7 @@ export class LoginPage {
     this.submit('login');
   }
 
-  protected register(): void {
-    this.submit('register');
-  }
-
-  private submit(action: 'login' | 'register'): void {
+  private submit(action: 'login'): void {
     this.isSubmitting.set(true);
     this.errorMessage.set(null);
 
@@ -58,11 +57,9 @@ export class LoginPage {
         },
         error: error => {
           this.errorMessage.set(
-            error.status === 409
-              ? 'El correo ya está registrado.'
-              : action === 'login'
-                ? 'Correo o contraseña incorrectos.'
-                : 'No fue posible crear la cuenta.'
+            error.status === 401
+              ? 'Correo o contraseña incorrectos.'
+              : 'No fue posible iniciar sesión. Inténtalo nuevamente.'
           );
         }
       });

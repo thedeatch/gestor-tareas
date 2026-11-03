@@ -4,7 +4,8 @@ import { Observable, map, tap } from 'rxjs';
 
 import {
   AuthCredentials,
-  AuthResponse
+  AuthResponse,
+  RegistrationData
 } from '../models/auth.model';
 
 @Service()
@@ -13,11 +14,15 @@ export class AuthService {
   private readonly apiUrl = '/api/auth';
   private readonly tokenStorageKey = 'gestor-tareas.token';
   private readonly emailStorageKey = 'gestor-tareas.email';
+  private readonly nameStorageKey = 'gestor-tareas.name';
   private readonly storedToken = this.loadStoredValue(
     this.tokenStorageKey
   );
   private readonly storedEmail = this.loadStoredValue(
     this.emailStorageKey
+  );
+  private readonly storedName = this.loadStoredValue(
+    this.nameStorageKey
   );
 
   private readonly authenticatedState = signal(
@@ -28,18 +33,25 @@ export class AuthService {
     this.storedEmail
   );
 
+  private readonly userNameState = signal<string | null>(
+    this.storedName ?? this.storedEmail
+  );
+
   readonly isAuthenticated =
     this.authenticatedState.asReadonly();
 
   readonly userEmail =
     this.userEmailState.asReadonly();
 
+  readonly userName =
+    this.userNameState.asReadonly();
+
   login(credentials: AuthCredentials): Observable<void> {
     return this.authenticate('/login', credentials);
   }
 
-  register(credentials: AuthCredentials): Observable<void> {
-    return this.authenticate('/register', credentials);
+  register(data: RegistrationData): Observable<void> {
+    return this.authenticate('/register', data);
   }
 
   getToken(): string | null {
@@ -48,21 +60,23 @@ export class AuthService {
 
   logout(): void {
     this.userEmailState.set(null);
+    this.userNameState.set(null);
     this.authenticatedState.set(false);
 
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.removeItem(this.tokenStorageKey);
       sessionStorage.removeItem(this.emailStorageKey);
+      sessionStorage.removeItem(this.nameStorageKey);
     }
   }
 
   private authenticate(
     endpoint: '/login' | '/register',
-    credentials: AuthCredentials
+    data: AuthCredentials | RegistrationData
   ): Observable<void> {
     return this.http.post<AuthResponse>(
       `${this.apiUrl}${endpoint}`,
-      credentials
+      data
     ).pipe(
       tap(response => this.storeSession(response)),
       map(() => undefined)
@@ -71,11 +85,13 @@ export class AuthService {
 
   private storeSession(response: AuthResponse): void {
     this.userEmailState.set(response.email);
+    this.userNameState.set(response.name);
     this.authenticatedState.set(true);
 
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.setItem(this.tokenStorageKey, response.token);
       sessionStorage.setItem(this.emailStorageKey, response.email);
+      sessionStorage.setItem(this.nameStorageKey, response.name);
     }
   }
 

@@ -27,8 +27,8 @@ export class Navbar {
   protected readonly isAuthenticated =
     this.authService.isAuthenticated;
 
-  protected readonly userEmail =
-    this.authService.userEmail;
+  protected readonly userName =
+    this.authService.userName;
 
   protected logout(): void {
     this.authService.logout();

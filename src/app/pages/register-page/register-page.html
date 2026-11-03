@@ -1,0 +1,167 @@
+<main class="login-container">
+  <mat-card class="login-card">
+    <mat-card-header>
+      <div mat-card-avatar class="login-avatar">
+        <mat-icon>person_add</mat-icon>
+      </div>
+
+      <mat-card-title>Crear una cuenta</mat-card-title>
+      <mat-card-subtitle>
+        Regístrate para organizar tus tareas
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form #registerForm="ngForm" (ngSubmit)="register()">
+        <mat-form-field appearance="outline">
+          <mat-label>Nombre</mat-label>
+          <input
+            matInput
+            type="text"
+            name="name"
+            autocomplete="name"
+            required
+            minlength="2"
+            maxlength="100"
+            [(ngModel)]="registration.name"
+            #nameControl="ngModel"
+          >
+          <mat-icon matPrefix>person</mat-icon>
+
+          @if (nameControl.hasError('required')) {
+            <mat-error>El nombre es obligatorio.</mat-error>
+          } @else if (nameControl.hasError('minlength')) {
+            <mat-error>Debe tener al menos 2 caracteres.</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Correo electrónico</mat-label>
+          <input
+            matInput
+            type="email"
+            name="email"
+            autocomplete="email"
+            required
+            email
+            [(ngModel)]="registration.email"
+            #emailControl="ngModel"
+          >
+          <mat-icon matPrefix>email</mat-icon>
+
+          @if (emailControl.hasError('required')) {
+            <mat-error>El correo es obligatorio.</mat-error>
+          } @else if (emailControl.hasError('email')) {
+            <mat-error>Ingresa un correo válido.</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Contraseña</mat-label>
+          <input
+            matInput
+            [type]="hidePassword() ? 'password' : 'text'"
+            name="password"
+            autocomplete="new-password"
+            required
+            minlength="8"
+            maxlength="72"
+            [(ngModel)]="registration.password"
+            #passwordControl="ngModel"
+          >
+          <mat-icon matPrefix>lock</mat-icon>
+          <button
+            mat-icon-button
+            matSuffix
+            type="button"
+            aria-label="Mostrar u ocultar contraseña"
+            (click)="togglePasswordVisibility()"
+          >
+            <mat-icon>
+              {{ hidePassword() ? 'visibility' : 'visibility_off' }}
+            </mat-icon>
+          </button>
+
+          @if (passwordControl.hasError('required')) {
+            <mat-error>La contraseña es obligatoria.</mat-error>
+          } @else if (passwordControl.hasError('minlength')) {
+            <mat-error>Debe tener al menos 8 caracteres.</mat-error>
+          }
+
+          <mat-hint>Utiliza entre 8 y 72 caracteres.</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Confirmar contraseña</mat-label>
+          <input
+            matInput
+            [type]="hidePassword() ? 'password' : 'text'"
+            name="passwordConfirmation"
+            autocomplete="new-password"
+            required
+            [(ngModel)]="registration.passwordConfirmation"
+            #confirmationControl="ngModel"
+          >
+          <mat-icon matPrefix>lock_reset</mat-icon>
+
+          @if (confirmationControl.hasError('required')) {
+            <mat-error>Confirma tu contraseña.</mat-error>
+          }
+        </mat-form-field>
+
+        @if (
+          confirmationControl.touched &&
+          registration.passwordConfirmation &&
+          !passwordsMatch()
+        ) {
+          <p class="auth-error" role="alert">
+            Las contraseñas no coinciden.
+          </p>
+        }
+
+        <button
+          mat-flat-button
+          type="submit"
+          [disabled]="
+            registerForm.invalid ||
+            !passwordsMatch() ||
+            isSubmitting()
+          "
+        >
+          @if (isSubmitting()) {
+            <span class="button-content">
+              <mat-spinner diameter="20"></mat-spinner>
+              Creando cuenta…
+            </span>
+          } @else {
+            <span class="button-content">
+              <mat-icon>person_add</mat-icon>
+              Crear cuenta
+            </span>
+          }
+        </button>
+
+        <a mat-stroked-button routerLink="/login">
+          Ya tengo una cuenta
+        </a>
+
+        @if (errorMessage()) {
+          <p class="auth-error" role="alert">
+            {{ errorMessage() }}
+          </p>
+
+          @if (emailAlreadyRegistered()) {
+            <a
+              mat-button
+              class="auth-action"
+              routerLink="/login"
+            >
+              <mat-icon>login</mat-icon>
+              Ir a iniciar sesión
+            </a>
+          }
+        }
+      </form>
+    </mat-card-content>
+  </mat-card>
+</main>

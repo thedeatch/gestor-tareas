@@ -51,17 +51,20 @@ class AuthControllerIntegrationTests {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
+                        "name": "Usuario de prueba",
                         "email": "Usuario@Ejemplo.cl",
                         "password": "secreto123"
                     }
                     """))
             .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.name").value("Usuario de prueba"))
             .andExpect(jsonPath("$.email").value("usuario@ejemplo.cl"))
             .andExpect(jsonPath("$.token").isNotEmpty());
 
         AppUser user = userRepository.findByEmailIgnoreCase("usuario@ejemplo.cl")
             .orElseThrow();
 
+        assertTrue(user.getName().equals("Usuario de prueba"));
         assertFalse(user.getPasswordHash().equals("secreto123"));
         assertTrue(passwordEncoder.matches("secreto123", user.getPasswordHash()));
     }
@@ -69,6 +72,7 @@ class AuthControllerIntegrationTests {
     @Test
     void shouldLoginWithValidCredentials() throws Exception {
         userRepository.save(new AppUser(
+            "Usuario de prueba",
             "usuario@ejemplo.cl",
             passwordEncoder.encode("secreto123")
         ));
@@ -82,8 +86,29 @@ class AuthControllerIntegrationTests {
                     }
                     """))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Usuario de prueba"))
             .andExpect(jsonPath("$.email").value("usuario@ejemplo.cl"))
             .andExpect(jsonPath("$.token").isNotEmpty());
+    }
+
+    @Test
+    void shouldRejectAnAlreadyRegisteredEmail() throws Exception {
+        userRepository.save(new AppUser(
+            "Usuario existente",
+            "usuario@ejemplo.cl",
+            passwordEncoder.encode("secreto123")
+        ));
+
+        mockMvc.perform(post("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "name": "Otro nombre",
+                        "email": "usuario@ejemplo.cl",
+                        "password": "otraClave123"
+                    }
+                    """))
+            .andExpect(status().isConflict());
     }
 
     @Test

@@ -8,7 +8,7 @@
         <mat-icon>person</mat-icon>
       </div>
 
-      <mat-card-title>Iniciar sesión</mat-card-title>
+      <mat-card-title>¡Bienvenido de nuevo!</mat-card-title>
 
       <mat-card-subtitle>
         Ingresa tus datos para continuar
@@ -52,7 +52,7 @@
             name="password"
             autocomplete="current-password"
             required
-            minlength="6"
+            minlength="8"
             [(ngModel)]="credentials.password"
             #passwordControl="ngModel"
           >
@@ -74,7 +74,7 @@
           @if (passwordControl.hasError('required')) {
             <mat-error>La contraseña es obligatoria.</mat-error>
           } @else if (passwordControl.hasError('minlength')) {
-            <mat-error>Debe tener al menos 6 caracteres.</mat-error>
+            <mat-error>Debe tener al menos 8 caracteres.</mat-error>
           }
         </mat-form-field>
 
@@ -83,19 +83,26 @@
           type="submit"
           [disabled]="loginForm.invalid || isSubmitting()"
         >
-          <mat-icon>login</mat-icon>
-          Iniciar sesión
+          @if (isSubmitting()) {
+            <span class="button-content">
+              <mat-spinner diameter="20"></mat-spinner>
+              Ingresando…
+            </span>
+          } @else {
+            <span class="button-content">
+              <mat-icon>login</mat-icon>
+              Iniciar sesión
+            </span>
+          }
         </button>
 
-        <button
+        <a
           mat-stroked-button
-          type="button"
-          [disabled]="loginForm.invalid || isSubmitting()"
-          (click)="register()"
+          routerLink="/registro"
         >
           <mat-icon>person_add</mat-icon>
           Crear cuenta
-        </button>
+        </a>
 
         @if (errorMessage()) {
           <p class="auth-error" role="alert">

@@ -42,7 +42,11 @@ class TaskServiceIntegrationTests {
     void cleanDatabase() {
         taskRepository.deleteAll();
         userRepository.deleteAll();
-        userRepository.save(new AppUser(USER_EMAIL, "hash-de-prueba"));
+        userRepository.save(new AppUser(
+            "Usuario de prueba",
+            USER_EMAIL,
+            "hash-de-prueba"
+        ));
     }
 
     @Test
@@ -163,7 +167,11 @@ class TaskServiceIntegrationTests {
     @Test
     void shouldNotExposeTasksOwnedByAnotherUser() {
         String otherEmail = "otro@gestor.cl";
-        userRepository.save(new AppUser(otherEmail, "otro-hash"));
+        userRepository.save(new AppUser(
+            "Otro usuario",
+            otherEmail,
+            "otro-hash"
+        ));
 
         taskService.create(
             new Task("Tarea del usuario principal", false),
