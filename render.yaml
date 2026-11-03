@@ -32,6 +32,22 @@ services:
           property: password
       - key: JWT_SECRET
         generateValue: true
+      - key: MAIL_HOST
+        value: smtp-relay.brevo.com
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: MAIL_SMTP_AUTH
+        value: "true"
+      - key: MAIL_STARTTLS
+        value: "true"
+      - key: FRONTEND_URL
+        value: https://gestor-tareas-web-thedeatch.onrender.com
 
   - type: web
     name: gestor-tareas-web-thedeatch

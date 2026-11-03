@@ -32,6 +32,18 @@ export const routes: Routes = [
         .then(module => module.RegisterPage)
   },
   {
+    path: 'olvide-contrasena',
+    loadComponent: () =>
+      import('./pages/forgot-password-page/forgot-password-page')
+        .then(module => module.ForgotPasswordPage)
+  },
+  {
+    path: 'restablecer-contrasena',
+    loadComponent: () =>
+      import('./pages/reset-password-page/reset-password-page')
+        .then(module => module.ResetPasswordPage)
+  },
+  {
     path: '**',
     redirectTo: 'tareas'
   }

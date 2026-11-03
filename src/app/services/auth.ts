@@ -54,6 +54,20 @@ export class AuthService {
     return this.authenticate('/register', data);
   }
 
+  forgotPassword(email: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.apiUrl}/forgot-password`,
+      { email }
+    );
+  }
+
+  resetPassword(token: string, password: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.apiUrl}/reset-password`,
+      { token, password }
+    );
+  }
+
   getToken(): string | null {
     return this.loadStoredValue(this.tokenStorageKey);
   }

@@ -9,8 +9,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import cl.gestortareas.api.dto.AuthRequest;
 import cl.gestortareas.api.dto.AuthResponse;
+import cl.gestortareas.api.dto.ForgotPasswordRequest;
 import cl.gestortareas.api.dto.RegisterRequest;
+import cl.gestortareas.api.dto.ResetPasswordRequest;
 import cl.gestortareas.api.service.AuthService;
+import cl.gestortareas.api.service.PasswordResetService;
 import jakarta.validation.Valid;
 
 @RestController
@@ -18,9 +21,14 @@ import jakarta.validation.Valid;
 public class AuthController {
 
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(
+        AuthService authService,
+        PasswordResetService passwordResetService
+    ) {
         this.authService = authService;
+        this.passwordResetService = passwordResetService;
     }
 
     @PostMapping("/register")
@@ -32,5 +40,21 @@ public class AuthController {
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody AuthRequest request) {
         return authService.login(request);
+    }
+
+    @PostMapping("/forgot-password")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public void forgotPassword(
+        @Valid @RequestBody ForgotPasswordRequest request
+    ) {
+        passwordResetService.requestReset(request);
+    }
+
+    @PostMapping("/reset-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void resetPassword(
+        @Valid @RequestBody ResetPasswordRequest request
+    ) {
+        passwordResetService.resetPassword(request);
     }
 }
