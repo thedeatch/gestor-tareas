@@ -1,0 +1,134 @@
+<main class="admin-container">
+  <header>
+    <div>
+      <h1>Administración de usuarios</h1>
+      <p>Consulta las cuentas y administra sus permisos.</p>
+    </div>
+    <span class="user-count">{{ totalElements() }} usuarios</span>
+  </header>
+
+  <mat-card>
+    <mat-card-content>
+      <form class="search-form" (ngSubmit)="searchUsers()">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Buscar por nombre o correo</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input
+            matInput
+            name="search"
+            [ngModel]="search()"
+            (ngModelChange)="search.set($event)"
+          >
+        </mat-form-field>
+        <button mat-flat-button type="submit">Buscar</button>
+        @if (search()) {
+          <button mat-button type="button" (click)="clearSearch()">
+            Limpiar
+          </button>
+        }
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  @if (isLoading()) {
+    <div class="loading" aria-label="Cargando usuarios">
+      <mat-spinner diameter="42"></mat-spinner>
+    </div>
+  } @else {
+    <mat-card class="users-card">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Registro</th>
+              <th>Rol</th>
+              <th><span class="visually-hidden">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (user of users(); track user.id) {
+              <tr>
+                <td>
+                  <strong>{{ user.name }}</strong>
+                  <span>{{ user.email }}</span>
+                  @if (isCurrentUser(user)) {
+                    <small>Tu cuenta</small>
+                  }
+                </td>
+                <td>{{ user.createdAt | date:'dd/MM/yyyy' }}</td>
+                <td>
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-select
+                      [disabled]="isCurrentUser(user)"
+                      [ngModel]="roleDrafts()[user.id]"
+                      (ngModelChange)="setRoleDraft(user.id, $event)"
+                      [attr.aria-label]="'Rol de ' + user.name"
+                    >
+                      @for (role of roles; track role) {
+                        <mat-option [value]="role">{{ roleLabel(role) }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                </td>
+                <td>
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    [disabled]="
+                      isCurrentUser(user)
+                      || roleDrafts()[user.id] === user.role
+                      || savingUserId() === user.id
+                    "
+                    (click)="updateRole(user)"
+                  >
+                    @if (savingUserId() === user.id) {
+                      <mat-spinner diameter="18"></mat-spinner>
+                    } @else {
+                      Guardar
+                    }
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="4" class="empty">No se encontraron usuarios.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (totalPages() > 1) {
+        <div class="pagination">
+          <button
+            mat-button
+            type="button"
+            [disabled]="page() === 0"
+            (click)="previousPage()"
+          >
+            <mat-icon>chevron_left</mat-icon>
+            Anterior
+          </button>
+          <span>Página {{ page() + 1 }} de {{ totalPages() }}</span>
+          <button
+            mat-button
+            type="button"
+            [disabled]="page() + 1 >= totalPages()"
+            (click)="nextPage()"
+          >
+            Siguiente
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </div>
+      }
+    </mat-card>
+  }
+
+  @if (message()) {
+    <p class="success" role="status">{{ message() }}</p>
+  }
+  @if (errorMessage()) {
+    <p class="error" role="alert">{{ errorMessage() }}</p>
+  }
+</main>

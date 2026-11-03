@@ -50,12 +50,12 @@ class ProfileControllerIntegrationTests {
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
-        userRepository.save(new AppUser(
+        AppUser user = userRepository.save(new AppUser(
             "Usuario inicial",
             "usuario@ejemplo.cl",
             passwordEncoder.encode("secreto123")
         ));
-        token = jwtService.generateToken("usuario@ejemplo.cl");
+        token = jwtService.generateToken(user);
     }
 
     @Test
@@ -65,7 +65,8 @@ class ProfileControllerIntegrationTests {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("Usuario inicial"))
             .andExpect(jsonPath("$.email").value("usuario@ejemplo.cl"))
-            .andExpect(jsonPath("$.hasAvatar").value(false));
+            .andExpect(jsonPath("$.hasAvatar").value(false))
+            .andExpect(jsonPath("$.role").value("USER"));
     }
 
     @Test
@@ -83,6 +84,7 @@ class ProfileControllerIntegrationTests {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("Nombre actualizado"))
             .andExpect(jsonPath("$.email").value("nuevo@ejemplo.cl"))
+            .andExpect(jsonPath("$.role").value("USER"))
             .andExpect(jsonPath("$.token").isNotEmpty());
     }
 

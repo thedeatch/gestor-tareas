@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -19,7 +20,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import cl.gestortareas.api.model.AppUser;
+import cl.gestortareas.api.model.UserRole;
 import cl.gestortareas.api.repository.AppUserRepository;
+import cl.gestortareas.api.service.JwtService;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -28,16 +31,19 @@ class AuthControllerIntegrationTests {
     private final MockMvc mockMvc;
     private final AppUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
     @Autowired
     AuthControllerIntegrationTests(
         MockMvc mockMvc,
         AppUserRepository userRepository,
-        PasswordEncoder passwordEncoder
+        PasswordEncoder passwordEncoder,
+        JwtService jwtService
     ) {
         this.mockMvc = mockMvc;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
     }
 
     @BeforeEach
@@ -59,6 +65,7 @@ class AuthControllerIntegrationTests {
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.name").value("Usuario de prueba"))
             .andExpect(jsonPath("$.email").value("usuario@ejemplo.cl"))
+            .andExpect(jsonPath("$.role").value("USER"))
             .andExpect(jsonPath("$.token").isNotEmpty());
 
         AppUser user = userRepository.findByEmailIgnoreCase("usuario@ejemplo.cl")
@@ -67,6 +74,7 @@ class AuthControllerIntegrationTests {
         assertTrue(user.getName().equals("Usuario de prueba"));
         assertFalse(user.getPasswordHash().equals("secreto123"));
         assertTrue(passwordEncoder.matches("secreto123", user.getPasswordHash()));
+        assertTrue(user.getRole() == UserRole.USER);
     }
 
     @Test
@@ -88,7 +96,98 @@ class AuthControllerIntegrationTests {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("Usuario de prueba"))
             .andExpect(jsonPath("$.email").value("usuario@ejemplo.cl"))
+            .andExpect(jsonPath("$.role").value("USER"))
             .andExpect(jsonPath("$.token").isNotEmpty());
+    }
+
+    @Test
+    void shouldRejectAdminEndpointForRegularUser() throws Exception {
+        AppUser user = userRepository.save(new AppUser(
+            "Usuario normal",
+            "usuario@ejemplo.cl",
+            passwordEncoder.encode("secreto123")
+        ));
+
+        mockMvc.perform(get("/api/admin/access")
+                .header("Authorization", "Bearer " + jwtService.generateToken(user)))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldAllowAdminEndpointForAdminUser() throws Exception {
+        AppUser admin = new AppUser(
+            "Administrador",
+            "admin@ejemplo.cl",
+            passwordEncoder.encode("secreto123")
+        );
+        admin.changeRole(UserRole.ADMIN);
+        userRepository.save(admin);
+
+        mockMvc.perform(get("/api/admin/access")
+                .header("Authorization", "Bearer " + jwtService.generateToken(admin)))
+            .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void shouldAllowAdminToListUsersAndChangeTheirRole() throws Exception {
+        AppUser admin = new AppUser(
+            "Administrador",
+            "admin@ejemplo.cl",
+            passwordEncoder.encode("secreto123")
+        );
+        admin.changeRole(UserRole.ADMIN);
+        userRepository.save(admin);
+
+        AppUser user = userRepository.save(new AppUser(
+            "Usuario normal",
+            "usuario@ejemplo.cl",
+            passwordEncoder.encode("secreto123")
+        ));
+        String adminToken = jwtService.generateToken(admin);
+
+        mockMvc.perform(get("/api/admin/users")
+                .header("Authorization", "Bearer " + adminToken))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalElements").value(2))
+            .andExpect(jsonPath("$.content[0].email").exists());
+
+        mockMvc.perform(patch("/api/admin/users/{id}/role", user.getId())
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "role": "MODERATOR"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.role").value("MODERATOR"));
+
+        AppUser updatedUser = userRepository.findById(user.getId()).orElseThrow();
+        assertTrue(updatedUser.getRole() == UserRole.MODERATOR);
+    }
+
+    @Test
+    void shouldPreventAdminFromRemovingOwnRole() throws Exception {
+        AppUser admin = new AppUser(
+            "Administrador",
+            "admin@ejemplo.cl",
+            passwordEncoder.encode("secreto123")
+        );
+        admin.changeRole(UserRole.ADMIN);
+        userRepository.save(admin);
+
+        mockMvc.perform(patch("/api/admin/users/{id}/role", admin.getId())
+                .header(
+                    "Authorization",
+                    "Bearer " + jwtService.generateToken(admin)
+                )
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "role": "USER"
+                    }
+                    """))
+            .andExpect(status().isConflict());
     }
 
     @Test

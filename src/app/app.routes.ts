@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth.guard';
+import { roleGuard } from './guards/role.guard';
 export const routes: Routes = [
   {
     path: '',
@@ -25,6 +26,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/profile-page/profile-page')
         .then(module => module.ProfilePage)
+  },
+  {
+    path: 'administracion/usuarios',
+    canActivate: [roleGuard(['ADMIN'])],
+    loadComponent: () =>
+      import('./pages/admin-users-page/admin-users-page')
+        .then(module => module.AdminUsersPage)
   },
   {
     path: 'login',

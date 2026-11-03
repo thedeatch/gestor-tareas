@@ -30,6 +30,9 @@ export class Navbar {
   protected readonly userName =
     this.authService.userName;
 
+  protected readonly userRole =
+    this.authService.userRole;
+
   protected readonly avatarUrl = signal<string | null>(null);
 
   constructor() {

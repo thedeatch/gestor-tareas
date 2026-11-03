@@ -28,6 +28,16 @@
     </a>
 
     @if (isAuthenticated()) {
+      @if (userRole() === 'ADMIN') {
+        <a
+          matButton
+          routerLink="/administracion/usuarios"
+          routerLinkActive="active-link"
+        >
+          Administración
+        </a>
+      }
+
       <a
         class="user-profile-link"
         routerLink="/perfil"

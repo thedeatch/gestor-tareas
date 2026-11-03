@@ -1,7 +1,10 @@
+export type UserRole = 'USER' | 'MODERATOR' | 'ADMIN';
+
 export interface AuthResponse {
   token: string;
   email: string;
   name: string;
+  role: UserRole;
 }
 
 export interface AuthCredentials {
@@ -17,6 +20,7 @@ export interface UserProfile {
   name: string;
   email: string;
   hasAvatar: boolean;
+  role: UserRole;
 }
 
 export interface ProfileUpdateData {

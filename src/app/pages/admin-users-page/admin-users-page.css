@@ -1,0 +1,141 @@
+.admin-container {
+  display: grid;
+  gap: 20px;
+  width: min(1100px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 40px 0;
+}
+
+header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+header h1,
+header p {
+  margin: 0;
+}
+
+header p {
+  margin-top: 8px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.user-count {
+  padding: 8px 12px;
+  border-radius: 18px;
+  color: var(--mat-sys-on-primary-container);
+  background: var(--mat-sys-primary-container);
+  white-space: nowrap;
+}
+
+.search-form {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-form mat-form-field {
+  flex: 1;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 64px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 16px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  text-align: left;
+  vertical-align: middle;
+}
+
+th {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+td:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 240px;
+}
+
+td:first-child span {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+td:first-child small {
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 12px;
+  color: var(--mat-sys-on-primary-container);
+  background: var(--mat-sys-primary-container);
+}
+
+td mat-form-field {
+  width: 170px;
+}
+
+.empty {
+  padding: 48px;
+  text-align: center;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+}
+
+.success,
+.error {
+  margin: 0;
+  text-align: center;
+}
+
+.success {
+  color: var(--mat-sys-primary);
+}
+
+.error {
+  color: var(--mat-sys-error);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .admin-container {
+    padding: 24px 0;
+  }
+
+  header,
+  .search-form {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

@@ -50,9 +50,10 @@ public class AuthService {
         userRepository.save(user);
 
         return new AuthResponse(
-            jwtService.generateToken(email),
+            jwtService.generateToken(user),
             email,
-            user.getName()
+            user.getName(),
+            user.getRole()
         );
     }
 
@@ -67,9 +68,10 @@ public class AuthService {
         }
 
         return new AuthResponse(
-            jwtService.generateToken(email),
+            jwtService.generateToken(user),
             email,
-            user.getName()
+            user.getName(),
+            user.getRole()
         );
     }
 

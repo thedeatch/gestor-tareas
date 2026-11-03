@@ -45,6 +45,7 @@ services:
       MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-true}
       MAIL_STARTTLS: ${MAIL_STARTTLS:-true}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4200}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
 
     ports:
       - "8081:8081"

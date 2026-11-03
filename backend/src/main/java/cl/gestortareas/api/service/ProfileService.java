@@ -48,7 +48,8 @@ public class ProfileService {
         return new ProfileResponse(
             user.getName(),
             user.getEmail(),
-            user.hasAvatar()
+            user.hasAvatar(),
+            user.getRole()
         );
     }
 
@@ -75,9 +76,10 @@ public class ProfileService {
 
         user.updateProfile(request.name().trim(), newEmail);
         return new AuthResponse(
-            jwtService.generateToken(newEmail),
+            jwtService.generateToken(user),
             newEmail,
-            user.getName()
+            user.getName(),
+            user.getRole()
         );
     }
 

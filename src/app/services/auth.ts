@@ -10,6 +10,7 @@ import {
   RegistrationData,
   UserProfile
 } from '../models/auth.model';
+import { UserRole } from '../models/auth.model';
 
 @Service()
 export class AuthService {
@@ -19,6 +20,7 @@ export class AuthService {
   private readonly tokenStorageKey = 'gestor-tareas.token';
   private readonly emailStorageKey = 'gestor-tareas.email';
   private readonly nameStorageKey = 'gestor-tareas.name';
+  private readonly roleStorageKey = 'gestor-tareas.role';
   private readonly storedToken = this.loadStoredValue(
     this.tokenStorageKey
   );
@@ -28,6 +30,7 @@ export class AuthService {
   private readonly storedName = this.loadStoredValue(
     this.nameStorageKey
   );
+  private readonly storedRole = this.loadStoredRole();
 
   private readonly authenticatedState = signal(
     this.storedToken !== null && this.storedEmail !== null
@@ -43,6 +46,10 @@ export class AuthService {
 
   private readonly avatarRevisionState = signal(0);
 
+  private readonly userRoleState = signal<UserRole | null>(
+    this.storedRole
+  );
+
   readonly isAuthenticated =
     this.authenticatedState.asReadonly();
 
@@ -54,6 +61,13 @@ export class AuthService {
 
   readonly avatarRevision =
     this.avatarRevisionState.asReadonly();
+
+  readonly userRole = this.userRoleState.asReadonly();
+
+  hasAnyRole(...roles: UserRole[]): boolean {
+    const currentRole = this.userRoleState();
+    return currentRole !== null && roles.includes(currentRole);
+  }
 
   login(credentials: AuthCredentials): Observable<void> {
     return this.authenticate('/login', credentials);
@@ -78,7 +92,9 @@ export class AuthService {
   }
 
   getProfile(): Observable<UserProfile> {
-    return this.http.get<UserProfile>(this.profileApiUrl);
+    return this.http.get<UserProfile>(this.profileApiUrl).pipe(
+      tap(profile => this.storeRole(profile.role))
+    );
   }
 
   updateProfile(data: ProfileUpdateData): Observable<void> {
@@ -119,6 +135,7 @@ export class AuthService {
   logout(): void {
     this.userEmailState.set(null);
     this.userNameState.set(null);
+    this.userRoleState.set(null);
     this.authenticatedState.set(false);
     this.avatarRevisionState.update(value => value + 1);
 
@@ -126,6 +143,7 @@ export class AuthService {
       sessionStorage.removeItem(this.tokenStorageKey);
       sessionStorage.removeItem(this.emailStorageKey);
       sessionStorage.removeItem(this.nameStorageKey);
+      sessionStorage.removeItem(this.roleStorageKey);
     }
   }
 
@@ -145,6 +163,7 @@ export class AuthService {
   private storeSession(response: AuthResponse): void {
     this.userEmailState.set(response.email);
     this.userNameState.set(response.name);
+    this.userRoleState.set(response.role);
     this.authenticatedState.set(true);
     this.avatarRevisionState.update(value => value + 1);
 
@@ -152,6 +171,7 @@ export class AuthService {
       sessionStorage.setItem(this.tokenStorageKey, response.token);
       sessionStorage.setItem(this.emailStorageKey, response.email);
       sessionStorage.setItem(this.nameStorageKey, response.name);
+      sessionStorage.setItem(this.roleStorageKey, response.role);
     }
   }
 
@@ -161,5 +181,19 @@ export class AuthService {
     }
 
     return sessionStorage.getItem(key);
+  }
+
+  private loadStoredRole(): UserRole | null {
+    const role = this.loadStoredValue(this.roleStorageKey);
+    return role === 'USER' || role === 'MODERATOR' || role === 'ADMIN'
+      ? role
+      : null;
+  }
+
+  private storeRole(role: UserRole): void {
+    this.userRoleState.set(role);
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(this.roleStorageKey, role);
+    }
   }
 }
