@@ -5,6 +5,7 @@ import {
   inject,
   signal
 } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -18,6 +19,7 @@ import { finalize } from 'rxjs';
 
 import { AuthService } from '../../services/auth';
 import { AvatarCropDialog } from '../../components/avatar-crop-dialog/avatar-crop-dialog';
+import { UserSession } from '../../models/auth.model';
 
 @Component({
   selector: 'app-profile-page',
@@ -29,7 +31,8 @@ import { AvatarCropDialog } from '../../components/avatar-crop-dialog/avatar-cro
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    DatePipe
   ],
   templateUrl: './profile-page.html',
   styleUrl: './profile-page.css'
@@ -60,9 +63,13 @@ export class ProfilePage implements OnInit, OnDestroy {
   protected readonly avatarUrl = signal<string | null>(null);
   protected readonly message = signal<string | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly sessions = signal<UserSession[]>([]);
+  protected readonly isLoadingSessions = signal(true);
+  protected readonly sessionInProgress = signal<number | null>(null);
 
   ngOnInit(): void {
     this.loadProfile();
+    this.loadSessions();
   }
 
   ngOnDestroy(): void {
@@ -179,6 +186,41 @@ export class ProfilePage implements OnInit, OnDestroy {
     });
   }
 
+  protected closeSession(session: UserSession): void {
+    this.beginAction();
+    this.sessionInProgress.set(session.id);
+    this.authService.closeSession(session.id).pipe(
+      finalize(() => this.sessionInProgress.set(null))
+    ).subscribe({
+      next: () => {
+        if (session.current) {
+          this.authService.logout();
+          void this.router.navigate(['/login'], {
+            state: { sessionClosed: true }
+          });
+          return;
+        }
+        this.message.set('La sesión seleccionada fue cerrada.');
+        this.loadSessions();
+      },
+      error: () => this.errorMessage.set('No fue posible cerrar la sesión.')
+    });
+  }
+
+  protected closeOtherSessions(): void {
+    this.beginAction();
+    this.sessionInProgress.set(-1);
+    this.authService.closeOtherSessions().pipe(
+      finalize(() => this.sessionInProgress.set(null))
+    ).subscribe({
+      next: () => {
+        this.message.set('Las demás sesiones fueron cerradas.');
+        this.loadSessions();
+      },
+      error: () => this.errorMessage.set('No fue posible cerrar las demás sesiones.')
+    });
+  }
+
   private loadProfile(): void {
     this.authService.getProfile().pipe(
       finalize(() => this.isLoading.set(false))
@@ -191,6 +233,16 @@ export class ProfilePage implements OnInit, OnDestroy {
         }
       },
       error: () => this.errorMessage.set('No fue posible cargar el perfil.')
+    });
+  }
+
+  private loadSessions(): void {
+    this.isLoadingSessions.set(true);
+    this.authService.getSessions().pipe(
+      finalize(() => this.isLoadingSessions.set(false))
+    ).subscribe({
+      next: sessions => this.sessions.set(sessions),
+      error: () => this.errorMessage.set('No fue posible cargar las sesiones activas.')
     });
   }
 

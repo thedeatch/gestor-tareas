@@ -10,6 +10,7 @@ import {
   RegistrationData,
   UserProfile
 } from '../models/auth.model';
+import { UserSession } from '../models/auth.model';
 import { UserRole } from '../models/auth.model';
 
 @Service()
@@ -158,6 +159,18 @@ export class AuthService {
     return this.http.delete<void>(`${this.profileApiUrl}/avatar`).pipe(
       tap(() => this.avatarRevisionState.update(value => value + 1))
     );
+  }
+
+  getSessions(): Observable<UserSession[]> {
+    return this.http.get<UserSession[]>(`${this.apiUrl}/sessions`);
+  }
+
+  closeSession(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/sessions/${id}`);
+  }
+
+  closeOtherSessions(): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/sessions/others`);
   }
 
   getToken(): string | null {

@@ -33,7 +33,17 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const router = inject(Router);
   const token = authService.getToken();
   const isApiRequest = request.url.startsWith('/api/');
-  const isPublicAuthRequest = request.url.startsWith('/api/auth/');
+  const publicAuthEndpoints = [
+    '/api/auth/login',
+    '/api/auth/register',
+    '/api/auth/refresh',
+    '/api/auth/logout',
+    '/api/auth/forgot-password',
+    '/api/auth/reset-password',
+    '/api/auth/verify-email',
+    '/api/auth/resend-verification'
+  ];
+  const isPublicAuthRequest = publicAuthEndpoints.includes(request.url);
 
   if (!token || !isApiRequest || isPublicAuthRequest) {
     return next(request);

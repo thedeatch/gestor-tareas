@@ -78,7 +78,7 @@ public class AuthService {
     }
 
     @Transactional(noRollbackFor = ResponseStatusException.class)
-    public AuthSession login(AuthRequest request) {
+    public AuthSession login(AuthRequest request, String userAgent, String ipAddress) {
         String email = normalizeEmail(request.email());
         AppUser user = userRepository.findByEmailIgnoreCase(email)
             .orElseThrow(this::invalidCredentials);
@@ -117,12 +117,14 @@ public class AuthService {
             );
         }
 
-        return createSession(user);
+        return createSession(user, userAgent, ipAddress);
     }
 
     @Transactional
     public AuthSession refresh(String refreshToken) {
-        return createSession(refreshTokenService.consume(refreshToken));
+        RefreshTokenService.RotatedToken rotated =
+            refreshTokenService.consumeAndRotate(refreshToken);
+        return createSession(rotated.user(), rotated.rawToken());
     }
 
     @Transactional
@@ -130,7 +132,13 @@ public class AuthService {
         refreshTokenService.revoke(refreshToken);
     }
 
-    private AuthSession createSession(AppUser user) {
+    private AuthSession createSession(AppUser user, String userAgent, String ipAddress) {
+        return createSession(user, refreshTokenService.issue(
+            user, userAgent, ipAddress
+        ));
+    }
+
+    private AuthSession createSession(AppUser user, String refreshToken) {
         return new AuthSession(
             new AuthResponse(
                 jwtService.generateToken(user),
@@ -138,7 +146,7 @@ public class AuthService {
                 user.getName(),
                 user.getRole()
             ),
-            refreshTokenService.issue(user)
+            refreshToken
         );
     }
 

@@ -1,0 +1,9 @@
+ALTER TABLE refresh_tokens
+    ADD COLUMN last_used_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE refresh_tokens
+    ADD COLUMN user_agent VARCHAR(255);
+
+ALTER TABLE refresh_tokens
+    ADD COLUMN ip_address VARCHAR(64);
+

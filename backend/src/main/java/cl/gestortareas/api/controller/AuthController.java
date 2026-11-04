@@ -1,17 +1,23 @@
 package cl.gestortareas.api.controller;
 
 import java.time.Duration;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 import cl.gestortareas.api.dto.AuthRequest;
 import cl.gestortareas.api.dto.AuthResponse;
@@ -21,11 +27,14 @@ import cl.gestortareas.api.dto.RegisterRequest;
 import cl.gestortareas.api.dto.RegistrationResponse;
 import cl.gestortareas.api.dto.ResetPasswordRequest;
 import cl.gestortareas.api.dto.VerifyEmailRequest;
+import cl.gestortareas.api.dto.UserSessionResponse;
 import cl.gestortareas.api.service.AuthService;
 import cl.gestortareas.api.service.EmailVerificationService;
 import cl.gestortareas.api.service.PasswordResetService;
+import cl.gestortareas.api.service.RefreshTokenService;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -36,11 +45,13 @@ public class AuthController {
     private final EmailVerificationService emailVerificationService;
     private final boolean secureRefreshCookie;
     private final long refreshExpirationDays;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthController(
         AuthService authService,
         PasswordResetService passwordResetService,
         EmailVerificationService emailVerificationService,
+        RefreshTokenService refreshTokenService,
         @Value("${security.refresh-token.cookie-secure:false}")
         boolean secureRefreshCookie,
         @Value("${security.refresh-token.expiration-days:7}")
@@ -49,6 +60,7 @@ public class AuthController {
         this.authService = authService;
         this.passwordResetService = passwordResetService;
         this.emailVerificationService = emailVerificationService;
+        this.refreshTokenService = refreshTokenService;
         this.secureRefreshCookie = secureRefreshCookie;
         this.refreshExpirationDays = refreshExpirationDays;
     }
@@ -64,9 +76,14 @@ public class AuthController {
     @PostMapping("/login")
     public AuthResponse login(
         @Valid @RequestBody AuthRequest request,
+        HttpServletRequest servletRequest,
         HttpServletResponse response
     ) {
-        return writeSession(authService.login(request), response);
+        return writeSession(authService.login(
+            request,
+            servletRequest.getHeader("User-Agent"),
+            clientIp(servletRequest)
+        ), response);
     }
 
     @PostMapping("/refresh")
@@ -96,6 +113,37 @@ public class AuthController {
             HttpHeaders.SET_COOKIE,
             refreshCookie("", Duration.ZERO).toString()
         );
+    }
+
+    @GetMapping("/sessions")
+    public List<UserSessionResponse> sessions(
+        @AuthenticationPrincipal Jwt jwt,
+        @CookieValue(name = "refresh_token") String refreshToken
+    ) {
+        return refreshTokenService.list(jwt.getSubject(), refreshToken);
+    }
+
+    @DeleteMapping("/sessions/others")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void revokeOtherSessions(
+        @AuthenticationPrincipal Jwt jwt,
+        @CookieValue(name = "refresh_token") String refreshToken
+    ) {
+        refreshTokenService.revokeOtherSessions(jwt.getSubject(), refreshToken);
+    }
+
+    @DeleteMapping("/sessions/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void revokeSession(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable Long id,
+        @CookieValue(name = "refresh_token") String refreshToken,
+        HttpServletResponse response
+    ) {
+        if (refreshTokenService.revokeSession(jwt.getSubject(), id, refreshToken)) {
+            response.addHeader(HttpHeaders.SET_COOKIE,
+                refreshCookie("", Duration.ZERO).toString());
+        }
     }
 
     @PostMapping("/forgot-password")
@@ -150,5 +198,12 @@ public class AuthController {
             .path("/api/auth")
             .maxAge(maxAge)
             .build();
+    }
+
+    private String clientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        return forwarded == null || forwarded.isBlank()
+            ? request.getRemoteAddr()
+            : forwarded.split(",")[0].trim();
     }
 }

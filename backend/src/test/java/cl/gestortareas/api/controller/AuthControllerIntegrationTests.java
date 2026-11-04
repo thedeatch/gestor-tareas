@@ -223,6 +223,41 @@ class AuthControllerIntegrationTests {
     }
 
     @Test
+    void shouldListTheCurrentActiveSession() throws Exception {
+        userRepository.save(new AppUser(
+            "Usuario de prueba",
+            "usuario@ejemplo.cl",
+            passwordEncoder.encode("secreto123")
+        ));
+
+        MvcResult login = mockMvc.perform(post("/api/auth/login")
+                .header("User-Agent", "Mozilla/5.0 Windows Chrome/120")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "email": "usuario@ejemplo.cl",
+                        "password": "secreto123"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        String accessToken = com.jayway.jsonpath.JsonPath.read(
+            login.getResponse().getContentAsString(),
+            "$.token"
+        );
+        Cookie refreshCookie = login.getResponse().getCookie("refresh_token");
+
+        mockMvc.perform(get("/api/auth/sessions")
+                .header("Authorization", "Bearer " + accessToken)
+                .cookie(refreshCookie))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].current").value(true))
+            .andExpect(jsonPath("$[0].device")
+                .value("Google Chrome en Windows"));
+    }
+
+    @Test
     void shouldRejectAdminEndpointForRegularUser() throws Exception {
         AppUser user = userRepository.save(new AppUser(
             "Usuario normal",

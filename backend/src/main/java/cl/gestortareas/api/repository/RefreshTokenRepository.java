@@ -2,6 +2,7 @@ package cl.gestortareas.api.repository;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -17,4 +18,8 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     void deleteByExpiresAtBefore(Instant instant);
 
     void deleteAllByUser(AppUser user);
+
+    List<RefreshToken> findAllByUserOrderByLastUsedAtDesc(AppUser user);
+
+    Optional<RefreshToken> findByIdAndUser(Long id, AppUser user);
 }

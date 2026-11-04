@@ -228,6 +228,58 @@
         </form>
       </mat-card-content>
     </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Sesiones activas</mat-card-title>
+        <mat-card-subtitle>
+          Revisa los dispositivos donde tu cuenta permanece iniciada
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content class="sessions-section">
+        @if (isLoadingSessions()) {
+          <div class="loading"><mat-spinner diameter="32"></mat-spinner></div>
+        } @else {
+          <div class="sessions-heading">
+            <span>{{ sessions().length }} sesiones</span>
+            @if (sessions().length > 1) {
+              <button
+                mat-stroked-button
+                type="button"
+                [disabled]="sessionInProgress() !== null"
+                (click)="closeOtherSessions()"
+              >Cerrar las demás</button>
+            }
+          </div>
+          <div class="session-list">
+            @for (session of sessions(); track session.id) {
+              <article class="session-item">
+                <mat-icon>devices</mat-icon>
+                <div>
+                  <strong>{{ session.device }}</strong>
+                  @if (session.current) {
+                    <span class="current-session">Esta sesión</span>
+                  }
+                  <p>
+                    Última actividad:
+                    {{ session.lastUsedAt | date:'dd/MM/yyyy HH:mm' }}
+                    @if (session.ipAddress) { · IP {{ session.ipAddress }} }
+                  </p>
+                </div>
+                <button
+                  mat-stroked-button
+                  type="button"
+                  [disabled]="sessionInProgress() !== null"
+                  (click)="closeSession(session)"
+                >{{ session.current ? 'Cerrar esta sesión' : 'Cerrar' }}</button>
+              </article>
+            } @empty {
+              <p>No hay sesiones renovables activas.</p>
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
   }
 
   @if (message()) {

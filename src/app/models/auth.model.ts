@@ -33,3 +33,13 @@ export interface PasswordChangeData {
   currentPassword: string;
   newPassword: string;
 }
+
+export interface UserSession {
+  id: number;
+  device: string;
+  ipAddress: string | null;
+  createdAt: string;
+  lastUsedAt: string;
+  expiresAt: string;
+  current: boolean;
+}
