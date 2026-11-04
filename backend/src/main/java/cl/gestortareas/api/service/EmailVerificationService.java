@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.Locale;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,20 +18,29 @@ import org.springframework.web.server.ResponseStatusException;
 import cl.gestortareas.api.model.AppUser;
 import cl.gestortareas.api.model.EmailVerificationToken;
 import cl.gestortareas.api.repository.EmailVerificationTokenRepository;
+import cl.gestortareas.api.repository.AppUserRepository;
 
 @Service
 public class EmailVerificationService {
 
     private final EmailVerificationTokenRepository tokenRepository;
     private final EmailVerificationMailService mailService;
+    private final AppUserRepository userRepository;
+    private final boolean enabled;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public EmailVerificationService(
         EmailVerificationTokenRepository tokenRepository,
-        EmailVerificationMailService mailService
+        EmailVerificationMailService mailService,
+        AppUserRepository userRepository,
+        @org.springframework.beans.factory.annotation.Value(
+            "${app.email-verification.enabled:true}"
+        ) boolean enabled
     ) {
         this.tokenRepository = tokenRepository;
         this.mailService = mailService;
+        this.userRepository = userRepository;
+        this.enabled = enabled;
     }
 
     @Transactional
@@ -56,6 +66,27 @@ public class EmailVerificationService {
         }
         token.getUser().verifyEmail();
         tokenRepository.deleteByUser(token.getUser());
+    }
+
+    @Transactional
+    public void resend(String email) {
+        if (!enabled) {
+            return;
+        }
+
+        userRepository.findByEmailIgnoreCase(
+            email.trim().toLowerCase(Locale.ROOT)
+        ).filter(user -> !user.isEmailVerified())
+            .ifPresent(user -> {
+                boolean recentlySent = tokenRepository.findByUser(user)
+                    .map(token -> token.getCreatedAt().isAfter(
+                        Instant.now().minus(Duration.ofMinutes(1))
+                    ))
+                    .orElse(false);
+                if (!recentlySent) {
+                    issueFor(user);
+                }
+            });
     }
 
     private String generateToken() {

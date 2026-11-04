@@ -86,6 +86,19 @@ class AuthControllerIntegrationTests {
     }
 
     @Test
+    void shouldAcceptVerificationResendWithoutRevealingUnknownEmail()
+        throws Exception {
+        mockMvc.perform(post("/api/auth/resend-verification")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "email": "desconocido@ejemplo.cl"
+                    }
+                    """))
+            .andExpect(status().isAccepted());
+    }
+
+    @Test
     void shouldLoginWithValidCredentials() throws Exception {
         userRepository.save(new AppUser(
             "Usuario de prueba",

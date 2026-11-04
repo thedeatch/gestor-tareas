@@ -84,6 +84,13 @@ export class AuthService {
     return this.http.post<void>(`${this.apiUrl}/verify-email`, { token });
   }
 
+  resendVerification(email: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.apiUrl}/resend-verification`,
+      { email }
+    );
+  }
+
   forgotPassword(email: string): Observable<void> {
     return this.http.post<void>(
       `${this.apiUrl}/forgot-password`,

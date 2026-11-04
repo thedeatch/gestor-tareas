@@ -12,5 +12,7 @@ public interface EmailVerificationTokenRepository
 
     Optional<EmailVerificationToken> findByTokenHash(String tokenHash);
 
+    Optional<EmailVerificationToken> findByUser(AppUser user);
+
     void deleteByUser(AppUser user);
 }

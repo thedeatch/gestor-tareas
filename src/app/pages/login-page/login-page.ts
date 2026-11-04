@@ -36,7 +36,12 @@ export class LoginPage {
 
   protected readonly hidePassword = signal(true);
   protected readonly isSubmitting = signal(false);
+  protected readonly isResending = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly verificationPending = signal(
+    this.route.snapshot.queryParamMap.get('registration') ===
+      'pending-verification'
+  );
   protected readonly successMessage = signal<string | null>(this.initialMessage());
 
   protected togglePasswordVisibility(): void {
@@ -45,6 +50,28 @@ export class LoginPage {
 
   protected login(): void {
     this.submit('login');
+  }
+
+  protected resendVerification(): void {
+    if (!this.credentials.email || this.isResending()) {
+      this.errorMessage.set(
+        'Ingresa tu correo para solicitar un nuevo enlace.'
+      );
+      return;
+    }
+
+    this.isResending.set(true);
+    this.errorMessage.set(null);
+    this.authService.resendVerification(this.credentials.email).pipe(
+      finalize(() => this.isResending.set(false))
+    ).subscribe({
+      next: () => this.successMessage.set(
+        'Si la cuenta está pendiente, recibirás un nuevo enlace. Revisa también spam.'
+      ),
+      error: () => this.errorMessage.set(
+        'No fue posible solicitar el correo. Inténtalo nuevamente.'
+      )
+    });
   }
 
   private submit(action: 'login'): void {
@@ -59,11 +86,19 @@ export class LoginPage {
           void this.router.navigateByUrl('/tareas');
         },
         error: error => {
+          const suspended = error.status === 403 &&
+            String(error.error?.detail ?? '').toLowerCase()
+              .includes('suspendida');
+          this.verificationPending.set(
+            error.status === 403 && !suspended
+          );
           this.errorMessage.set(
             error.status === 401
               ? 'Correo o contraseña incorrectos.'
               : error.status === 403
-                ? 'Debes confirmar tu correo antes de iniciar sesión.'
+                ? suspended
+                  ? 'Tu cuenta está suspendida. Contacta a un administrador.'
+                  : 'Debes confirmar tu correo antes de iniciar sesión.'
               : 'No fue posible iniciar sesión. Inténtalo nuevamente.'
           );
         }

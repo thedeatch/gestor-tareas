@@ -72,4 +72,17 @@ describe('AuthService', () => {
     expect(service.isAuthenticated()).toBe(false);
     expect(service.userName()).toBeNull();
   });
+
+  it('should request a new verification email', () => {
+    service.resendVerification('pendiente@ejemplo.cl').subscribe();
+
+    const request = httpTesting.expectOne(
+      '/api/auth/resend-verification'
+    );
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      email: 'pendiente@ejemplo.cl'
+    });
+    request.flush(null);
+  });
 });

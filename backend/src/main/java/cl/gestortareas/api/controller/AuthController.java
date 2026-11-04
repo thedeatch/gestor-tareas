@@ -71,4 +71,12 @@ public class AuthController {
     public void verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
         emailVerificationService.verify(request.token());
     }
+
+    @PostMapping("/resend-verification")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public void resendVerification(
+        @Valid @RequestBody ForgotPasswordRequest request
+    ) {
+        emailVerificationService.resend(request.email());
+    }
 }

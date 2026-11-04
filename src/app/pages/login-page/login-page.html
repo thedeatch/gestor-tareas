@@ -123,6 +123,28 @@
             {{ successMessage() }}
           </p>
         }
+
+        @if (verificationPending()) {
+          <button
+            mat-button
+            type="button"
+            class="auth-action"
+            [disabled]="isResending()"
+            (click)="resendVerification()"
+          >
+            @if (isResending()) {
+              <span class="button-content">
+                <mat-spinner diameter="18"></mat-spinner>
+                Enviando…
+              </span>
+            } @else {
+              <span class="button-content">
+                <mat-icon>forward_to_inbox</mat-icon>
+                Reenviar correo de verificación
+              </span>
+            }
+          </button>
+        }
       </form>
 
 

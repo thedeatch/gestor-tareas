@@ -53,4 +53,8 @@ public class EmailVerificationToken {
     public boolean isExpired() {
         return expiresAt.isBefore(Instant.now());
     }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
 }
