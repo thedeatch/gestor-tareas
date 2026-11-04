@@ -66,6 +66,12 @@ export const routes: Routes = [
         .then(module => module.ResetPasswordPage)
   },
   {
+    path: 'verificar-correo',
+    loadComponent: () =>
+      import('./pages/verify-email-page/verify-email-page')
+        .then(module => module.VerifyEmailPage)
+  },
+  {
     path: '**',
     redirectTo: 'tareas'
   }

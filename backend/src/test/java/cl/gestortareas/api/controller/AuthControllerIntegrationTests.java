@@ -16,7 +16,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import cl.gestortareas.api.model.AppUser;
@@ -34,6 +36,9 @@ class AuthControllerIntegrationTests {
     private final AdminAuditLogRepository auditLogRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+
+    @MockitoBean
+    private JavaMailSender mailSender;
 
     @Autowired
     AuthControllerIntegrationTests(
@@ -68,10 +73,7 @@ class AuthControllerIntegrationTests {
                     }
                     """))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.name").value("Usuario de prueba"))
-            .andExpect(jsonPath("$.email").value("usuario@ejemplo.cl"))
-            .andExpect(jsonPath("$.role").value("USER"))
-            .andExpect(jsonPath("$.token").isNotEmpty());
+            .andExpect(jsonPath("$.verificationRequired").value(true));
 
         AppUser user = userRepository.findByEmailIgnoreCase("usuario@ejemplo.cl")
             .orElseThrow();
@@ -80,6 +82,7 @@ class AuthControllerIntegrationTests {
         assertFalse(user.getPasswordHash().equals("secreto123"));
         assertTrue(passwordEncoder.matches("secreto123", user.getPasswordHash()));
         assertTrue(user.getRole() == UserRole.USER);
+        assertFalse(user.isEmailVerified());
     }
 
     @Test

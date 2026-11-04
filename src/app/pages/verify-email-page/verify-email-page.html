@@ -1,0 +1,18 @@
+<main class="auth-page">
+  <mat-card class="auth-card">
+    @if (isLoading()) {
+      <mat-spinner diameter="44" aria-label="Verificando correo"></mat-spinner>
+      <h1>Verificando tu correo...</h1>
+    } @else if (verified()) {
+      <mat-icon class="auth-icon">mark_email_read</mat-icon>
+      <h1>Correo confirmado</h1>
+      <p>Tu cuenta ya está lista. Ahora puedes iniciar sesión.</p>
+      <a mat-flat-button routerLink="/login">Iniciar sesión</a>
+    } @else {
+      <mat-icon class="auth-icon">error_outline</mat-icon>
+      <h1>No pudimos confirmar el correo</h1>
+      <p class="error" role="alert">{{ errorMessage() }}</p>
+      <a mat-button routerLink="/login">Volver a iniciar sesión</a>
+    }
+  </mat-card>
+</main>

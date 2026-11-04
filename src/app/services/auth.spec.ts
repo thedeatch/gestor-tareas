@@ -55,7 +55,7 @@ describe('AuthService', () => {
     expect(service.getToken()).toBe('jwt-de-prueba');
   });
 
-  it('should send the name when registering', () => {
+  it('should register without starting a session before verification', () => {
     service.register({
       name: 'Nueva usuaria',
       email: 'nueva@ejemplo.cl',
@@ -67,12 +67,9 @@ describe('AuthService', () => {
     expect(request.request.method).toBe('POST');
     expect(request.request.body.name).toBe('Nueva usuaria');
 
-    request.flush({
-      token: 'otro-jwt',
-      email: 'nueva@ejemplo.cl',
-      name: 'Nueva usuaria'
-    });
+    request.flush({ verificationRequired: true });
 
-    expect(service.userName()).toBe('Nueva usuaria');
+    expect(service.isAuthenticated()).toBe(false);
+    expect(service.userName()).toBeNull();
   });
 });

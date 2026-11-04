@@ -68,8 +68,14 @@ export class RegisterPage {
     }).pipe(
       finalize(() => this.isSubmitting.set(false))
     ).subscribe({
-      next: () => {
-        void this.router.navigateByUrl('/tareas');
+      next: response => {
+        void this.router.navigate(['/login'], {
+          queryParams: {
+            registration: response.verificationRequired
+              ? 'pending-verification'
+              : 'ready'
+          }
+        });
       },
       error: error => {
         const emailExists = error.status === 409;

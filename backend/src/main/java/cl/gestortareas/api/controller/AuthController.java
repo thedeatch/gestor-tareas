@@ -11,8 +11,11 @@ import cl.gestortareas.api.dto.AuthRequest;
 import cl.gestortareas.api.dto.AuthResponse;
 import cl.gestortareas.api.dto.ForgotPasswordRequest;
 import cl.gestortareas.api.dto.RegisterRequest;
+import cl.gestortareas.api.dto.RegistrationResponse;
 import cl.gestortareas.api.dto.ResetPasswordRequest;
+import cl.gestortareas.api.dto.VerifyEmailRequest;
 import cl.gestortareas.api.service.AuthService;
+import cl.gestortareas.api.service.EmailVerificationService;
 import cl.gestortareas.api.service.PasswordResetService;
 import jakarta.validation.Valid;
 
@@ -22,18 +25,23 @@ public class AuthController {
 
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
+    private final EmailVerificationService emailVerificationService;
 
     public AuthController(
         AuthService authService,
-        PasswordResetService passwordResetService
+        PasswordResetService passwordResetService,
+        EmailVerificationService emailVerificationService
     ) {
         this.authService = authService;
         this.passwordResetService = passwordResetService;
+        this.emailVerificationService = emailVerificationService;
     }
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
+    public RegistrationResponse register(
+        @Valid @RequestBody RegisterRequest request
+    ) {
         return authService.register(request);
     }
 
@@ -56,5 +64,11 @@ public class AuthController {
         @Valid @RequestBody ResetPasswordRequest request
     ) {
         passwordResetService.resetPassword(request);
+    }
+
+    @PostMapping("/verify-email")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        emailVerificationService.verify(request.token());
     }
 }

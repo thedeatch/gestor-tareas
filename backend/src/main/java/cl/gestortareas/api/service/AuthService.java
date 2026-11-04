@@ -2,6 +2,7 @@ package cl.gestortareas.api.service;
 
 import java.util.Locale;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,7 @@ import org.springframework.web.server.ResponseStatusException;
 import cl.gestortareas.api.dto.AuthRequest;
 import cl.gestortareas.api.dto.AuthResponse;
 import cl.gestortareas.api.dto.RegisterRequest;
+import cl.gestortareas.api.dto.RegistrationResponse;
 import cl.gestortareas.api.model.AppUser;
 import cl.gestortareas.api.repository.AppUserRepository;
 
@@ -20,19 +22,26 @@ public class AuthService {
     private final AppUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final EmailVerificationService emailVerificationService;
+    private final boolean emailVerificationEnabled;
 
     public AuthService(
         AppUserRepository userRepository,
         PasswordEncoder passwordEncoder,
-        JwtService jwtService
+        JwtService jwtService,
+        EmailVerificationService emailVerificationService,
+        @Value("${app.email-verification.enabled:true}")
+        boolean emailVerificationEnabled
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.emailVerificationService = emailVerificationService;
+        this.emailVerificationEnabled = emailVerificationEnabled;
     }
 
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
+    public RegistrationResponse register(RegisterRequest request) {
         String email = normalizeEmail(request.email());
 
         if (userRepository.existsByEmailIgnoreCase(email)) {
@@ -47,14 +56,14 @@ public class AuthService {
             email,
             passwordEncoder.encode(request.password())
         );
+        if (emailVerificationEnabled) {
+            user.requireEmailVerification();
+        }
         userRepository.save(user);
-
-        return new AuthResponse(
-            jwtService.generateToken(user),
-            email,
-            user.getName(),
-            user.getRole()
-        );
+        if (emailVerificationEnabled) {
+            emailVerificationService.issueFor(user);
+        }
+        return new RegistrationResponse(emailVerificationEnabled);
     }
 
     @Transactional(readOnly = true)
@@ -71,6 +80,13 @@ public class AuthService {
             throw new ResponseStatusException(
                 HttpStatus.FORBIDDEN,
                 "La cuenta está suspendida"
+            );
+        }
+
+        if (!user.isEmailVerified()) {
+            throw new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "Debes confirmar tu correo antes de iniciar sesión"
             );
         }
 

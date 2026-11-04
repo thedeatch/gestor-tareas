@@ -44,6 +44,9 @@ public class AppUser {
     @Column(nullable = false)
     private boolean active = true;
 
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = true;
+
     protected AppUser() {
     }
 
@@ -118,5 +121,17 @@ public class AppUser {
 
     public void changeActiveStatus(boolean active) {
         this.active = active;
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
+    public void requireEmailVerification() {
+        this.emailVerified = false;
+    }
+
+    public void verifyEmail() {
+        this.emailVerified = true;
     }
 }

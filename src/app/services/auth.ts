@@ -73,8 +73,15 @@ export class AuthService {
     return this.authenticate('/login', credentials);
   }
 
-  register(data: RegistrationData): Observable<void> {
-    return this.authenticate('/register', data);
+  register(data: RegistrationData): Observable<{ verificationRequired: boolean }> {
+    return this.http.post<{ verificationRequired: boolean }>(
+      `${this.apiUrl}/register`,
+      data
+    );
+  }
+
+  verifyEmail(token: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/verify-email`, { token });
   }
 
   forgotPassword(email: string): Observable<void> {
