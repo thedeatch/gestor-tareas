@@ -109,6 +109,9 @@ export class LoginPage {
     if (this.router.getCurrentNavigation()?.extras.state?.['passwordChanged']) {
       return 'Contraseña actualizada. Inicia sesión nuevamente.';
     }
+    if (this.route.snapshot.queryParamMap.get('session') === 'expired') {
+      return 'Tu sesión expiró. Inicia sesión nuevamente para continuar.';
+    }
     const registration = this.route.snapshot.queryParamMap.get('registration');
     if (registration === 'pending-verification') {
       return 'Cuenta creada. Revisa tu correo para confirmar la dirección.';

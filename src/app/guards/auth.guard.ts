@@ -10,6 +10,15 @@ export const authGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
+  const token = authService.getToken();
+
+  if (token && authService.isTokenExpired(token)) {
+    authService.expireSession();
+    return router.createUrlTree(['/login'], {
+      queryParams: { session: 'expired' }
+    });
+  }
+
   if (authService.isAuthenticated()) {
     return true;
   }

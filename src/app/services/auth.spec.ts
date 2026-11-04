@@ -85,4 +85,21 @@ describe('AuthService', () => {
     });
     request.flush(null);
   });
+
+  it('should detect an expired JWT', () => {
+    const payload = btoa(JSON.stringify({
+      exp: Math.floor(Date.now() / 1000) - 60
+    }));
+
+    expect(service.isTokenExpired(`header.${payload}.signature`)).toBe(true);
+  });
+
+  it('should clear the stored session when it expires', () => {
+    sessionStorage.setItem('gestor-tareas.token', 'jwt-de-prueba');
+    sessionStorage.setItem('gestor-tareas.email', 'usuario@ejemplo.cl');
+
+    expect(service.expireSession()).toBe(true);
+    expect(service.getToken()).toBeNull();
+    expect(service.isAuthenticated()).toBe(false);
+  });
 });

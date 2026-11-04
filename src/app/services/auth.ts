@@ -33,7 +33,9 @@ export class AuthService {
   private readonly storedRole = this.loadStoredRole();
 
   private readonly authenticatedState = signal(
-    this.storedToken !== null && this.storedEmail !== null
+    this.storedToken !== null &&
+      this.storedEmail !== null &&
+      !this.isTokenExpired(this.storedToken)
   );
 
   private readonly userEmailState = signal<string | null>(
@@ -144,6 +146,35 @@ export class AuthService {
 
   getToken(): string | null {
     return this.loadStoredValue(this.tokenStorageKey);
+  }
+
+  isTokenExpired(token = this.getToken()): boolean {
+    if (!token) {
+      return false;
+    }
+
+    try {
+      const payloadPart = token.split('.')[1];
+      if (!payloadPart) {
+        return false;
+      }
+
+      const normalizedPayload = payloadPart
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+      const payload = JSON.parse(atob(normalizedPayload));
+
+      return typeof payload.exp === 'number' &&
+        payload.exp * 1000 <= Date.now();
+    } catch {
+      return false;
+    }
+  }
+
+  expireSession(): boolean {
+    const hadSession = this.getToken() !== null;
+    this.logout();
+    return hadSession;
   }
 
   logout(): void {
