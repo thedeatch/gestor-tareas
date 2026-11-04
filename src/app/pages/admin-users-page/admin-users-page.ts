@@ -45,6 +45,7 @@ export class AdminUsersPage {
   protected readonly totalElements = signal(0);
   protected readonly isLoading = signal(false);
   protected readonly savingUserId = signal<number | null>(null);
+  protected readonly updatingStatusUserId = signal<number | null>(null);
   protected readonly message = signal<string | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
 
@@ -118,6 +119,34 @@ export class AdminUsersPage {
         error.status === 409
           ? 'No es posible retirar el acceso del último administrador.'
           : 'No fue posible actualizar el rol.'
+      )
+    });
+  }
+
+  protected updateStatus(user: AdminUser): void {
+    if (this.isCurrentUser(user)) {
+      return;
+    }
+
+    const nextActive = !user.active;
+    this.message.set(null);
+    this.errorMessage.set(null);
+    this.updatingStatusUserId.set(user.id);
+    this.adminService.updateStatus(user.id, nextActive).pipe(
+      finalize(() => this.updatingStatusUserId.set(null))
+    ).subscribe({
+      next: updatedUser => {
+        this.users.update(users => users.map(current =>
+          current.id === updatedUser.id ? updatedUser : current
+        ));
+        this.message.set(
+          `${updatedUser.name} fue ${updatedUser.active ? 'activado' : 'suspendido'}.`
+        );
+      },
+      error: error => this.errorMessage.set(
+        error.status === 409
+          ? 'No puedes suspender tu propia cuenta.'
+          : 'No fue posible actualizar el estado de la cuenta.'
       )
     });
   }

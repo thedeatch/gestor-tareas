@@ -41,6 +41,9 @@ public class AppUser {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
+    @Column(nullable = false)
+    private boolean active = true;
+
     protected AppUser() {
     }
 
@@ -107,5 +110,13 @@ public class AppUser {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void changeActiveStatus(boolean active) {
+        this.active = active;
     }
 }

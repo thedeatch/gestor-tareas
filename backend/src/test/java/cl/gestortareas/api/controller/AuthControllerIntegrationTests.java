@@ -191,6 +191,76 @@ class AuthControllerIntegrationTests {
     }
 
     @Test
+    void shouldSuspendUserAndRejectExistingToken() throws Exception {
+        AppUser admin = new AppUser(
+            "Administrador",
+            "admin@ejemplo.cl",
+            passwordEncoder.encode("secreto123")
+        );
+        admin.changeRole(UserRole.ADMIN);
+        userRepository.save(admin);
+
+        AppUser user = userRepository.save(new AppUser(
+            "Usuario suspendible",
+            "usuario@ejemplo.cl",
+            passwordEncoder.encode("secreto123")
+        ));
+        String userToken = jwtService.generateToken(user);
+
+        mockMvc.perform(patch("/api/admin/users/{id}/status", user.getId())
+                .header(
+                    "Authorization",
+                    "Bearer " + jwtService.generateToken(admin)
+                )
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "active": false
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.active").value(false));
+
+        mockMvc.perform(get("/api/tasks")
+                .header("Authorization", "Bearer " + userToken))
+            .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "email": "usuario@ejemplo.cl",
+                        "password": "secreto123"
+                    }
+                    """))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldPreventAdminFromSuspendingOwnAccount() throws Exception {
+        AppUser admin = new AppUser(
+            "Administrador",
+            "admin@ejemplo.cl",
+            passwordEncoder.encode("secreto123")
+        );
+        admin.changeRole(UserRole.ADMIN);
+        userRepository.save(admin);
+
+        mockMvc.perform(patch("/api/admin/users/{id}/status", admin.getId())
+                .header(
+                    "Authorization",
+                    "Bearer " + jwtService.generateToken(admin)
+                )
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "active": false
+                    }
+                    """))
+            .andExpect(status().isConflict());
+    }
+
+    @Test
     void shouldRejectAnAlreadyRegisteredEmail() throws Exception {
         userRepository.save(new AppUser(
             "Usuario existente",

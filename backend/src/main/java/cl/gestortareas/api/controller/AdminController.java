@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import cl.gestortareas.api.dto.AdminUserResponse;
 import cl.gestortareas.api.dto.AdminUserPageResponse;
 import cl.gestortareas.api.dto.UpdateUserRoleRequest;
+import cl.gestortareas.api.dto.UpdateUserStatusRequest;
 import cl.gestortareas.api.service.AdminUserService;
 import jakarta.validation.Valid;
 
@@ -53,6 +54,19 @@ public class AdminController {
             jwt.getSubject(),
             id,
             request.role()
+        );
+    }
+
+    @PatchMapping("/users/{id}/status")
+    public AdminUserResponse updateStatus(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable Long id,
+        @Valid @RequestBody UpdateUserStatusRequest request
+    ) {
+        return adminUserService.updateStatus(
+            jwt.getSubject(),
+            id,
+            request.active()
         );
     }
 }

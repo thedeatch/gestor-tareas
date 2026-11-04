@@ -67,6 +67,13 @@ public class AuthService {
             throw invalidCredentials();
         }
 
+        if (!user.isActive()) {
+            throw new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "La cuenta está suspendida"
+            );
+        }
+
         return new AuthResponse(
             jwtService.generateToken(user),
             email,

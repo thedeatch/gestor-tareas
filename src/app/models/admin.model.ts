@@ -5,6 +5,7 @@ export interface AdminUser {
   name: string;
   email: string;
   role: UserRole;
+  active: boolean;
   createdAt: string;
 }
 

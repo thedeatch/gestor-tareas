@@ -9,6 +9,7 @@ public record AdminUserResponse(
     String name,
     String email,
     UserRole role,
+    boolean active,
     Instant createdAt
 ) {
 }

@@ -53,7 +53,9 @@ public class PasswordResetService {
     public void requestReset(ForgotPasswordRequest request) {
         String email = request.email().trim().toLowerCase(Locale.ROOT);
 
-        userRepository.findByEmailIgnoreCase(email).ifPresent(user -> {
+        userRepository.findByEmailIgnoreCase(email)
+            .filter(AppUser::isActive)
+            .ifPresent(user -> {
             tokenRepository.deleteAllByUser(user);
 
             String rawToken = generateToken();
@@ -64,7 +66,7 @@ public class PasswordResetService {
             );
             tokenRepository.save(token);
             mailService.sendPasswordReset(user.getEmail(), rawToken);
-        });
+            });
     }
 
     @Transactional
@@ -79,6 +81,9 @@ public class PasswordResetService {
         }
 
         AppUser user = token.getUser();
+        if (!user.isActive()) {
+            throw invalidToken();
+        }
         user.changePassword(passwordEncoder.encode(request.password()));
         token.markAsUsed(now);
     }

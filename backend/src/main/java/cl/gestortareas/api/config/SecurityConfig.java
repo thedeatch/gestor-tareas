@@ -18,6 +18,10 @@ import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
@@ -26,6 +30,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import cl.gestortareas.api.repository.AppUserRepository;
 
 @Configuration
 public class SecurityConfig {
@@ -118,14 +124,31 @@ public class SecurityConfig {
     }
 
     @Bean
-    JwtDecoder jwtDecoder(SecretKey secretKey) {
+    JwtDecoder jwtDecoder(
+        SecretKey secretKey,
+        AppUserRepository userRepository
+    ) {
         NimbusJwtDecoder decoder = NimbusJwtDecoder
             .withSecretKey(secretKey)
             .macAlgorithm(MacAlgorithm.HS256)
             .build();
-        decoder.setJwtValidator(
-            JwtValidators.createDefaultWithIssuer("gestor-tareas-api")
-        );
+        OAuth2TokenValidator<org.springframework.security.oauth2.jwt.Jwt>
+            accountValidator = token -> userRepository
+                .findByEmailIgnoreCase(token.getSubject())
+                .filter(user -> user.isActive())
+                .map(user -> OAuth2TokenValidatorResult.success())
+                .orElseGet(() -> OAuth2TokenValidatorResult.failure(
+                    new OAuth2Error(
+                        "account_inactive",
+                        "La cuenta no está activa",
+                        null
+                    )
+                ));
+
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
+            JwtValidators.createDefaultWithIssuer("gestor-tareas-api"),
+            accountValidator
+        ));
         return decoder;
     }
 }

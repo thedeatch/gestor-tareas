@@ -92,6 +92,32 @@ td mat-form-field {
   width: 170px;
 }
 
+.status-chip {
+  display: inline-flex;
+  padding: 5px 10px;
+  border-radius: 14px;
+  color: var(--mat-sys-on-primary-container);
+  background: var(--mat-sys-primary-container);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.status-chip--suspended {
+  color: var(--mat-sys-on-error-container);
+  background: var(--mat-sys-error-container);
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.suspend-button {
+  color: var(--mat-sys-error) !important;
+}
+
 .empty {
   padding: 48px;
   text-align: center;

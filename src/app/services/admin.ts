@@ -29,4 +29,11 @@ export class AdminService {
       { role }
     );
   }
+
+  updateStatus(userId: number, active: boolean): Observable<AdminUser> {
+    return this.http.patch<AdminUser>(
+      `${this.apiUrl}/${userId}/status`,
+      { active }
+    );
+  }
 }

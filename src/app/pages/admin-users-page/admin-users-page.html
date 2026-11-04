@@ -2,7 +2,7 @@
   <header>
     <div>
       <h1>Administración de usuarios</h1>
-      <p>Consulta las cuentas y administra sus permisos.</p>
+      <p>Consulta las cuentas y administra sus permisos y estado.</p>
     </div>
     <span class="user-count">{{ totalElements() }} usuarios</span>
   </header>
@@ -42,6 +42,7 @@
             <tr>
               <th>Usuario</th>
               <th>Registro</th>
+              <th>Estado</th>
               <th>Rol</th>
               <th><span class="visually-hidden">Acciones</span></th>
             </tr>
@@ -58,6 +59,14 @@
                 </td>
                 <td>{{ user.createdAt | date:'dd/MM/yyyy' }}</td>
                 <td>
+                  <span
+                    class="status-chip"
+                    [class.status-chip--suspended]="!user.active"
+                  >
+                    {{ user.active ? 'Activa' : 'Suspendida' }}
+                  </span>
+                </td>
+                <td>
                   <mat-form-field appearance="outline" subscriptSizing="dynamic">
                     <mat-select
                       [disabled]="isCurrentUser(user)"
@@ -72,27 +81,45 @@
                   </mat-form-field>
                 </td>
                 <td>
-                  <button
-                    mat-stroked-button
-                    type="button"
-                    [disabled]="
-                      isCurrentUser(user)
-                      || roleDrafts()[user.id] === user.role
-                      || savingUserId() === user.id
-                    "
-                    (click)="updateRole(user)"
-                  >
-                    @if (savingUserId() === user.id) {
-                      <mat-spinner diameter="18"></mat-spinner>
-                    } @else {
-                      Guardar
-                    }
-                  </button>
+                  <div class="row-actions">
+                    <button
+                      mat-stroked-button
+                      type="button"
+                      [disabled]="
+                        isCurrentUser(user)
+                        || roleDrafts()[user.id] === user.role
+                        || savingUserId() === user.id
+                      "
+                      (click)="updateRole(user)"
+                    >
+                      @if (savingUserId() === user.id) {
+                        <mat-spinner diameter="18"></mat-spinner>
+                      } @else {
+                        Guardar rol
+                      }
+                    </button>
+                    <button
+                      mat-button
+                      type="button"
+                      [class.suspend-button]="user.active"
+                      [disabled]="
+                        isCurrentUser(user)
+                        || updatingStatusUserId() === user.id
+                      "
+                      (click)="updateStatus(user)"
+                    >
+                      @if (updatingStatusUserId() === user.id) {
+                        <mat-spinner diameter="18"></mat-spinner>
+                      } @else {
+                        {{ user.active ? 'Suspender' : 'Activar' }}
+                      }
+                    </button>
+                  </div>
                 </td>
               </tr>
             } @empty {
               <tr>
-                <td colspan="4" class="empty">No se encontraron usuarios.</td>
+                <td colspan="5" class="empty">No se encontraron usuarios.</td>
               </tr>
             }
           </tbody>

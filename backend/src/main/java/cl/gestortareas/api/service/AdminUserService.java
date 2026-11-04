@@ -81,12 +81,38 @@ public class AdminUserService {
         return toResponse(user);
     }
 
+    @Transactional
+    public AdminUserResponse updateStatus(
+        String authenticatedEmail,
+        Long userId,
+        boolean active
+    ) {
+        AppUser user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Usuario no encontrado"
+            ));
+
+        boolean isCurrentUser = user.getEmail()
+            .equalsIgnoreCase(authenticatedEmail);
+        if (isCurrentUser && !active) {
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "No puedes suspender tu propia cuenta"
+            );
+        }
+
+        user.changeActiveStatus(active);
+        return toResponse(user);
+    }
+
     private AdminUserResponse toResponse(AppUser user) {
         return new AdminUserResponse(
             user.getId(),
             user.getName(),
             user.getEmail(),
             user.getRole(),
+            user.isActive(),
             user.getCreatedAt()
         );
     }
