@@ -114,7 +114,7 @@ td mat-form-field {
   white-space: nowrap;
 }
 
-.suspend-button {
+.suspend-button:not(:disabled) {
   color: var(--mat-sys-error) !important;
 }
 
