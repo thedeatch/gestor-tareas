@@ -47,6 +47,12 @@ public class AppUser {
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified = true;
 
+    @Column(name = "failed_login_attempts", nullable = false)
+    private int failedLoginAttempts;
+
+    @Column(name = "locked_until")
+    private Instant lockedUntil;
+
     protected AppUser() {
     }
 
@@ -133,5 +139,31 @@ public class AppUser {
 
     public void verifyEmail() {
         this.emailVerified = true;
+    }
+
+    public boolean isLoginLockedAt(Instant instant) {
+        return lockedUntil != null && lockedUntil.isAfter(instant);
+    }
+
+    public void clearExpiredLoginLockAt(Instant instant) {
+        if (lockedUntil != null && !lockedUntil.isAfter(instant)) {
+            clearLoginFailures();
+        }
+    }
+
+    public void registerFailedLogin(
+        int maximumAttempts,
+        long lockMinutes,
+        Instant instant
+    ) {
+        failedLoginAttempts++;
+        if (failedLoginAttempts >= maximumAttempts) {
+            lockedUntil = instant.plusSeconds(lockMinutes * 60);
+        }
+    }
+
+    public void clearLoginFailures() {
+        failedLoginAttempts = 0;
+        lockedUntil = null;
     }
 }

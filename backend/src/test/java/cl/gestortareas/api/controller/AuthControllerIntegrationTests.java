@@ -129,6 +129,44 @@ class AuthControllerIntegrationTests {
     }
 
     @Test
+    void shouldTemporarilyLockAccountAfterRepeatedFailures() throws Exception {
+        userRepository.save(new AppUser(
+            "Usuario de prueba",
+            "usuario@ejemplo.cl",
+            passwordEncoder.encode("secreto123")
+        ));
+
+        String invalidLogin = """
+            {
+                "email": "usuario@ejemplo.cl",
+                "password": "incorrecta123"
+            }
+            """;
+
+        for (int attempt = 1; attempt < 5; attempt++) {
+            mockMvc.perform(post("/api/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(invalidLogin))
+                .andExpect(status().isUnauthorized());
+        }
+
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(invalidLogin))
+            .andExpect(status().isTooManyRequests());
+
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "email": "usuario@ejemplo.cl",
+                        "password": "secreto123"
+                    }
+                    """))
+            .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
     void shouldRotateRefreshTokenAndRejectItsReuse() throws Exception {
         userRepository.save(new AppUser(
             "Usuario de prueba",

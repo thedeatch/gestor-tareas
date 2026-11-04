@@ -1,5 +1,6 @@
 package cl.gestortareas.api.service;
 
+import java.time.Instant;
 import java.util.Locale;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -26,6 +27,8 @@ public class AuthService {
     private final EmailVerificationService emailVerificationService;
     private final RefreshTokenService refreshTokenService;
     private final boolean emailVerificationEnabled;
+    private final int maximumLoginAttempts;
+    private final long loginLockMinutes;
 
     public AuthService(
         AppUserRepository userRepository,
@@ -34,7 +37,9 @@ public class AuthService {
         EmailVerificationService emailVerificationService,
         RefreshTokenService refreshTokenService,
         @Value("${app.email-verification.enabled:true}")
-        boolean emailVerificationEnabled
+        boolean emailVerificationEnabled,
+        @Value("${security.login.max-attempts:5}") int maximumLoginAttempts,
+        @Value("${security.login.lock-minutes:15}") long loginLockMinutes
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -42,6 +47,8 @@ public class AuthService {
         this.emailVerificationService = emailVerificationService;
         this.refreshTokenService = refreshTokenService;
         this.emailVerificationEnabled = emailVerificationEnabled;
+        this.maximumLoginAttempts = maximumLoginAttempts;
+        this.loginLockMinutes = loginLockMinutes;
     }
 
     @Transactional
@@ -70,15 +77,31 @@ public class AuthService {
         return new RegistrationResponse(emailVerificationEnabled);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = ResponseStatusException.class)
     public AuthSession login(AuthRequest request) {
         String email = normalizeEmail(request.email());
         AppUser user = userRepository.findByEmailIgnoreCase(email)
             .orElseThrow(this::invalidCredentials);
 
+        Instant now = Instant.now();
+        user.clearExpiredLoginLockAt(now);
+        if (user.isLoginLockedAt(now)) {
+            throw loginTemporarilyLocked();
+        }
+
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            user.registerFailedLogin(
+                maximumLoginAttempts,
+                loginLockMinutes,
+                now
+            );
+            if (user.isLoginLockedAt(now)) {
+                throw loginTemporarilyLocked();
+            }
             throw invalidCredentials();
         }
+
+        user.clearLoginFailures();
 
         if (!user.isActive()) {
             throw new ResponseStatusException(
@@ -127,6 +150,13 @@ public class AuthService {
         return new ResponseStatusException(
             HttpStatus.UNAUTHORIZED,
             "Correo o contraseña incorrectos"
+        );
+    }
+
+    private ResponseStatusException loginTemporarilyLocked() {
+        return new ResponseStatusException(
+            HttpStatus.TOO_MANY_REQUESTS,
+            "Demasiados intentos. Intenta nuevamente más tarde"
         );
     }
 }

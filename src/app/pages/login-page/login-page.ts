@@ -93,7 +93,9 @@ export class LoginPage {
             error.status === 403 && !suspended
           );
           this.errorMessage.set(
-            error.status === 401
+            error.status === 429
+              ? 'Demasiados intentos fallidos. Espera 15 minutos o recupera tu contraseña.'
+              : error.status === 401
               ? 'Correo o contraseña incorrectos.'
               : error.status === 403
                 ? suspended

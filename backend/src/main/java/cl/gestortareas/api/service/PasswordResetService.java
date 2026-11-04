@@ -88,6 +88,7 @@ public class PasswordResetService {
             throw invalidToken();
         }
         user.changePassword(passwordEncoder.encode(request.password()));
+        user.clearLoginFailures();
         refreshTokenService.revokeAll(user);
         token.markAsUsed(now);
     }
