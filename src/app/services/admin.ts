@@ -2,7 +2,11 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { AdminUser, PageResponse } from '../models/admin.model';
+import {
+  AdminAuditEntry,
+  AdminUser,
+  PageResponse
+} from '../models/admin.model';
 import { UserRole } from '../models/auth.model';
 
 @Service()
@@ -30,10 +34,25 @@ export class AdminService {
     );
   }
 
-  updateStatus(userId: number, active: boolean): Observable<AdminUser> {
+  updateStatus(
+    userId: number,
+    active: boolean,
+    reason?: string
+  ): Observable<AdminUser> {
     return this.http.patch<AdminUser>(
       `${this.apiUrl}/${userId}/status`,
-      { active }
+      { active, reason }
+    );
+  }
+
+  findAuditLog(page: number, size = 20): Observable<PageResponse<AdminAuditEntry>> {
+    const params = new HttpParams()
+      .set('page', page)
+      .set('size', size);
+
+    return this.http.get<PageResponse<AdminAuditEntry>>(
+      '/api/admin/audit',
+      { params }
     );
   }
 }

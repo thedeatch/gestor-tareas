@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import cl.gestortareas.api.model.AppUser;
 import cl.gestortareas.api.model.UserRole;
 import cl.gestortareas.api.repository.AppUserRepository;
+import cl.gestortareas.api.repository.AdminAuditLogRepository;
 import cl.gestortareas.api.service.JwtService;
 
 @SpringBootTest
@@ -30,6 +31,7 @@ class AuthControllerIntegrationTests {
 
     private final MockMvc mockMvc;
     private final AppUserRepository userRepository;
+    private final AdminAuditLogRepository auditLogRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
@@ -37,17 +39,20 @@ class AuthControllerIntegrationTests {
     AuthControllerIntegrationTests(
         MockMvc mockMvc,
         AppUserRepository userRepository,
+        AdminAuditLogRepository auditLogRepository,
         PasswordEncoder passwordEncoder,
         JwtService jwtService
     ) {
         this.mockMvc = mockMvc;
         this.userRepository = userRepository;
+        this.auditLogRepository = auditLogRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
     }
 
     @BeforeEach
     void cleanDatabase() {
+        auditLogRepository.deleteAll();
         userRepository.deleteAll();
     }
 
@@ -218,12 +223,46 @@ class AuthControllerIntegrationTests {
                         "active": false
                     }
                     """))
+            .andExpect(status().isBadRequest());
+
+        mockMvc.perform(patch("/api/admin/users/{id}/status", user.getId())
+                .header(
+                    "Authorization",
+                    "Bearer " + jwtService.generateToken(admin)
+                )
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "active": false,
+                        "reason": "Incumplimiento reiterado de las normas"
+                    }
+                    """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.active").value(false));
 
         mockMvc.perform(get("/api/tasks")
                 .header("Authorization", "Bearer " + userToken))
             .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/admin/audit")
+                .header(
+                    "Authorization",
+                    "Bearer " + jwtService.generateToken(admin)
+                ))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalElements").value(1))
+            .andExpect(jsonPath("$.content[0].actorEmail")
+                .value("admin@ejemplo.cl"))
+            .andExpect(jsonPath("$.content[0].targetEmail")
+                .value("usuario@ejemplo.cl"))
+            .andExpect(jsonPath("$.content[0].action")
+                .value("ACCOUNT_SUSPENDED"))
+            .andExpect(jsonPath("$.content[0].previousValue")
+                .value("ACTIVE"))
+            .andExpect(jsonPath("$.content[0].newValue")
+                .value("SUSPENDED"))
+            .andExpect(jsonPath("$.content[0].reason")
+                .value("Incumplimiento reiterado de las normas"));
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -254,7 +293,8 @@ class AuthControllerIntegrationTests {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                        "active": false
+                        "active": false,
+                        "reason": "Prueba de autosuspensión"
                     }
                     """))
             .andExpect(status().isConflict());

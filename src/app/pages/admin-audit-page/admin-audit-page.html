@@ -1,0 +1,76 @@
+<main class="audit-container">
+  <header>
+    <div>
+      <h1>Auditoría administrativa</h1>
+      <p>Historial de cambios realizados sobre las cuentas.</p>
+    </div>
+    <span class="event-count">{{ totalElements() }} eventos</span>
+  </header>
+
+  @if (isLoading()) {
+    <div class="loading" aria-label="Cargando auditoría">
+      <mat-spinner diameter="42"></mat-spinner>
+    </div>
+  } @else {
+    <mat-card>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Administrador</th>
+              <th>Usuario afectado</th>
+              <th>Acción</th>
+              <th>Motivo</th>
+              <th>Cambio</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (entry of entries(); track entry.id) {
+              <tr>
+                <td>{{ entry.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+                <td>{{ entry.actorEmail }}</td>
+                <td>{{ entry.targetEmail }}</td>
+                <td>
+                  <span class="action-chip">{{ actionLabel(entry.action) }}</span>
+                </td>
+                <td class="reason-cell">
+                  {{ entry.reason || 'Sin motivo registrado' }}
+                </td>
+                <td>
+                  {{ valueLabel(entry.previousValue) }}
+                  <mat-icon aria-hidden="true">arrow_forward</mat-icon>
+                  {{ valueLabel(entry.newValue) }}
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6" class="empty">
+                  Aún no existen acciones administrativas registradas.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (totalPages() > 1) {
+        <div class="pagination">
+          <button mat-button type="button" [disabled]="page() === 0" (click)="previousPage()">
+            <mat-icon>chevron_left</mat-icon>
+            Anterior
+          </button>
+          <span>Página {{ page() + 1 }} de {{ totalPages() }}</span>
+          <button mat-button type="button" [disabled]="page() + 1 >= totalPages()" (click)="nextPage()">
+            Siguiente
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </div>
+      }
+    </mat-card>
+  }
+
+  @if (errorMessage()) {
+    <p class="error" role="alert">{{ errorMessage() }}</p>
+  }
+</main>

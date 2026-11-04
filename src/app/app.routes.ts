@@ -35,6 +35,13 @@ export const routes: Routes = [
         .then(module => module.AdminUsersPage)
   },
   {
+    path: 'administracion/auditoria',
+    canActivate: [roleGuard(['ADMIN'])],
+    loadComponent: () =>
+      import('./pages/admin-audit-page/admin-audit-page')
+        .then(module => module.AdminAuditPage)
+  },
+  {
     path: 'login',
     loadComponent: () =>
         import('./pages/login-page/login-page')

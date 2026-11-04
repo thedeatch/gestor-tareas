@@ -3,6 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -14,6 +15,10 @@ import { AdminUser } from '../../models/admin.model';
 import { UserRole } from '../../models/auth.model';
 import { AdminService } from '../../services/admin';
 import { AuthService } from '../../services/auth';
+import {
+  SuspensionDialog,
+  SuspensionDialogData
+} from '../../components/suspension-dialog/suspension-dialog';
 
 @Component({
   selector: 'app-admin-users-page',
@@ -22,6 +27,7 @@ import { AuthService } from '../../services/auth';
     FormsModule,
     MatButtonModule,
     MatCardModule,
+    MatDialogModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
@@ -34,6 +40,7 @@ import { AuthService } from '../../services/auth';
 export class AdminUsersPage {
   private readonly adminService = inject(AdminService);
   private readonly authService = inject(AuthService);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly roles: UserRole[] = ['USER', 'MODERATOR', 'ADMIN'];
   protected readonly currentEmail = this.authService.userEmail;
@@ -128,11 +135,31 @@ export class AdminUsersPage {
       return;
     }
 
-    const nextActive = !user.active;
+    if (user.active) {
+      const data: SuspensionDialogData = {
+        userName: user.name,
+        userEmail: user.email
+      };
+      this.dialog.open(SuspensionDialog, { data, autoFocus: 'textarea' })
+        .afterClosed()
+        .subscribe((reason: string | undefined) => {
+          if (reason) this.saveStatus(user, false, reason);
+        });
+      return;
+    }
+
+    this.saveStatus(user, true);
+  }
+
+  private saveStatus(
+    user: AdminUser,
+    active: boolean,
+    reason?: string
+  ): void {
     this.message.set(null);
     this.errorMessage.set(null);
     this.updatingStatusUserId.set(user.id);
-    this.adminService.updateStatus(user.id, nextActive).pipe(
+    this.adminService.updateStatus(user.id, active, reason).pipe(
       finalize(() => this.updatingStatusUserId.set(null))
     ).subscribe({
       next: updatedUser => {

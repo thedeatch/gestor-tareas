@@ -1,0 +1,50 @@
+.audit-container {
+  display: grid;
+  gap: 20px;
+  width: min(1200px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 40px 0;
+}
+
+header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+header h1,
+header p { margin: 0; }
+header p { margin-top: 8px; color: var(--mat-sys-on-surface-variant); }
+
+.event-count,
+.action-chip {
+  padding: 6px 10px;
+  border-radius: 16px;
+  color: var(--mat-sys-on-primary-container);
+  background: var(--mat-sys-primary-container);
+  white-space: nowrap;
+}
+
+.loading { display: flex; justify-content: center; padding: 64px; }
+.table-wrapper { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 16px; border-bottom: 1px solid var(--mat-sys-outline-variant); text-align: left; vertical-align: middle; }
+th { color: var(--mat-sys-on-surface-variant); font-size: 13px; font-weight: 600; }
+th:nth-child(1) { width: 150px; }
+th:nth-child(4) { width: 170px; }
+th:nth-child(5) { width: 260px; }
+th:nth-child(6) { width: 190px; }
+td:nth-child(6) { white-space: nowrap; }
+td:nth-child(6) mat-icon { margin: 0 6px; font-size: 18px; width: 18px; height: 18px; }
+.reason-cell { min-width: 220px; max-width: 360px; white-space: normal; }
+.action-chip { display: inline-flex; font-size: 13px; font-weight: 500; }
+.empty { padding: 48px; text-align: center; }
+.pagination { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 16px; }
+.error { margin: 0; color: var(--mat-sys-error); text-align: center; }
+
+@media (max-width: 700px) {
+  .audit-container { padding: 24px 0; }
+  header { align-items: stretch; flex-direction: column; }
+  .event-count { width: fit-content; }
+}

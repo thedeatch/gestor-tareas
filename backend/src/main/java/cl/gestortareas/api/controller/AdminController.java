@@ -13,9 +13,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import cl.gestortareas.api.dto.AdminUserResponse;
 import cl.gestortareas.api.dto.AdminUserPageResponse;
+import cl.gestortareas.api.dto.AdminAuditPageResponse;
 import cl.gestortareas.api.dto.UpdateUserRoleRequest;
 import cl.gestortareas.api.dto.UpdateUserStatusRequest;
 import cl.gestortareas.api.service.AdminUserService;
+import cl.gestortareas.api.service.AdminAuditService;
 import jakarta.validation.Valid;
 
 @RestController
@@ -23,9 +25,14 @@ import jakarta.validation.Valid;
 public class AdminController {
 
     private final AdminUserService adminUserService;
+    private final AdminAuditService adminAuditService;
 
-    public AdminController(AdminUserService adminUserService) {
+    public AdminController(
+        AdminUserService adminUserService,
+        AdminAuditService adminAuditService
+    ) {
         this.adminUserService = adminUserService;
+        this.adminAuditService = adminAuditService;
     }
 
     @GetMapping("/access")
@@ -41,6 +48,16 @@ public class AdminController {
     ) {
         return AdminUserPageResponse.from(
             adminUserService.findUsers(search, page, size)
+        );
+    }
+
+    @GetMapping("/audit")
+    public AdminAuditPageResponse findAuditLog(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        return AdminAuditPageResponse.from(
+            adminAuditService.findAll(page, size)
         );
     }
 
@@ -66,7 +83,8 @@ public class AdminController {
         return adminUserService.updateStatus(
             jwt.getSubject(),
             id,
-            request.active()
+            request.active(),
+            request.reason()
         );
     }
 }

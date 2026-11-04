@@ -10,6 +10,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import cl.gestortareas.api.dto.AdminUserResponse;
 import cl.gestortareas.api.model.AppUser;
+import cl.gestortareas.api.model.AdminAuditAction;
 import cl.gestortareas.api.model.UserRole;
 import cl.gestortareas.api.repository.AppUserRepository;
 
@@ -17,9 +18,14 @@ import cl.gestortareas.api.repository.AppUserRepository;
 public class AdminUserService {
 
     private final AppUserRepository userRepository;
+    private final AdminAuditService auditService;
 
-    public AdminUserService(AppUserRepository userRepository) {
+    public AdminUserService(
+        AppUserRepository userRepository,
+        AdminAuditService auditService
+    ) {
         this.userRepository = userRepository;
+        this.auditService = auditService;
     }
 
     @Transactional(readOnly = true)
@@ -77,7 +83,19 @@ public class AdminUserService {
             );
         }
 
+        UserRole previousRole = user.getRole();
+        if (previousRole == newRole) {
+            return toResponse(user);
+        }
+
         user.changeRole(newRole);
+        auditService.record(
+            authenticatedEmail,
+            user,
+            AdminAuditAction.ROLE_CHANGED,
+            previousRole.name(),
+            newRole.name()
+        );
         return toResponse(user);
     }
 
@@ -85,7 +103,8 @@ public class AdminUserService {
     public AdminUserResponse updateStatus(
         String authenticatedEmail,
         Long userId,
-        boolean active
+        boolean active,
+        String reason
     ) {
         AppUser user = userRepository.findById(userId)
             .orElseThrow(() -> new ResponseStatusException(
@@ -102,7 +121,30 @@ public class AdminUserService {
             );
         }
 
+        String normalizedReason = reason == null ? "" : reason.trim();
+        if (!active && normalizedReason.isBlank()) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Debes indicar el motivo de la suspensión"
+            );
+        }
+
+        boolean previousActive = user.isActive();
+        if (previousActive == active) {
+            return toResponse(user);
+        }
+
         user.changeActiveStatus(active);
+        auditService.record(
+            authenticatedEmail,
+            user,
+            active
+                ? AdminAuditAction.ACCOUNT_ACTIVATED
+                : AdminAuditAction.ACCOUNT_SUSPENDED,
+            previousActive ? "ACTIVE" : "SUSPENDED",
+            active ? "ACTIVE" : "SUSPENDED",
+            active ? null : normalizedReason
+        );
         return toResponse(user);
     }
 

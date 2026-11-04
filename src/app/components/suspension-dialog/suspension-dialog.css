@@ -1,0 +1,21 @@
+mat-dialog-content {
+  display: grid;
+  gap: 14px;
+  width: min(520px, 100%);
+}
+
+p {
+  margin: 0;
+}
+
+.warning {
+  color: var(--mat-sys-on-error-container);
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+textarea {
+  resize: vertical;
+}
