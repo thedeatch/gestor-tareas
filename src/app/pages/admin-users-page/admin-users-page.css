@@ -70,17 +70,17 @@ th {
   font-weight: 600;
 }
 
-td:first-child {
+.user-cell {
   display: grid;
   gap: 4px;
   min-width: 240px;
 }
 
-td:first-child span {
+.user-cell span {
   color: var(--mat-sys-on-surface-variant);
 }
 
-td:first-child small {
+.user-cell small {
   width: fit-content;
   padding: 3px 8px;
   border-radius: 12px;

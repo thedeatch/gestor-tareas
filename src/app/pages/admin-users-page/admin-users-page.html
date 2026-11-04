@@ -51,11 +51,13 @@
             @for (user of users(); track user.id) {
               <tr>
                 <td>
-                  <strong>{{ user.name }}</strong>
-                  <span>{{ user.email }}</span>
-                  @if (isCurrentUser(user)) {
-                    <small>Tu cuenta</small>
-                  }
+                  <div class="user-cell">
+                    <strong>{{ user.name }}</strong>
+                    <span>{{ user.email }}</span>
+                    @if (isCurrentUser(user)) {
+                      <small>Tu cuenta</small>
+                    }
+                  </div>
                 </td>
                 <td>{{ user.createdAt | date:'dd/MM/yyyy' }}</td>
                 <td>
