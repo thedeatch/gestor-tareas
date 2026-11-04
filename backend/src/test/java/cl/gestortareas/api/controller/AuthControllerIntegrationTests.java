@@ -20,12 +20,15 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import cl.gestortareas.api.model.AppUser;
 import cl.gestortareas.api.model.UserRole;
 import cl.gestortareas.api.repository.AppUserRepository;
 import cl.gestortareas.api.repository.AdminAuditLogRepository;
+import cl.gestortareas.api.repository.RefreshTokenRepository;
 import cl.gestortareas.api.service.JwtService;
+import jakarta.servlet.http.Cookie;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -36,6 +39,7 @@ class AuthControllerIntegrationTests {
     private final AdminAuditLogRepository auditLogRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @MockitoBean
     private JavaMailSender mailSender;
@@ -46,18 +50,21 @@ class AuthControllerIntegrationTests {
         AppUserRepository userRepository,
         AdminAuditLogRepository auditLogRepository,
         PasswordEncoder passwordEncoder,
-        JwtService jwtService
+        JwtService jwtService,
+        RefreshTokenRepository refreshTokenRepository
     ) {
         this.mockMvc = mockMvc;
         this.userRepository = userRepository;
         this.auditLogRepository = auditLogRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.refreshTokenRepository = refreshTokenRepository;
     }
 
     @BeforeEach
     void cleanDatabase() {
         auditLogRepository.deleteAll();
+        refreshTokenRepository.deleteAll();
         userRepository.deleteAll();
     }
 
@@ -119,6 +126,43 @@ class AuthControllerIntegrationTests {
             .andExpect(jsonPath("$.email").value("usuario@ejemplo.cl"))
             .andExpect(jsonPath("$.role").value("USER"))
             .andExpect(jsonPath("$.token").isNotEmpty());
+    }
+
+    @Test
+    void shouldRotateRefreshTokenAndRejectItsReuse() throws Exception {
+        userRepository.save(new AppUser(
+            "Usuario de prueba",
+            "usuario@ejemplo.cl",
+            passwordEncoder.encode("secreto123")
+        ));
+
+        MvcResult login = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "email": "usuario@ejemplo.cl",
+                        "password": "secreto123"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(header().exists("Set-Cookie"))
+            .andReturn();
+
+        Cookie firstCookie = login.getResponse().getCookie("refresh_token");
+        assertTrue(firstCookie != null && firstCookie.isHttpOnly());
+
+        MvcResult refresh = mockMvc.perform(post("/api/auth/refresh")
+                .cookie(firstCookie))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.token").isNotEmpty())
+            .andReturn();
+
+        Cookie rotatedCookie = refresh.getResponse().getCookie("refresh_token");
+        assertTrue(rotatedCookie != null);
+        assertFalse(firstCookie.getValue().equals(rotatedCookie.getValue()));
+
+        mockMvc.perform(post("/api/auth/refresh").cookie(firstCookie))
+            .andExpect(status().isUnauthorized());
     }
 
     @Test

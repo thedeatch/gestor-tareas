@@ -1,6 +1,6 @@
 import { inject, Service, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, tap } from 'rxjs';
+import { Observable, finalize, map, tap } from 'rxjs';
 
 import {
   AuthCredentials,
@@ -73,6 +73,22 @@ export class AuthService {
 
   login(credentials: AuthCredentials): Observable<void> {
     return this.authenticate('/login', credentials);
+  }
+
+  refreshSession(): Observable<void> {
+    return this.http.post<AuthResponse>(
+      `${this.apiUrl}/refresh`,
+      {}
+    ).pipe(
+      tap(response => this.storeSession(response)),
+      map(() => undefined)
+    );
+  }
+
+  logoutFromServer(): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/logout`, {}).pipe(
+      finalize(() => this.logout())
+    );
   }
 
   register(data: RegistrationData): Observable<{ verificationRequired: boolean }> {

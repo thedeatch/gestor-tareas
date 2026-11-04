@@ -1,12 +1,32 @@
 import {
   HttpErrorResponse,
+  HttpHandlerFn,
   HttpInterceptorFn
 } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { catchError, throwError } from 'rxjs';
+import {
+  Observable,
+  catchError,
+  finalize,
+  shareReplay,
+  switchMap,
+  throwError
+} from 'rxjs';
 
 import { AuthService } from '../services/auth';
+
+let refreshRequest$: Observable<void> | null = null;
+
+const refreshOnce = (authService: AuthService): Observable<void> => {
+  if (!refreshRequest$) {
+    refreshRequest$ = authService.refreshSession().pipe(
+      finalize(() => refreshRequest$ = null),
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
+  }
+  return refreshRequest$;
+};
 
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const authService = inject(AuthService);
@@ -28,13 +48,27 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
     }
   };
 
+  const retryAfterRefresh = (
+    failedRequest: typeof request,
+    handler: HttpHandlerFn
+  ) => refreshOnce(authService).pipe(
+    switchMap(() => {
+      const refreshedToken = authService.getToken();
+      if (!refreshedToken) {
+        return throwError(() => new HttpErrorResponse({ status: 401 }));
+      }
+      return handler(failedRequest.clone({
+        setHeaders: { Authorization: `Bearer ${refreshedToken}` }
+      }));
+    }),
+    catchError(error => {
+      redirectToExpiredSession();
+      return throwError(() => error);
+    })
+  );
+
   if (authService.isTokenExpired(token)) {
-    redirectToExpiredSession();
-    return throwError(() => new HttpErrorResponse({
-      status: 401,
-      statusText: 'Sesión expirada',
-      url: request.url
-    }));
+    return retryAfterRefresh(request, next);
   }
 
   return next(request.clone({
@@ -44,7 +78,7 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   })).pipe(
     catchError(error => {
       if (error instanceof HttpErrorResponse && error.status === 401) {
-        redirectToExpiredSession();
+        return retryAfterRefresh(request, next);
       }
       return throwError(() => error);
     })

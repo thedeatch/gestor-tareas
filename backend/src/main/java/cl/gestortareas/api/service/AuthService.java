@@ -11,6 +11,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import cl.gestortareas.api.dto.AuthRequest;
 import cl.gestortareas.api.dto.AuthResponse;
+import cl.gestortareas.api.dto.AuthSession;
 import cl.gestortareas.api.dto.RegisterRequest;
 import cl.gestortareas.api.dto.RegistrationResponse;
 import cl.gestortareas.api.model.AppUser;
@@ -23,6 +24,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final EmailVerificationService emailVerificationService;
+    private final RefreshTokenService refreshTokenService;
     private final boolean emailVerificationEnabled;
 
     public AuthService(
@@ -30,6 +32,7 @@ public class AuthService {
         PasswordEncoder passwordEncoder,
         JwtService jwtService,
         EmailVerificationService emailVerificationService,
+        RefreshTokenService refreshTokenService,
         @Value("${app.email-verification.enabled:true}")
         boolean emailVerificationEnabled
     ) {
@@ -37,6 +40,7 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.emailVerificationService = emailVerificationService;
+        this.refreshTokenService = refreshTokenService;
         this.emailVerificationEnabled = emailVerificationEnabled;
     }
 
@@ -66,8 +70,8 @@ public class AuthService {
         return new RegistrationResponse(emailVerificationEnabled);
     }
 
-    @Transactional(readOnly = true)
-    public AuthResponse login(AuthRequest request) {
+    @Transactional
+    public AuthSession login(AuthRequest request) {
         String email = normalizeEmail(request.email());
         AppUser user = userRepository.findByEmailIgnoreCase(email)
             .orElseThrow(this::invalidCredentials);
@@ -90,11 +94,28 @@ public class AuthService {
             );
         }
 
-        return new AuthResponse(
-            jwtService.generateToken(user),
-            email,
-            user.getName(),
-            user.getRole()
+        return createSession(user);
+    }
+
+    @Transactional
+    public AuthSession refresh(String refreshToken) {
+        return createSession(refreshTokenService.consume(refreshToken));
+    }
+
+    @Transactional
+    public void logout(String refreshToken) {
+        refreshTokenService.revoke(refreshToken);
+    }
+
+    private AuthSession createSession(AppUser user) {
+        return new AuthSession(
+            new AuthResponse(
+                jwtService.generateToken(user),
+                user.getEmail(),
+                user.getName(),
+                user.getRole()
+            ),
+            refreshTokenService.issue(user)
         );
     }
 

@@ -116,9 +116,13 @@ export class ProfilePage implements OnInit, OnDestroy {
       finalize(() => this.isChangingPassword.set(false))
     ).subscribe({
       next: () => {
-        this.authService.logout();
-        void this.router.navigate(['/login'], {
-          state: { passwordChanged: true }
+        this.authService.logoutFromServer().subscribe({
+          complete: () => void this.router.navigate(['/login'], {
+            state: { passwordChanged: true }
+          }),
+          error: () => void this.router.navigate(['/login'], {
+            state: { passwordChanged: true }
+          })
         });
       },
       error: error => this.errorMessage.set(

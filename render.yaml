@@ -32,6 +32,12 @@ services:
           property: password
       - key: JWT_SECRET
         generateValue: true
+      - key: JWT_EXPIRATION_MINUTES
+        value: "60"
+      - key: REFRESH_TOKEN_EXPIRATION_DAYS
+        value: "7"
+      - key: REFRESH_TOKEN_COOKIE_SECURE
+        value: "true"
       - key: MAIL_HOST
         value: smtp-relay.brevo.com
       - key: MAIL_PORT

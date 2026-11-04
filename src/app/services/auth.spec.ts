@@ -46,7 +46,8 @@ describe('AuthService', () => {
     request.flush({
       token: 'jwt-de-prueba',
       email: 'usuario@ejemplo.cl',
-      name: 'Usuario de prueba'
+      name: 'Usuario de prueba',
+      role: 'USER'
     });
 
     expect(service.isAuthenticated()).toBe(true);
@@ -84,6 +85,22 @@ describe('AuthService', () => {
       email: 'pendiente@ejemplo.cl'
     });
     request.flush(null);
+  });
+
+  it('should store a renewed session', () => {
+    service.refreshSession().subscribe();
+
+    const request = httpTesting.expectOne('/api/auth/refresh');
+    expect(request.request.method).toBe('POST');
+    request.flush({
+      token: 'jwt-renovado',
+      email: 'usuario@ejemplo.cl',
+      name: 'Usuario renovado',
+      role: 'USER'
+    });
+
+    expect(service.getToken()).toBe('jwt-renovado');
+    expect(service.isAuthenticated()).toBe(true);
   });
 
   it('should detect an expired JWT', () => {

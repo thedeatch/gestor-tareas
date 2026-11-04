@@ -3,6 +3,7 @@ import {
   CanActivateFn,
   Router
 } from '@angular/router';
+import { catchError, map, of } from 'rxjs';
 
 import { AuthService } from '../services/auth';
 
@@ -12,16 +13,24 @@ export const authGuard: CanActivateFn = () => {
 
   const token = authService.getToken();
 
-  if (token && authService.isTokenExpired(token)) {
-    authService.expireSession();
-    return router.createUrlTree(['/login'], {
-      queryParams: { session: 'expired' }
-    });
-  }
-
-  if (authService.isAuthenticated()) {
+  if (
+    authService.isAuthenticated() &&
+    token &&
+    !authService.isTokenExpired(token)
+  ) {
     return true;
   }
 
-  return router.createUrlTree(['/login']);
+  return authService.refreshSession().pipe(
+    map(() => true),
+    catchError(() => {
+      const hadExpiredToken = token !== null;
+      authService.expireSession();
+      return of(router.createUrlTree(['/login'], {
+        queryParams: hadExpiredToken
+          ? { session: 'expired' }
+          : undefined
+      }));
+    })
+  );
 };

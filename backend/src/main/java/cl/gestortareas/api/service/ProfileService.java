@@ -31,15 +31,18 @@ public class ProfileService {
     private final AppUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     public ProfileService(
         AppUserRepository userRepository,
         PasswordEncoder passwordEncoder,
-        JwtService jwtService
+        JwtService jwtService,
+        RefreshTokenService refreshTokenService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.refreshTokenService = refreshTokenService;
     }
 
     @Transactional(readOnly = true)
@@ -102,6 +105,7 @@ public class ProfileService {
         }
 
         user.changePassword(passwordEncoder.encode(request.newPassword()));
+        refreshTokenService.revokeAll(user);
     }
 
     @Transactional(readOnly = true)

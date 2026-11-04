@@ -31,6 +31,7 @@ public class PasswordResetService {
     private final PasswordResetTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final PasswordResetMailService mailService;
+    private final RefreshTokenService refreshTokenService;
     private final long expirationMinutes;
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -39,6 +40,7 @@ public class PasswordResetService {
         PasswordResetTokenRepository tokenRepository,
         PasswordEncoder passwordEncoder,
         PasswordResetMailService mailService,
+        RefreshTokenService refreshTokenService,
         @Value("${app.password-reset.expiration-minutes:15}")
         long expirationMinutes
     ) {
@@ -46,6 +48,7 @@ public class PasswordResetService {
         this.tokenRepository = tokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.mailService = mailService;
+        this.refreshTokenService = refreshTokenService;
         this.expirationMinutes = expirationMinutes;
     }
 
@@ -85,6 +88,7 @@ public class PasswordResetService {
             throw invalidToken();
         }
         user.changePassword(passwordEncoder.encode(request.password()));
+        refreshTokenService.revokeAll(user);
         token.markAsUsed(now);
     }
 

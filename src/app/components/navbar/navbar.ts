@@ -47,8 +47,10 @@ export class Navbar {
   }
 
   protected logout(): void {
-    this.authService.logout();
-    void this.router.navigateByUrl('/login');
+    this.authService.logoutFromServer().subscribe({
+      complete: () => void this.router.navigateByUrl('/login'),
+      error: () => void this.router.navigateByUrl('/login')
+    });
   }
 
   private loadAvatar(): void {
