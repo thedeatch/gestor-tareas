@@ -61,6 +61,46 @@ class TaskControllerIntegrationTests {
     }
 
     @Test
+    void shouldReturnUniformErrorWhenAuthenticationIsMissing()
+        throws Exception {
+        mockMvc.perform(get("/api/tasks"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+            .andExpect(jsonPath("$.message").isNotEmpty())
+            .andExpect(jsonPath("$.path").value("/api/tasks"))
+            .andExpect(jsonPath("$.timestamp").isNotEmpty());
+    }
+
+    @Test
+    void shouldReturnFieldErrorsForInvalidTask() throws Exception {
+        mockMvc.perform(post("/api/tasks")
+                .with(jwt().jwt(token -> token.subject(USER_EMAIL)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "description": "",
+                        "completed": false
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+            .andExpect(jsonPath("$.fieldErrors.description").isNotEmpty())
+            .andExpect(jsonPath("$.path").value("/api/tasks"));
+    }
+
+    @Test
+    void shouldReturnUniformErrorWhenTaskDoesNotExist() throws Exception {
+        mockMvc.perform(get("/api/tasks/{id}", 99999)
+                .with(jwt().jwt(token -> token.subject(USER_EMAIL))))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.status").value(404))
+            .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+            .andExpect(jsonPath("$.message").isNotEmpty())
+            .andExpect(jsonPath("$.path").value("/api/tasks/99999"));
+    }
+
+    @Test
     void shouldCreateTask() throws Exception {
         String requestBody = """
                 {

@@ -10,6 +10,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../services/auth';
+import { getApiErrorMessage } from '../../models/api-error.model';
 @Component({
   selector: 'app-login-page',
   imports: [
@@ -87,7 +88,7 @@ export class LoginPage {
         },
         error: error => {
           const suspended = error.status === 403 &&
-            String(error.error?.detail ?? '').toLowerCase()
+            getApiErrorMessage(error, '').toLowerCase()
               .includes('suspendida');
           this.verificationPending.set(
             error.status === 403 && !suspended

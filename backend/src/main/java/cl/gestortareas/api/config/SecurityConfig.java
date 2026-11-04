@@ -9,6 +9,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -33,12 +34,17 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import cl.gestortareas.api.repository.AppUserRepository;
+import cl.gestortareas.api.error.ApiExceptionHandler;
+import cl.gestortareas.api.error.SecurityErrorWriter;
 
 @Configuration
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(
+        HttpSecurity http,
+        SecurityErrorWriter errorWriter
+    ) throws Exception {
         return http
             .csrf(csrf -> csrf.disable())
             .cors(Customizer.withDefaults())
@@ -64,6 +70,28 @@ public class SecurityConfig {
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt
                 .jwtAuthenticationConverter(jwtAuthenticationConverter())
             ))
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint((request, response, exception) ->
+                    errorWriter.write(
+                        response,
+                        HttpStatus.UNAUTHORIZED.value(),
+                        ApiExceptionHandler.defaultMessageFor(
+                            HttpStatus.UNAUTHORIZED.value()
+                        ),
+                        request.getRequestURI()
+                    )
+                )
+                .accessDeniedHandler((request, response, exception) ->
+                    errorWriter.write(
+                        response,
+                        HttpStatus.FORBIDDEN.value(),
+                        ApiExceptionHandler.defaultMessageFor(
+                            HttpStatus.FORBIDDEN.value()
+                        ),
+                        request.getRequestURI()
+                    )
+                )
+            )
             .build();
     }
 
