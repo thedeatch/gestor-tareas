@@ -1,9 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
 import { finalize } from 'rxjs';
 
 import {
@@ -16,10 +20,14 @@ import { AdminService } from '../../services/admin';
   selector: 'app-admin-audit-page',
   imports: [
     CommonModule,
+    FormsModule,
     MatButtonModule,
     MatCardModule,
+    MatFormFieldModule,
     MatIconModule,
-    MatProgressSpinnerModule
+    MatInputModule,
+    MatProgressSpinnerModule,
+    MatSelectModule
   ],
   templateUrl: './admin-audit-page.html',
   styleUrl: './admin-audit-page.css'
@@ -33,6 +41,10 @@ export class AdminAuditPage {
   protected readonly totalElements = signal(0);
   protected readonly isLoading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly search = signal('');
+  protected readonly action = signal<AdminAuditAction | ''>('');
+  protected readonly fromDate = signal('');
+  protected readonly toDate = signal('');
 
   constructor() {
     this.loadEntries();
@@ -46,6 +58,34 @@ export class AdminAuditPage {
     if (this.page() + 1 < this.totalPages()) {
       this.loadEntries(this.page() + 1);
     }
+  }
+
+  protected applyFilters(): void {
+    if (
+      this.fromDate() && this.toDate() &&
+      this.fromDate() > this.toDate()
+    ) {
+      this.errorMessage.set(
+        'La fecha inicial no puede ser posterior a la fecha final.'
+      );
+      return;
+    }
+    this.loadEntries(0);
+  }
+
+  protected clearFilters(): void {
+    this.search.set('');
+    this.action.set('');
+    this.fromDate.set('');
+    this.toDate.set('');
+    this.loadEntries(0);
+  }
+
+  protected hasFilters(): boolean {
+    return Boolean(
+      this.search().trim() || this.action() ||
+      this.fromDate() || this.toDate()
+    );
   }
 
   protected actionLabel(action: AdminAuditAction): string {
@@ -69,7 +109,12 @@ export class AdminAuditPage {
   private loadEntries(page = 0): void {
     this.errorMessage.set(null);
     this.isLoading.set(true);
-    this.adminService.findAuditLog(page).pipe(
+    this.adminService.findAuditLog(page, {
+      search: this.search().trim(),
+      action: this.action(),
+      from: this.fromDate(),
+      to: this.toDate()
+    }).pipe(
       finalize(() => this.isLoading.set(false))
     ).subscribe({
       next: response => {

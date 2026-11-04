@@ -7,6 +7,62 @@
     <span class="event-count">{{ totalElements() }} eventos</span>
   </header>
 
+  <mat-card class="filters-card">
+    <form class="filters" (ngSubmit)="applyFilters()">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search-filter">
+        <mat-label>Responsable o usuario afectado</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input
+          matInput
+          name="auditSearch"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+        >
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Acción</mat-label>
+        <mat-select
+          name="auditAction"
+          [ngModel]="action()"
+          (ngModelChange)="action.set($event)"
+        >
+          <mat-option value="">Todas</mat-option>
+          <mat-option value="ROLE_CHANGED">Cambio de rol</mat-option>
+          <mat-option value="ACCOUNT_SUSPENDED">Cuenta suspendida</mat-option>
+          <mat-option value="ACCOUNT_ACTIVATED">Cuenta reactivada</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Desde</mat-label>
+        <input
+          matInput
+          type="date"
+          name="auditFrom"
+          [ngModel]="fromDate()"
+          (ngModelChange)="fromDate.set($event)"
+        >
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Hasta</mat-label>
+        <input
+          matInput
+          type="date"
+          name="auditTo"
+          [ngModel]="toDate()"
+          (ngModelChange)="toDate.set($event)"
+        >
+      </mat-form-field>
+
+      <button mat-flat-button type="submit">Filtrar</button>
+      @if (hasFilters()) {
+        <button mat-button type="button" (click)="clearFilters()">Limpiar</button>
+      }
+    </form>
+  </mat-card>
+
   @if (isLoading()) {
     <div class="loading" aria-label="Cargando auditoría">
       <mat-spinner diameter="42"></mat-spinner>
@@ -46,7 +102,10 @@
             } @empty {
               <tr>
                 <td colspan="6" class="empty">
-                  Aún no existen acciones administrativas registradas.
+                  {{ hasFilters()
+                    ? 'No existen eventos que coincidan con los filtros.'
+                    : 'Aún no existen acciones administrativas registradas.'
+                  }}
                 </td>
               </tr>
             }

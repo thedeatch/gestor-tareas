@@ -370,6 +370,36 @@ class AuthControllerIntegrationTests {
             .andExpect(jsonPath("$.content[0].reason")
                 .value("Incumplimiento reiterado de las normas"));
 
+        mockMvc.perform(get("/api/admin/audit")
+                .header(
+                    "Authorization",
+                    "Bearer " + jwtService.generateToken(admin)
+                )
+                .param("search", "USUARIO@EJEMPLO")
+                .param("action", "ACCOUNT_SUSPENDED"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalElements").value(1))
+            .andExpect(jsonPath("$.content[0].targetEmail")
+                .value("usuario@ejemplo.cl"));
+
+        mockMvc.perform(get("/api/admin/audit")
+                .header(
+                    "Authorization",
+                    "Bearer " + jwtService.generateToken(admin)
+                )
+                .param("search", "correo-inexistente"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalElements").value(0));
+
+        mockMvc.perform(get("/api/admin/audit")
+                .header(
+                    "Authorization",
+                    "Bearer " + jwtService.generateToken(admin)
+                )
+                .param("from", "2026-11-04")
+                .param("to", "2026-11-03"))
+            .andExpect(status().isBadRequest());
+
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""

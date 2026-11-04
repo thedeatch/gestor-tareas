@@ -49,10 +49,24 @@ export class AdminService {
     );
   }
 
-  findAuditLog(page: number, size = 20): Observable<PageResponse<AdminAuditEntry>> {
-    const params = new HttpParams()
+  findAuditLog(
+    page: number,
+    filters: {
+      search?: string;
+      action?: string;
+      from?: string;
+      to?: string;
+    } = {},
+    size = 20
+  ): Observable<PageResponse<AdminAuditEntry>> {
+    let params = new HttpParams()
       .set('page', page)
       .set('size', size);
+
+    if (filters.search) params = params.set('search', filters.search);
+    if (filters.action) params = params.set('action', filters.action);
+    if (filters.from) params = params.set('from', filters.from);
+    if (filters.to) params = params.set('to', filters.to);
 
     return this.http.get<PageResponse<AdminAuditEntry>>(
       '/api/admin/audit',

@@ -1,5 +1,8 @@
 package cl.gestortareas.api.controller;
 
+import java.time.LocalDate;
+
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,6 +19,7 @@ import cl.gestortareas.api.dto.AdminUserPageResponse;
 import cl.gestortareas.api.dto.AdminAuditPageResponse;
 import cl.gestortareas.api.dto.UpdateUserRoleRequest;
 import cl.gestortareas.api.dto.UpdateUserStatusRequest;
+import cl.gestortareas.api.model.AdminAuditAction;
 import cl.gestortareas.api.service.AdminUserService;
 import cl.gestortareas.api.service.AdminAuditService;
 import jakarta.validation.Valid;
@@ -53,11 +57,17 @@ public class AdminController {
 
     @GetMapping("/audit")
     public AdminAuditPageResponse findAuditLog(
+        @RequestParam(defaultValue = "") String search,
+        @RequestParam(required = false) AdminAuditAction action,
+        @RequestParam(required = false)
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+        @RequestParam(required = false)
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
         return AdminAuditPageResponse.from(
-            adminAuditService.findAll(page, size)
+            adminAuditService.findAll(search, action, from, to, page, size)
         );
     }
 
