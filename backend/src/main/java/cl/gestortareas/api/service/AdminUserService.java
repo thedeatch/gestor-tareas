@@ -56,7 +56,8 @@ public class AdminUserService {
     public AdminUserResponse updateRole(
         String authenticatedEmail,
         Long userId,
-        UserRole newRole
+        UserRole newRole,
+        String reason
     ) {
         AppUser user = userRepository.findById(userId)
             .orElseThrow(() -> new ResponseStatusException(
@@ -88,13 +89,16 @@ public class AdminUserService {
             return toResponse(user);
         }
 
+        String normalizedReason = requireReason(reason);
+
         user.changeRole(newRole);
         auditService.record(
             authenticatedEmail,
             user,
             AdminAuditAction.ROLE_CHANGED,
             previousRole.name(),
-            newRole.name()
+            newRole.name(),
+            normalizedReason
         );
         return toResponse(user);
     }
@@ -106,6 +110,11 @@ public class AdminUserService {
         boolean active,
         String reason
     ) {
+        AppUser actor = userRepository.findByEmailIgnoreCase(authenticatedEmail)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.UNAUTHORIZED,
+                "Sesión no válida"
+            ));
         AppUser user = userRepository.findById(userId)
             .orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.NOT_FOUND,
@@ -121,11 +130,11 @@ public class AdminUserService {
             );
         }
 
-        String normalizedReason = reason == null ? "" : reason.trim();
-        if (!active && normalizedReason.isBlank()) {
+        if (actor.getRole() == UserRole.MODERATOR
+            && user.getRole() != UserRole.USER) {
             throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "Debes indicar el motivo de la suspensión"
+                HttpStatus.FORBIDDEN,
+                "Un moderador solo puede administrar cuentas de usuario"
             );
         }
 
@@ -133,6 +142,8 @@ public class AdminUserService {
         if (previousActive == active) {
             return toResponse(user);
         }
+
+        String normalizedReason = requireReason(reason);
 
         user.changeActiveStatus(active);
         auditService.record(
@@ -143,9 +154,20 @@ public class AdminUserService {
                 : AdminAuditAction.ACCOUNT_SUSPENDED,
             previousActive ? "ACTIVE" : "SUSPENDED",
             active ? "ACTIVE" : "SUSPENDED",
-            active ? null : normalizedReason
+            normalizedReason
         );
         return toResponse(user);
+    }
+
+    private String requireReason(String reason) {
+        String normalizedReason = reason == null ? "" : reason.trim();
+        if (normalizedReason.isBlank()) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Debes indicar el motivo de la acción administrativa"
+            );
+        }
+        return normalizedReason;
     }
 
     private AdminUserResponse toResponse(AppUser user) {

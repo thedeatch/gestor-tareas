@@ -9,6 +9,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -52,7 +53,12 @@ public class SecurityConfig {
                     "/swagger-ui/**",
                     "/swagger-ui.html"
                 ).permitAll()
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers(
+                    HttpMethod.PATCH,
+                    "/api/admin/users/*/role"
+                ).hasRole("ADMIN")
+                .requestMatchers("/api/admin/**")
+                    .hasAnyRole("ADMIN", "MODERATOR")
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt
@@ -136,6 +142,13 @@ public class SecurityConfig {
             accountValidator = token -> userRepository
                 .findByEmailIgnoreCase(token.getSubject())
                 .filter(user -> user.isActive())
+                .filter(user -> {
+                    List<String> tokenRoles = token.getClaimAsStringList(
+                        "roles"
+                    );
+                    return tokenRoles != null
+                        && tokenRoles.contains(user.getRole().name());
+                })
                 .map(user -> OAuth2TokenValidatorResult.success())
                 .orElseGet(() -> OAuth2TokenValidatorResult.failure(
                     new OAuth2Error(

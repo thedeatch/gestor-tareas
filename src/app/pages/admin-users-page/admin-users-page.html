@@ -69,43 +69,50 @@
                   </span>
                 </td>
                 <td>
-                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                    <mat-select
-                      [disabled]="isCurrentUser(user)"
-                      [ngModel]="roleDrafts()[user.id]"
-                      (ngModelChange)="setRoleDraft(user.id, $event)"
-                      [attr.aria-label]="'Rol de ' + user.name"
-                    >
-                      @for (role of roles; track role) {
-                        <mat-option [value]="role">{{ roleLabel(role) }}</mat-option>
-                      }
-                    </mat-select>
-                  </mat-form-field>
+                  @if (canManageRoles()) {
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <mat-select
+                        [disabled]="isCurrentUser(user)"
+                        [ngModel]="roleDrafts()[user.id]"
+                        (ngModelChange)="setRoleDraft(user.id, $event)"
+                        [attr.aria-label]="'Rol de ' + user.name"
+                      >
+                        @for (role of roles; track role) {
+                          <mat-option [value]="role">{{ roleLabel(role) }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  } @else {
+                    <span class="role-label">{{ roleLabel(user.role) }}</span>
+                  }
                 </td>
                 <td>
                   <div class="row-actions">
-                    <button
-                      mat-stroked-button
-                      type="button"
-                      [disabled]="
-                        isCurrentUser(user)
-                        || roleDrafts()[user.id] === user.role
-                        || savingUserId() === user.id
-                      "
-                      (click)="updateRole(user)"
-                    >
-                      @if (savingUserId() === user.id) {
-                        <mat-spinner diameter="18"></mat-spinner>
-                      } @else {
-                        Guardar rol
-                      }
-                    </button>
+                    @if (canManageRoles()) {
+                      <button
+                        mat-stroked-button
+                        type="button"
+                        [disabled]="
+                          isCurrentUser(user)
+                          || roleDrafts()[user.id] === user.role
+                          || savingUserId() === user.id
+                        "
+                        (click)="updateRole(user)"
+                      >
+                        @if (savingUserId() === user.id) {
+                          <mat-spinner diameter="18"></mat-spinner>
+                        } @else {
+                          Guardar rol
+                        }
+                      </button>
+                    }
                     <button
                       mat-button
                       type="button"
                       [class.suspend-button]="user.active"
                       [disabled]="
                         isCurrentUser(user)
+                        || (!canManageRoles() && user.role !== 'USER')
                         || updatingStatusUserId() === user.id
                       "
                       (click)="updateStatus(user)"

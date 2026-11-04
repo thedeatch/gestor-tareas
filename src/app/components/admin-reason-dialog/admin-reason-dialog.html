@@ -1,16 +1,13 @@
-<h2 mat-dialog-title>Suspender cuenta</h2>
+<h2 mat-dialog-title>{{ data.title }}</h2>
 
 <mat-dialog-content>
-  <p>
-    ¿Confirmas que deseas suspender la cuenta de
-    <strong>{{ data.userName }}</strong> ({{ data.userEmail }})?
-  </p>
-  <p class="warning">
-    La persona perderá el acceso inmediatamente y sus sesiones dejarán de ser válidas.
-  </p>
+  <p>{{ data.message }}</p>
+  @if (data.warning) {
+    <p class="warning">{{ data.warning }}</p>
+  }
 
   <mat-form-field appearance="outline" subscriptSizing="dynamic">
-    <mat-label>Motivo de la suspensión</mat-label>
+    <mat-label>{{ data.reasonLabel }}</mat-label>
     <textarea
       matInput
       rows="4"
@@ -18,7 +15,7 @@
       required
       [ngModel]="reason()"
       (ngModelChange)="reason.set($event)"
-      placeholder="Describe brevemente la razón"
+      [placeholder]="data.reasonPlaceholder"
     ></textarea>
     <mat-hint align="end">{{ reason().length }}/500</mat-hint>
   </mat-form-field>
@@ -32,6 +29,6 @@
     [disabled]="!normalizedReason()"
     [mat-dialog-close]="normalizedReason()"
   >
-    Confirmar suspensión
+    {{ data.confirmText }}
   </button>
 </mat-dialog-actions>

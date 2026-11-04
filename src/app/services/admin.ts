@@ -27,17 +27,21 @@ export class AdminService {
     return this.http.get<PageResponse<AdminUser>>(this.apiUrl, { params });
   }
 
-  updateRole(userId: number, role: UserRole): Observable<AdminUser> {
+  updateRole(
+    userId: number,
+    role: UserRole,
+    reason: string
+  ): Observable<AdminUser> {
     return this.http.patch<AdminUser>(
       `${this.apiUrl}/${userId}/role`,
-      { role }
+      { role, reason }
     );
   }
 
   updateStatus(
     userId: number,
     active: boolean,
-    reason?: string
+    reason: string
   ): Observable<AdminUser> {
     return this.http.patch<AdminUser>(
       `${this.apiUrl}/${userId}/status`,

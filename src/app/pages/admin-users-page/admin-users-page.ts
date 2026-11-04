@@ -16,9 +16,9 @@ import { UserRole } from '../../models/auth.model';
 import { AdminService } from '../../services/admin';
 import { AuthService } from '../../services/auth';
 import {
-  SuspensionDialog,
-  SuspensionDialogData
-} from '../../components/suspension-dialog/suspension-dialog';
+  AdminReasonDialog,
+  AdminReasonDialogData
+} from '../../components/admin-reason-dialog/admin-reason-dialog';
 
 @Component({
   selector: 'app-admin-users-page',
@@ -44,6 +44,8 @@ export class AdminUsersPage {
 
   protected readonly roles: UserRole[] = ['USER', 'MODERATOR', 'ADMIN'];
   protected readonly currentEmail = this.authService.userEmail;
+  protected readonly canManageRoles = () =>
+    this.authService.userRole() === 'ADMIN';
   protected readonly users = signal<AdminUser[]>([]);
   protected readonly roleDrafts = signal<Record<number, UserRole>>({});
   protected readonly search = signal('');
@@ -101,15 +103,32 @@ export class AdminUsersPage {
   }
 
   protected updateRole(user: AdminUser): void {
+    if (!this.canManageRoles()) return;
     const newRole = this.roleDrafts()[user.id];
     if (!newRole || newRole === user.role || this.isCurrentUser(user)) {
       return;
     }
 
+    const data: AdminReasonDialogData = {
+      title: 'Confirmar cambio de rol',
+      message: `Cambiarás el rol de ${user.name} de ${this.roleLabel(user.role)} a ${this.roleLabel(newRole)}.`,
+      warning: 'El cambio modificará sus permisos y cerrará sus sesiones actuales.',
+      reasonLabel: 'Motivo del cambio de rol',
+      reasonPlaceholder: 'Describe por qué se modifican sus permisos',
+      confirmText: 'Cambiar rol'
+    };
+    this.dialog.open(AdminReasonDialog, { data, autoFocus: 'textarea' })
+      .afterClosed()
+      .subscribe((reason: string | undefined) => {
+        if (reason) this.saveRole(user, newRole, reason);
+      });
+  }
+
+  private saveRole(user: AdminUser, newRole: UserRole, reason: string): void {
     this.message.set(null);
     this.errorMessage.set(null);
     this.savingUserId.set(user.id);
-    this.adminService.updateRole(user.id, newRole).pipe(
+    this.adminService.updateRole(user.id, newRole, reason).pipe(
       finalize(() => this.savingUserId.set(null))
     ).subscribe({
       next: updatedUser => {
@@ -136,11 +155,15 @@ export class AdminUsersPage {
     }
 
     if (user.active) {
-      const data: SuspensionDialogData = {
-        userName: user.name,
-        userEmail: user.email
+      const data: AdminReasonDialogData = {
+        title: 'Suspender cuenta',
+        message: `Suspenderás la cuenta de ${user.name} (${user.email}).`,
+        warning: 'La persona perderá el acceso inmediatamente y sus sesiones dejarán de ser válidas.',
+        reasonLabel: 'Motivo de la suspensión',
+        reasonPlaceholder: 'Describe brevemente la razón',
+        confirmText: 'Confirmar suspensión'
       };
-      this.dialog.open(SuspensionDialog, { data, autoFocus: 'textarea' })
+      this.dialog.open(AdminReasonDialog, { data, autoFocus: 'textarea' })
         .afterClosed()
         .subscribe((reason: string | undefined) => {
           if (reason) this.saveStatus(user, false, reason);
@@ -148,13 +171,25 @@ export class AdminUsersPage {
       return;
     }
 
-    this.saveStatus(user, true);
+    const data: AdminReasonDialogData = {
+      title: 'Reactivar cuenta',
+      message: `Reactivarás la cuenta de ${user.name} (${user.email}).`,
+      warning: 'La persona podrá volver a iniciar sesión y utilizar la aplicación.',
+      reasonLabel: 'Motivo de la reactivación',
+      reasonPlaceholder: 'Describe por qué se restablece el acceso',
+      confirmText: 'Confirmar reactivación'
+    };
+    this.dialog.open(AdminReasonDialog, { data, autoFocus: 'textarea' })
+      .afterClosed()
+      .subscribe((reason: string | undefined) => {
+        if (reason) this.saveStatus(user, true, reason);
+      });
   }
 
   private saveStatus(
     user: AdminUser,
     active: boolean,
-    reason?: string
+    reason: string
   ): void {
     this.message.set(null);
     this.errorMessage.set(null);

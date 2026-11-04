@@ -92,6 +92,10 @@ td mat-form-field {
   width: 170px;
 }
 
+.role-label {
+  font-weight: 500;
+}
+
 .status-chip {
   display: inline-flex;
   padding: 5px 10px;

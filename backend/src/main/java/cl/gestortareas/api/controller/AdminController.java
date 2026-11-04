@@ -70,7 +70,8 @@ public class AdminController {
         return adminUserService.updateRole(
             jwt.getSubject(),
             id,
-            request.role()
+            request.role(),
+            request.reason()
         );
     }
 

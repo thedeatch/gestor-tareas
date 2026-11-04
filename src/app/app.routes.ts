@@ -29,14 +29,14 @@ export const routes: Routes = [
   },
   {
     path: 'administracion/usuarios',
-    canActivate: [roleGuard(['ADMIN'])],
+    canActivate: [roleGuard(['ADMIN', 'MODERATOR'])],
     loadComponent: () =>
       import('./pages/admin-users-page/admin-users-page')
         .then(module => module.AdminUsersPage)
   },
   {
     path: 'administracion/auditoria',
-    canActivate: [roleGuard(['ADMIN'])],
+    canActivate: [roleGuard(['ADMIN', 'MODERATOR'])],
     loadComponent: () =>
       import('./pages/admin-audit-page/admin-audit-page')
         .then(module => module.AdminAuditPage)

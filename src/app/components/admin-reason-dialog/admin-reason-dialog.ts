@@ -5,13 +5,17 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 
-export interface SuspensionDialogData {
-  userName: string;
-  userEmail: string;
+export interface AdminReasonDialogData {
+  title: string;
+  message: string;
+  warning?: string;
+  reasonLabel: string;
+  reasonPlaceholder: string;
+  confirmText: string;
 }
 
 @Component({
-  selector: 'app-suspension-dialog',
+  selector: 'app-admin-reason-dialog',
   imports: [
     FormsModule,
     MatButtonModule,
@@ -19,11 +23,11 @@ export interface SuspensionDialogData {
     MatFormFieldModule,
     MatInputModule
   ],
-  templateUrl: './suspension-dialog.html',
-  styleUrl: './suspension-dialog.css'
+  templateUrl: './admin-reason-dialog.html',
+  styleUrl: './admin-reason-dialog.css'
 })
-export class SuspensionDialog {
-  protected readonly data = inject<SuspensionDialogData>(MAT_DIALOG_DATA);
+export class AdminReasonDialog {
+  protected readonly data = inject<AdminReasonDialogData>(MAT_DIALOG_DATA);
   protected readonly reason = signal('');
 
   protected normalizedReason(): string {

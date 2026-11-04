@@ -149,6 +149,7 @@ class AuthControllerIntegrationTests {
             passwordEncoder.encode("secreto123")
         ));
         String adminToken = jwtService.generateToken(admin);
+        String userToken = jwtService.generateToken(user);
 
         mockMvc.perform(get("/api/admin/users")
                 .header("Authorization", "Bearer " + adminToken))
@@ -164,11 +165,115 @@ class AuthControllerIntegrationTests {
                         "role": "MODERATOR"
                     }
                     """))
+            .andExpect(status().isBadRequest());
+
+        mockMvc.perform(patch("/api/admin/users/{id}/role", user.getId())
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "role": "MODERATOR",
+                        "reason": "Asignación de responsabilidades de moderación"
+                    }
+                    """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.role").value("MODERATOR"));
 
         AppUser updatedUser = userRepository.findById(user.getId()).orElseThrow();
         assertTrue(updatedUser.getRole() == UserRole.MODERATOR);
+
+        mockMvc.perform(get("/api/tasks")
+                .header("Authorization", "Bearer " + userToken))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldApplyModeratorPermissions() throws Exception {
+        AppUser admin = new AppUser(
+            "Administrador",
+            "admin@ejemplo.cl",
+            passwordEncoder.encode("secreto123")
+        );
+        admin.changeRole(UserRole.ADMIN);
+        userRepository.save(admin);
+
+        AppUser moderator = new AppUser(
+            "Moderador",
+            "moderador@ejemplo.cl",
+            passwordEncoder.encode("secreto123")
+        );
+        moderator.changeRole(UserRole.MODERATOR);
+        userRepository.save(moderator);
+
+        AppUser user = userRepository.save(new AppUser(
+            "Usuario normal",
+            "usuario@ejemplo.cl",
+            passwordEncoder.encode("secreto123")
+        ));
+        String moderatorToken = jwtService.generateToken(moderator);
+
+        mockMvc.perform(get("/api/admin/users")
+                .header("Authorization", "Bearer " + moderatorToken))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/admin/audit")
+                .header("Authorization", "Bearer " + moderatorToken))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(patch("/api/admin/users/{id}/role", user.getId())
+                .header("Authorization", "Bearer " + moderatorToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "role": "MODERATOR"
+                    }
+                    """))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(patch("/api/admin/users/{id}/status", admin.getId())
+                .header("Authorization", "Bearer " + moderatorToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "active": false,
+                        "reason": "Intento no autorizado"
+                    }
+                    """))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(patch("/api/admin/users/{id}/status", user.getId())
+                .header("Authorization", "Bearer " + moderatorToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "active": false,
+                        "reason": "Incumplimiento de las normas"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.active").value(false));
+
+        mockMvc.perform(patch("/api/admin/users/{id}/status", user.getId())
+                .header("Authorization", "Bearer " + moderatorToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "active": true
+                    }
+                    """))
+            .andExpect(status().isBadRequest());
+
+        mockMvc.perform(patch("/api/admin/users/{id}/status", user.getId())
+                .header("Authorization", "Bearer " + moderatorToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "active": true,
+                        "reason": "Revisión completada satisfactoriamente"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.active").value(true));
     }
 
     @Test
@@ -189,7 +294,8 @@ class AuthControllerIntegrationTests {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                        "role": "USER"
+                        "role": "USER",
+                        "reason": "Prueba de autoprotección"
                     }
                     """))
             .andExpect(status().isConflict());

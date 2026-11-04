@@ -28,7 +28,7 @@
     </a>
 
     @if (isAuthenticated()) {
-      @if (userRole() === 'ADMIN') {
+      @if (userRole() === 'ADMIN' || userRole() === 'MODERATOR') {
         <a
           matButton
           routerLink="/administracion/usuarios"
