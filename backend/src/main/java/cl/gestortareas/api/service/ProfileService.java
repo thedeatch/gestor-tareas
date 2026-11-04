@@ -1,6 +1,5 @@
 package cl.gestortareas.api.service;
 
-import java.io.IOException;
 import java.util.Locale;
 import java.util.Set;
 
@@ -16,6 +15,8 @@ import cl.gestortareas.api.dto.ChangePasswordRequest;
 import cl.gestortareas.api.dto.ProfileResponse;
 import cl.gestortareas.api.dto.UpdateProfileRequest;
 import cl.gestortareas.api.model.AppUser;
+import cl.gestortareas.api.model.FilePurpose;
+import cl.gestortareas.api.model.StoredFile;
 import cl.gestortareas.api.repository.AppUserRepository;
 
 @Service
@@ -32,17 +33,20 @@ public class ProfileService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final FileStorageService fileStorageService;
 
     public ProfileService(
         AppUserRepository userRepository,
         PasswordEncoder passwordEncoder,
         JwtService jwtService,
-        RefreshTokenService refreshTokenService
+        RefreshTokenService refreshTokenService,
+        FileStorageService fileStorageService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
+        this.fileStorageService = fileStorageService;
     }
 
     @Transactional(readOnly = true)
@@ -117,6 +121,10 @@ public class ProfileService {
                 "El usuario no tiene una foto de perfil"
             );
         }
+        if (user.getAvatarFile() != null) {
+            StoredFile file = user.getAvatarFile();
+            return new AvatarData(file.getData(), file.getContentType());
+        }
         return new AvatarData(
             user.getAvatarData(),
             user.getAvatarContentType()
@@ -143,23 +151,25 @@ public class ProfileService {
             );
         }
 
-        try {
-            findUser(authenticatedEmail).updateAvatar(
-                file.getBytes(),
-                contentType
-            );
-        } catch (IOException exception) {
-            throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "No fue posible leer la imagen",
-                exception
-            );
+        AppUser user = findUser(authenticatedEmail);
+        StoredFile stored = fileStorageService.store(
+            authenticatedEmail, file, FilePurpose.AVATAR,
+            MAX_AVATAR_SIZE, ALLOWED_AVATAR_TYPES
+        );
+        StoredFile previous = user.updateAvatarFile(stored);
+        if (previous != null) {
+            fileStorageService.delete(previous);
         }
     }
 
     @Transactional
     public void removeAvatar(String authenticatedEmail) {
-        findUser(authenticatedEmail).removeAvatar();
+        AppUser user = findUser(authenticatedEmail);
+        StoredFile previous = user.getAvatarFile();
+        user.removeAvatar();
+        if (previous != null) {
+            fileStorageService.delete(previous);
+        }
     }
 
     private AppUser findUser(String email) {

@@ -6,7 +6,11 @@ import {
 import { MatButtonModule } from '@angular/material/button';
 
 export interface ConfirmDialogData {
-  taskDescription: string;
+  taskDescription?: string;
+  title?: string;
+  itemLabel?: string;
+  itemName?: string;
+  confirmLabel?: string;
 }
 
 @Component({

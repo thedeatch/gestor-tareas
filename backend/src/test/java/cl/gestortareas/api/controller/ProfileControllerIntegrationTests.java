@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import cl.gestortareas.api.model.AppUser;
 import cl.gestortareas.api.repository.AppUserRepository;
+import cl.gestortareas.api.repository.StoredFileRepository;
 import cl.gestortareas.api.service.JwtService;
 
 @SpringBootTest
@@ -32,6 +33,7 @@ class ProfileControllerIntegrationTests {
     private final AppUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final StoredFileRepository storedFileRepository;
     private String token;
 
     @Autowired
@@ -39,12 +41,14 @@ class ProfileControllerIntegrationTests {
         MockMvc mockMvc,
         AppUserRepository userRepository,
         PasswordEncoder passwordEncoder,
-        JwtService jwtService
+        JwtService jwtService,
+        StoredFileRepository storedFileRepository
     ) {
         this.mockMvc = mockMvc;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.storedFileRepository = storedFileRepository;
     }
 
     @BeforeEach
@@ -174,6 +178,55 @@ class ProfileControllerIntegrationTests {
             .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/users/me/avatar")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldManageOwnedPersonalFiles() throws Exception {
+        byte[] document = "contenido de prueba".getBytes();
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "notas.txt",
+            MediaType.TEXT_PLAIN_VALUE,
+            document
+        );
+
+        mockMvc.perform(multipart("/api/files")
+                .file(file)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("notas.txt"))
+            .andExpect(jsonPath("$.purpose").value("ATTACHMENT"));
+
+        Long fileId = storedFileRepository.findAll().get(0).getId();
+
+        mockMvc.perform(get("/api/files")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].id").value(fileId))
+            .andExpect(jsonPath("$[0].sizeBytes").value(document.length));
+
+        mockMvc.perform(get("/api/files/{id}", fileId)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(content().bytes(document));
+
+        AppUser otherUser = userRepository.save(new AppUser(
+            "Otro usuario",
+            "otro@ejemplo.cl",
+            passwordEncoder.encode("secreto123")
+        ));
+        String otherToken = jwtService.generateToken(otherUser);
+        mockMvc.perform(get("/api/files/{id}", fileId)
+                .header("Authorization", "Bearer " + otherToken))
+            .andExpect(status().isNotFound());
+
+        mockMvc.perform(delete("/api/files/{id}", fileId)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/files/{id}", fileId)
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isNotFound());
     }

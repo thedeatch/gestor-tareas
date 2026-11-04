@@ -10,6 +10,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
 
 @Entity
 @Table(name = "users")
@@ -37,6 +40,10 @@ public class AppUser {
 
     @Column(name = "avatar_content_type", length = 50)
     private String avatarContentType;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "avatar_file_id")
+    private StoredFile avatarFile;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
@@ -104,7 +111,17 @@ public class AppUser {
     }
 
     public boolean hasAvatar() {
-        return avatarData != null && avatarData.length > 0;
+        return avatarFile != null || (avatarData != null && avatarData.length > 0);
+    }
+
+    public StoredFile getAvatarFile() { return avatarFile; }
+
+    public StoredFile updateAvatarFile(StoredFile file) {
+        StoredFile previous = avatarFile;
+        avatarFile = file;
+        avatarData = null;
+        avatarContentType = null;
+        return previous;
     }
 
     public void updateAvatar(byte[] data, String contentType) {
@@ -113,6 +130,7 @@ public class AppUser {
     }
 
     public void removeAvatar() {
+        avatarFile = null;
         this.avatarData = null;
         this.avatarContentType = null;
     }

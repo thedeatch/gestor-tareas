@@ -280,6 +280,68 @@
         }
       </mat-card-content>
     </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Archivos personales</mat-card-title>
+        <mat-card-subtitle>
+          Imágenes, PDF o texto de hasta 10 MB
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content class="files-section">
+        <div class="files-heading">
+          <span>{{ files().length }} archivos</span>
+          <button
+            mat-flat-button
+            type="button"
+            [disabled]="fileInProgress() !== null"
+            (click)="personalFileInput.click()"
+          >
+            <mat-icon>upload_file</mat-icon>
+            Subir archivo
+          </button>
+          <input
+            #personalFileInput
+            class="file-input"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,application/pdf,text/plain"
+            (change)="selectFile($event)"
+          >
+        </div>
+
+        @if (isLoadingFiles()) {
+          <div class="loading"><mat-spinner diameter="32"></mat-spinner></div>
+        } @else {
+          <div class="file-list">
+            @for (file of files(); track file.id) {
+              <article class="file-item">
+                <mat-icon>description</mat-icon>
+                <div>
+                  <strong>{{ file.name }}</strong>
+                  <p>{{ formatFileSize(file.sizeBytes) }} · {{ file.createdAt | date:'dd/MM/yyyy HH:mm' }}</p>
+                </div>
+                <button
+                  mat-icon-button
+                  type="button"
+                  aria-label="Descargar archivo"
+                  [disabled]="fileInProgress() !== null"
+                  (click)="downloadFile(file)"
+                ><mat-icon>download</mat-icon></button>
+                <button
+                  mat-icon-button
+                  type="button"
+                  aria-label="Eliminar archivo"
+                  [disabled]="fileInProgress() !== null"
+                  (click)="deleteFile(file)"
+                ><mat-icon>delete</mat-icon></button>
+              </article>
+            } @empty {
+              <p>Aún no has guardado archivos personales.</p>
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
   }
 
   @if (message()) {

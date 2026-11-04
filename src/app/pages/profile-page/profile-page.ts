@@ -20,6 +20,12 @@ import { finalize } from 'rxjs';
 import { AuthService } from '../../services/auth';
 import { AvatarCropDialog } from '../../components/avatar-crop-dialog/avatar-crop-dialog';
 import { UserSession } from '../../models/auth.model';
+import { StoredFile } from '../../models/stored-file.model';
+import { FileStorageService } from '../../services/file-storage';
+import {
+  ConfirmDialog,
+  ConfirmDialogData
+} from '../../components/confirm-dialog/confirm-dialog';
 
 @Component({
   selector: 'app-profile-page',
@@ -41,6 +47,7 @@ export class ProfilePage implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
+  private readonly fileStorage = inject(FileStorageService);
 
   protected readonly profile = {
     name: '',
@@ -66,10 +73,14 @@ export class ProfilePage implements OnInit, OnDestroy {
   protected readonly sessions = signal<UserSession[]>([]);
   protected readonly isLoadingSessions = signal(true);
   protected readonly sessionInProgress = signal<number | null>(null);
+  protected readonly files = signal<StoredFile[]>([]);
+  protected readonly isLoadingFiles = signal(true);
+  protected readonly fileInProgress = signal<number | null>(null);
 
   ngOnInit(): void {
     this.loadProfile();
     this.loadSessions();
+    this.loadFiles();
   }
 
   ngOnDestroy(): void {
@@ -221,6 +232,94 @@ export class ProfilePage implements OnInit, OnDestroy {
     });
   }
 
+  protected selectFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      this.errorMessage.set('El archivo debe pesar como máximo 10 MB.');
+      input.value = '';
+      return;
+    }
+
+    this.beginAction();
+    this.fileInProgress.set(-1);
+    this.fileStorage.upload(file).pipe(
+      finalize(() => {
+        this.fileInProgress.set(null);
+        input.value = '';
+      })
+    ).subscribe({
+      next: () => {
+        this.message.set('Archivo guardado correctamente.');
+        this.loadFiles();
+      },
+      error: error => this.errorMessage.set(
+        error.status === 400
+          ? 'Formato no permitido o archivo inválido.'
+          : 'No fue posible guardar el archivo.'
+      )
+    });
+  }
+
+  protected downloadFile(file: StoredFile): void {
+    this.beginAction();
+    this.fileInProgress.set(file.id);
+    this.fileStorage.download(file.id).pipe(
+      finalize(() => this.fileInProgress.set(null))
+    ).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = file.name;
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => this.errorMessage.set('No fue posible descargar el archivo.')
+    });
+  }
+
+  protected deleteFile(file: StoredFile): void {
+    const data: ConfirmDialogData = {
+      title: 'Eliminar archivo',
+      itemLabel: 'el archivo',
+      itemName: file.name,
+      confirmLabel: 'Eliminar'
+    };
+
+    this.dialog.open(ConfirmDialog, { data })
+      .afterClosed()
+      .subscribe(confirmed => {
+        if (confirmed) {
+          this.performFileDeletion(file);
+        }
+      });
+  }
+
+  private performFileDeletion(file: StoredFile): void {
+    this.beginAction();
+    this.fileInProgress.set(file.id);
+    this.fileStorage.delete(file.id).pipe(
+      finalize(() => this.fileInProgress.set(null))
+    ).subscribe({
+      next: () => {
+        this.message.set('Archivo eliminado.');
+        this.loadFiles();
+      },
+      error: () => this.errorMessage.set('No fue posible eliminar el archivo.')
+    });
+  }
+
+  protected formatFileSize(size: number): string {
+    return size < 1024 * 1024
+      ? `${Math.max(1, Math.round(size / 1024))} KB`
+      : `${(size / 1024 / 1024).toFixed(1)} MB`;
+  }
+
   private loadProfile(): void {
     this.authService.getProfile().pipe(
       finalize(() => this.isLoading.set(false))
@@ -243,6 +342,16 @@ export class ProfilePage implements OnInit, OnDestroy {
     ).subscribe({
       next: sessions => this.sessions.set(sessions),
       error: () => this.errorMessage.set('No fue posible cargar las sesiones activas.')
+    });
+  }
+
+  private loadFiles(): void {
+    this.isLoadingFiles.set(true);
+    this.fileStorage.list().pipe(
+      finalize(() => this.isLoadingFiles.set(false))
+    ).subscribe({
+      next: files => this.files.set(files),
+      error: () => this.errorMessage.set('No fue posible cargar los archivos.')
     });
   }
 

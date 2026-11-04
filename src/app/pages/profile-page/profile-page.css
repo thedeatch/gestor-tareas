@@ -82,34 +82,50 @@ form > button {
 }
 
 .sessions-section,
-.session-list {
+.session-list,
+.files-section,
+.file-list {
   display: grid;
   gap: 12px;
 }
 
 .sessions-heading,
-.session-item {
+.session-item,
+.files-heading,
+.file-item {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.sessions-heading {
+.sessions-heading,
+.files-heading {
   justify-content: space-between;
 }
 
-.session-item {
+.session-item,
+.file-item {
   padding: 16px 0;
   border-top: 1px solid var(--mat-sys-outline-variant);
 }
 
-.session-item > div {
+.session-item > div,
+.file-item > div {
   flex: 1;
+  min-width: 0;
 }
 
-.session-item p {
+.session-item p,
+.file-item p {
   margin: 4px 0 0;
   color: var(--mat-sys-on-surface-variant);
+}
+
+.file-item strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .current-session {
@@ -155,7 +171,9 @@ form > button {
     justify-self: stretch;
   }
 
-  .session-item {
+  .session-item,
+  .file-item,
+  .files-heading {
     align-items: flex-start;
     flex-wrap: wrap;
   }
