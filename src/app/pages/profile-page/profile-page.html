@@ -168,6 +168,7 @@
               required
               minlength="8"
               maxlength="72"
+              pattern="^(?=.*[A-Za-zÁÉÍÓÚáéíóúÑñ])(?=.*\d).{8,72}$"
               autocomplete="new-password"
               [(ngModel)]="password.newPassword"
             >
@@ -183,7 +184,7 @@
                 {{ hideNewPassword() ? 'visibility' : 'visibility_off' }}
               </mat-icon>
             </button>
-            <mat-hint>Utiliza entre 8 y 72 caracteres.</mat-hint>
+            <mat-hint>Entre 8 y 72 caracteres, con una letra y un número.</mat-hint>
           </mat-form-field>
 
           <mat-form-field appearance="outline">

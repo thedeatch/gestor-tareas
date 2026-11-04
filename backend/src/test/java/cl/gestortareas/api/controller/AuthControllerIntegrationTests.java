@@ -93,6 +93,25 @@ class AuthControllerIntegrationTests {
     }
 
     @Test
+    void shouldRejectRegistrationWhenPasswordHasNoNumber()
+        throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "name": "Usuario de prueba",
+                        "email": "usuario@ejemplo.cl",
+                        "password": "soloLetras"
+                    }
+                    """))
+            .andExpect(status().isBadRequest());
+
+        assertFalse(userRepository
+            .findByEmailIgnoreCase("usuario@ejemplo.cl")
+            .isPresent());
+    }
+
+    @Test
     void shouldAcceptVerificationResendWithoutRevealingUnknownEmail()
         throws Exception {
         mockMvc.perform(post("/api/auth/resend-verification")

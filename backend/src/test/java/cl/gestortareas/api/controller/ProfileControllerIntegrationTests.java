@@ -126,6 +126,29 @@ class ProfileControllerIntegrationTests {
     }
 
     @Test
+    void shouldRejectPasswordChangeWhenNewPasswordHasNoNumber()
+        throws Exception {
+        mockMvc.perform(post("/api/users/me/password")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "currentPassword": "secreto123",
+                        "newPassword": "soloLetras"
+                    }
+                    """))
+            .andExpect(status().isBadRequest());
+
+        AppUser user = userRepository
+            .findByEmailIgnoreCase("usuario@ejemplo.cl")
+            .orElseThrow();
+        assertTrue(passwordEncoder.matches(
+            "secreto123",
+            user.getPasswordHash()
+        ));
+    }
+
+    @Test
     void shouldUploadReadAndDeleteAvatar() throws Exception {
         byte[] image = new byte[] { 1, 2, 3, 4 };
         MockMultipartFile file = new MockMultipartFile(

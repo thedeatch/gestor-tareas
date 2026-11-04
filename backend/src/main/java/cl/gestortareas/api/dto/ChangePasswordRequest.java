@@ -1,10 +1,10 @@
 package cl.gestortareas.api.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import cl.gestortareas.api.validation.ValidPassword;
 
 public record ChangePasswordRequest(
     @NotBlank String currentPassword,
-    @NotBlank @Size(min = 8, max = 72) String newPassword
+    @ValidPassword String newPassword
 ) {
 }

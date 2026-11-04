@@ -1,11 +1,11 @@
 package cl.gestortareas.api.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import cl.gestortareas.api.validation.ValidPassword;
 
 public record ResetPasswordRequest(
     @NotBlank String token,
-    @NotBlank @Size(min = 8, max = 72) String password
+    @ValidPassword String password
 ) {
 }
 

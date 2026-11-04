@@ -66,6 +66,7 @@
             required
             minlength="8"
             maxlength="72"
+            pattern="^(?=.*[A-Za-zÁÉÍÓÚáéíóúÑñ])(?=.*\d).{8,72}$"
             [(ngModel)]="registration.password"
             #passwordControl="ngModel"
           >
@@ -86,9 +87,11 @@
             <mat-error>La contraseña es obligatoria.</mat-error>
           } @else if (passwordControl.hasError('minlength')) {
             <mat-error>Debe tener al menos 8 caracteres.</mat-error>
+          } @else if (passwordControl.hasError('pattern')) {
+            <mat-error>Debe incluir al menos una letra y un número.</mat-error>
           }
 
-          <mat-hint>Utiliza entre 8 y 72 caracteres.</mat-hint>
+          <mat-hint>Entre 8 y 72 caracteres, con una letra y un número.</mat-hint>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
