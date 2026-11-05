@@ -7,7 +7,7 @@ services:
     branch: Dev
     rootDir: backend
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /v3/api-docs
+    healthCheckPath: /api/health
     autoDeployTrigger: checksPass
     envVars:
       - key: DB_HOST

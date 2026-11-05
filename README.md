@@ -1,59 +1,128 @@
 # GestorTareas
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.0.8.
+Aplicación full stack para gestionar tareas y servir como base reutilizable de futuros proyectos. Incluye autenticación, perfiles, roles, administración, auditoría, archivos, preferencias y gestión de sesiones.
 
-## Development server
+## Tecnologías
 
-To start a local development server, run:
+- Angular 22, TypeScript y Angular Material.
+- Spring Boot 4 y Java 17.
+- PostgreSQL 17 y Flyway.
+- JWT, refresh tokens, BCrypt y RBAC.
+- Docker Compose, GitHub Actions y Render.
 
-```bash
-ng serve
+## Arquitectura
+
+El proyecto es un **monolito modular**, no una arquitectura de microservicios. Angular es el cliente web, Spring Boot expone la API REST y PostgreSQL conserva los datos. Consulta [ARCHITECTURE.md](ARCHITECTURE.md) para conocer el diseño y las responsabilidades.
+
+## Inicio rápido con Docker
+
+Requisitos: Git y Docker Desktop con el motor activo.
+
+1. Copia `.env.example` como `.env`.
+2. Sustituye las contraseñas y secretos de ejemplo.
+3. Desde la raíz ejecuta:
+
+```powershell
+docker compose up -d --build
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Servicios disponibles:
 
-## Code scaffolding
+- Frontend: http://localhost:4200
+- API: http://localhost:8081/api/health
+- Swagger: http://localhost:8081/swagger-ui/index.html
+- PostgreSQL: `localhost:5432`
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+Para detenerlos sin borrar los datos:
 
-```bash
-ng generate component component-name
+```powershell
+docker compose down
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Desarrollo local
 
-```bash
-ng generate --help
+Primero inicia PostgreSQL:
+
+```powershell
+docker compose up -d postgres
 ```
 
-## Building
+En una terminal, inicia el backend:
 
-To build the project run:
-
-```bash
-ng build
+```powershell
+cd backend
+.\mvnw.cmd spring-boot:run
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+En otra terminal, inicia Angular:
 
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
+```powershell
+npm ci
+npm start
 ```
 
-## Running end-to-end tests
+El proxy de desarrollo dirige las solicitudes `/api` de Angular hacia Spring Boot.
 
-For end-to-end (e2e) testing, run:
+## Variables de entorno
 
-```bash
-ng e2e
+La referencia completa está en [.env.example](.env.example). Las variables más importantes son:
+
+- `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`: conexión a PostgreSQL.
+- `JWT_SECRET`: secreto de al menos 32 caracteres.
+- `REFRESH_TOKEN_COOKIE_SECURE`: `false` en HTTP local y `true` en HTTPS.
+- `MAIL_*`: credenciales SMTP para verificación y recuperación.
+- `FRONTEND_URL`: URL usada en enlaces enviados por correo.
+- `BOOTSTRAP_ADMIN_EMAIL`: correo de una cuenta ya registrada que se promoverá inicialmente.
+- `EMAIL_VERIFICATION_ENABLED`: permite desactivar la verificación únicamente en desarrollo.
+
+No publiques el archivo `.env` ni credenciales reales.
+
+## Calidad y pruebas
+
+Frontend:
+
+```powershell
+npm test -- --watch=false
+npm run build
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+Backend:
 
-## Additional Resources
+```powershell
+cd backend
+.\mvnw.cmd clean verify
+```
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Imágenes Docker:
+
+```powershell
+docker build -t gestor-tareas-api:dev .\backend
+docker build -t gestor-tareas-frontend:dev .
+```
+
+GitHub Actions ejecuta automáticamente estas validaciones en cada push o pull request dirigido a `Dev` o `main`. Render despliega solamente cuando los controles terminan correctamente.
+
+## Documentación del proyecto
+
+- [ARCHITECTURE.md](ARCHITECTURE.md): componentes, seguridad y flujo de datos.
+- [MODULE-GUIDE.md](MODULE-GUIDE.md): guía para agregar un módulo reutilizable.
+- [ROADMAP.md](ROADMAP.md): estado de la base transversal y próximos hitos.
+- Swagger local: http://localhost:8081/swagger-ui/index.html
+
+## Estructura
+
+```text
+gestor-tareas/
+├── src/                 # Aplicación Angular
+├── backend/             # API Spring Boot y migraciones Flyway
+├── .github/workflows/   # Integración continua
+├── compose.yaml         # Entorno local completo
+├── render.yaml          # Infraestructura de despliegue
+└── .env.example         # Plantilla de configuración
+```
+
+## Flujo de ramas
+
+- `Dev`: integración y despliegue del entorno actual.
+- `main`: versión estable.
+- Los cambios se integran mediante commits convencionales, por ejemplo `feat:`, `fix:`, `test:` y `docs:`.
