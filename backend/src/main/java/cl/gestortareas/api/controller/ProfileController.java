@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -20,6 +21,8 @@ import cl.gestortareas.api.dto.AuthResponse;
 import cl.gestortareas.api.dto.ChangePasswordRequest;
 import cl.gestortareas.api.dto.ProfileResponse;
 import cl.gestortareas.api.dto.UpdateProfileRequest;
+import cl.gestortareas.api.dto.UpdateUserPreferencesRequest;
+import cl.gestortareas.api.dto.UserPreferencesResponse;
 import cl.gestortareas.api.service.ProfileService;
 import jakarta.validation.Valid;
 
@@ -85,5 +88,20 @@ public class ProfileController {
     ) {
         profileService.removeAvatar(jwt.getSubject());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/preferences")
+    public UserPreferencesResponse getPreferences(
+        @AuthenticationPrincipal Jwt jwt
+    ) {
+        return profileService.getPreferences(jwt.getSubject());
+    }
+
+    @PutMapping("/preferences")
+    public UserPreferencesResponse updatePreferences(
+        @AuthenticationPrincipal Jwt jwt,
+        @Valid @RequestBody UpdateUserPreferencesRequest request
+    ) {
+        return profileService.updatePreferences(jwt.getSubject(), request);
     }
 }

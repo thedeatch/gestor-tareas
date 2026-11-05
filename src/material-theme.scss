@@ -36,3 +36,12 @@ body {
   margin: 0;
   height: 100%;
 }
+
+html[data-theme='light'] body {
+  color-scheme: light;
+}
+
+html[data-theme='dark'] body {
+  color-scheme: dark;
+}
+

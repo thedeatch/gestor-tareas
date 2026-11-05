@@ -14,6 +14,8 @@ import cl.gestortareas.api.dto.AuthResponse;
 import cl.gestortareas.api.dto.ChangePasswordRequest;
 import cl.gestortareas.api.dto.ProfileResponse;
 import cl.gestortareas.api.dto.UpdateProfileRequest;
+import cl.gestortareas.api.dto.UpdateUserPreferencesRequest;
+import cl.gestortareas.api.dto.UserPreferencesResponse;
 import cl.gestortareas.api.model.AppUser;
 import cl.gestortareas.api.model.FilePurpose;
 import cl.gestortareas.api.model.StoredFile;
@@ -88,6 +90,22 @@ public class ProfileService {
             user.getName(),
             user.getRole()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public UserPreferencesResponse getPreferences(String authenticatedEmail) {
+        AppUser user = findUser(authenticatedEmail);
+        return preferencesResponse(user);
+    }
+
+    @Transactional
+    public UserPreferencesResponse updatePreferences(
+        String authenticatedEmail,
+        UpdateUserPreferencesRequest request
+    ) {
+        AppUser user = findUser(authenticatedEmail);
+        user.updatePreferences(request.theme(), request.reducedMotion());
+        return preferencesResponse(user);
     }
 
     @Transactional
@@ -191,6 +209,13 @@ public class ProfileService {
 
     private String normalizeEmail(String email) {
         return email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private UserPreferencesResponse preferencesResponse(AppUser user) {
+        return new UserPreferencesResponse(
+            user.getThemePreference(),
+            user.isReducedMotion()
+        );
     }
 
     public record AvatarData(byte[] bytes, String contentType) {

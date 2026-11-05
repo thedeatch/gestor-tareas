@@ -8,6 +8,8 @@ import {
   RouterLinkActive
 } from '@angular/router';
 import { AuthService } from '../../services/auth';
+import { ThemePreference } from '../../models/user-preferences.model';
+import { UserPreferencesService } from '../../services/user-preferences';
 @Component({
   selector: 'app-navbar',
   imports: [
@@ -23,6 +25,7 @@ import { AuthService } from '../../services/auth';
 export class Navbar {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly preferencesService = inject(UserPreferencesService);
 
   protected readonly isAuthenticated =
     this.authService.isAuthenticated;
@@ -34,6 +37,8 @@ export class Navbar {
     this.authService.userRole;
 
   protected readonly avatarUrl = signal<string | null>(null);
+  protected readonly isChangingTheme = signal(false);
+  protected readonly preferences = this.preferencesService.preferences;
 
   constructor() {
     effect(() => {
@@ -53,6 +58,37 @@ export class Navbar {
     });
   }
 
+  protected changeTheme(): void {
+    if (this.isChangingTheme()) {
+      return;
+    }
+
+    const current = this.preferences();
+    this.isChangingTheme.set(true);
+    this.preferencesService.update({
+      ...current,
+      theme: this.nextTheme(current.theme)
+    }).subscribe({
+      error: () => this.isChangingTheme.set(false),
+      complete: () => this.isChangingTheme.set(false)
+    });
+  }
+
+  protected themeIcon(): string {
+    return this.preferences().theme === 'DARK'
+      ? 'dark_mode'
+      : 'light_mode';
+  }
+
+  protected themeTooltip(): string {
+    const names: Record<ThemePreference, string> = {
+      LIGHT: 'Claro',
+      DARK: 'Oscuro'
+    };
+    const current = this.preferences().theme;
+    return `Tema actual: ${names[current]}. Cambiar a ${names[this.nextTheme(current)]}`;
+  }
+
   private loadAvatar(): void {
     this.authService.getAvatar().subscribe({
       next: blob => this.replaceAvatarUrl(URL.createObjectURL(blob)),
@@ -66,5 +102,9 @@ export class Navbar {
       URL.revokeObjectURL(previousUrl);
     }
     this.avatarUrl.set(url);
+  }
+
+  private nextTheme(theme: ThemePreference): ThemePreference {
+    return theme === 'LIGHT' ? 'DARK' : 'LIGHT';
   }
 }

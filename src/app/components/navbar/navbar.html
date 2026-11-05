@@ -45,6 +45,18 @@
         </a>
       }
 
+      <button
+        mat-icon-button
+        class="theme-button"
+        type="button"
+        [disabled]="isChangingTheme()"
+        [attr.title]="themeTooltip()"
+        [attr.aria-label]="themeTooltip()"
+        (click)="changeTheme()"
+      >
+        <mat-icon>{{ themeIcon() }}</mat-icon>
+      </button>
+
       <a
         class="user-profile-link"
         routerLink="/perfil"

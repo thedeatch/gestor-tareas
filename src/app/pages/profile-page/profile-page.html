@@ -342,6 +342,59 @@
         }
       </mat-card-content>
     </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Preferencias</mat-card-title>
+        <mat-card-subtitle>
+          Personaliza la apariencia y accesibilidad de tu cuenta
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        @if (isLoadingPreferences()) {
+          <div class="loading"><mat-spinner diameter="32"></mat-spinner></div>
+        } @else {
+          <form #preferencesForm="ngForm" (ngSubmit)="savePreferences()">
+            <mat-form-field appearance="outline">
+              <mat-label>Tema visual</mat-label>
+              <mat-select
+                name="theme"
+                [(ngModel)]="preferences.theme"
+              >
+                <mat-option value="LIGHT">Claro</mat-option>
+                <mat-option value="DARK">Oscuro</mat-option>
+              </mat-select>
+              <mat-icon matPrefix>palette</mat-icon>
+            </mat-form-field>
+
+            <mat-slide-toggle
+              name="reducedMotion"
+              [(ngModel)]="preferences.reducedMotion"
+            >
+              Reducir animaciones y transiciones
+            </mat-slide-toggle>
+
+            <button
+              mat-flat-button
+              type="submit"
+              [disabled]="preferencesForm.invalid || isSavingPreferences()"
+            >
+              @if (isSavingPreferences()) {
+                <span class="button-content">
+                  <mat-spinner diameter="20"></mat-spinner>
+                  Guardando…
+                </span>
+              } @else {
+                <span class="button-content">
+                  <mat-icon>save</mat-icon>
+                  Guardar preferencias
+                </span>
+              }
+            </button>
+          </form>
+        }
+      </mat-card-content>
+    </mat-card>
   }
 
   @if (message()) {

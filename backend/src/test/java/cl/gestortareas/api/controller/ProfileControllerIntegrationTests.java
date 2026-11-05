@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -229,5 +230,33 @@ class ProfileControllerIntegrationTests {
         mockMvc.perform(get("/api/files/{id}", fileId)
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldPersistUserPreferences() throws Exception {
+        mockMvc.perform(get("/api/users/me/preferences")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.theme").value("LIGHT"))
+            .andExpect(jsonPath("$.reducedMotion").value(false));
+
+        mockMvc.perform(put("/api/users/me/preferences")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "theme": "DARK",
+                        "reducedMotion": true
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.theme").value("DARK"))
+            .andExpect(jsonPath("$.reducedMotion").value(true));
+
+        mockMvc.perform(get("/api/users/me/preferences")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.theme").value("DARK"))
+            .andExpect(jsonPath("$.reducedMotion").value(true));
     }
 }

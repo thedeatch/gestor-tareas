@@ -60,6 +60,13 @@ public class AppUser {
     @Column(name = "locked_until")
     private Instant lockedUntil;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "theme_preference", nullable = false, length = 10)
+    private ThemePreference themePreference = ThemePreference.LIGHT;
+
+    @Column(name = "reduced_motion", nullable = false)
+    private boolean reducedMotion;
+
     protected AppUser() {
     }
 
@@ -183,5 +190,21 @@ public class AppUser {
     public void clearLoginFailures() {
         failedLoginAttempts = 0;
         lockedUntil = null;
+    }
+
+    public ThemePreference getThemePreference() {
+        return themePreference;
+    }
+
+    public boolean isReducedMotion() {
+        return reducedMotion;
+    }
+
+    public void updatePreferences(
+        ThemePreference themePreference,
+        boolean reducedMotion
+    ) {
+        this.themePreference = themePreference;
+        this.reducedMotion = reducedMotion;
     }
 }

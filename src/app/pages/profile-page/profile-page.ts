@@ -1,5 +1,6 @@
 import {
   Component,
+  effect,
   OnDestroy,
   OnInit,
   inject,
@@ -14,6 +15,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 
@@ -22,6 +25,8 @@ import { AvatarCropDialog } from '../../components/avatar-crop-dialog/avatar-cro
 import { UserSession } from '../../models/auth.model';
 import { StoredFile } from '../../models/stored-file.model';
 import { FileStorageService } from '../../services/file-storage';
+import { ThemePreference } from '../../models/user-preferences.model';
+import { UserPreferencesService } from '../../services/user-preferences';
 import {
   ConfirmDialog,
   ConfirmDialogData
@@ -38,6 +43,8 @@ import {
     MatIconModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    MatSelectModule,
+    MatSlideToggleModule,
     DatePipe
   ],
   templateUrl: './profile-page.html',
@@ -48,6 +55,7 @@ export class ProfilePage implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
   private readonly fileStorage = inject(FileStorageService);
+  private readonly preferencesService = inject(UserPreferencesService);
 
   protected readonly profile = {
     name: '',
@@ -76,11 +84,26 @@ export class ProfilePage implements OnInit, OnDestroy {
   protected readonly files = signal<StoredFile[]>([]);
   protected readonly isLoadingFiles = signal(true);
   protected readonly fileInProgress = signal<number | null>(null);
+  protected readonly preferences = {
+    theme: 'LIGHT' as ThemePreference,
+    reducedMotion: false
+  };
+  protected readonly isLoadingPreferences = signal(true);
+  protected readonly isSavingPreferences = signal(false);
+
+  constructor() {
+    effect(() => {
+      const current = this.preferencesService.preferences();
+      this.preferences.theme = current.theme;
+      this.preferences.reducedMotion = current.reducedMotion;
+    });
+  }
 
   ngOnInit(): void {
     this.loadProfile();
     this.loadSessions();
     this.loadFiles();
+    this.loadPreferences();
   }
 
   ngOnDestroy(): void {
@@ -320,6 +343,19 @@ export class ProfilePage implements OnInit, OnDestroy {
       : `${(size / 1024 / 1024).toFixed(1)} MB`;
   }
 
+  protected savePreferences(): void {
+    this.beginAction();
+    this.isSavingPreferences.set(true);
+    this.preferencesService.update(this.preferences).pipe(
+      finalize(() => this.isSavingPreferences.set(false))
+    ).subscribe({
+      next: () => this.message.set('Preferencias guardadas correctamente.'),
+      error: () => this.errorMessage.set(
+        'No fue posible guardar las preferencias.'
+      )
+    });
+  }
+
   private loadProfile(): void {
     this.authService.getProfile().pipe(
       finalize(() => this.isLoading.set(false))
@@ -352,6 +388,21 @@ export class ProfilePage implements OnInit, OnDestroy {
     ).subscribe({
       next: files => this.files.set(files),
       error: () => this.errorMessage.set('No fue posible cargar los archivos.')
+    });
+  }
+
+  private loadPreferences(): void {
+    this.isLoadingPreferences.set(true);
+    this.preferencesService.load().pipe(
+      finalize(() => this.isLoadingPreferences.set(false))
+    ).subscribe({
+      next: preferences => {
+        this.preferences.theme = preferences.theme;
+        this.preferences.reducedMotion = preferences.reducedMotion;
+      },
+      error: () => this.errorMessage.set(
+        'No fue posible cargar las preferencias.'
+      )
     });
   }
 
