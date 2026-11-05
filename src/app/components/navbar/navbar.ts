@@ -12,6 +12,7 @@ import { AuthService } from '../../services/auth';
 import { ThemePreference } from '../../models/user-preferences.model';
 import { UserPreferencesService } from '../../services/user-preferences';
 import { APP_MODULES } from '../../models/app-module.model';
+import { ModuleConfigurationService } from '../../services/module-configuration';
 @Component({
   selector: 'app-navbar',
   imports: [
@@ -29,6 +30,7 @@ export class Navbar {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly preferencesService = inject(UserPreferencesService);
+  private readonly moduleConfiguration = inject(ModuleConfigurationService);
 
   protected readonly isAuthenticated =
     this.authService.isAuthenticated;
@@ -46,11 +48,13 @@ export class Navbar {
     const role = this.userRole();
     return APP_MODULES.filter(module =>
       module.id !== 'profile' &&
+      this.moduleConfiguration.isEnabled(module.id) &&
       (!module.roles || (role !== null && module.roles.includes(role)))
     );
   });
 
   constructor() {
+    this.moduleConfiguration.load().subscribe({ error: () => undefined });
     effect(() => {
       this.authService.avatarRevision();
       if (this.isAuthenticated()) {

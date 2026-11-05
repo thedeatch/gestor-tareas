@@ -74,6 +74,8 @@ La referencia completa está en [.env.example](.env.example). Las variables más
 - `FRONTEND_URL`: URL usada en enlaces enviados por correo.
 - `BOOTSTRAP_ADMIN_EMAIL`: correo de una cuenta ya registrada que se promoverá inicialmente.
 - `EMAIL_VERIFICATION_ENABLED`: permite desactivar la verificación únicamente en desarrollo.
+- `MODULE_TASKS_ENABLED`, `MODULE_USERS_ENABLED` y `MODULE_AUDIT_ENABLED`:
+  activan o desactivan módulos sin modificar el código.
 
 No publiques el archivo `.env` ni credenciales reales.
 

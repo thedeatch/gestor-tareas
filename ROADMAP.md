@@ -13,7 +13,7 @@
 - [x] Refresh tokens, sesiones y cierre remoto.
 - [x] Pruebas, Docker, CI/CD y documentación.
 - [x] Panel modular y navegación adaptable.
-- [ ] Configuración para activar o desactivar módulos.
+- [x] Configuración para activar o desactivar módulos.
 
 ## Hito de separación
 

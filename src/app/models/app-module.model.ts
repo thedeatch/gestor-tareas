@@ -1,7 +1,7 @@
 import { UserRole } from './auth.model';
 
 export interface AppModule {
-  id: string;
+  id: ModuleId;
   label: string;
   title: string;
   description: string;
@@ -9,6 +9,10 @@ export interface AppModule {
   route: string;
   roles?: UserRole[];
 }
+
+export type ModuleId = 'tasks' | 'profile' | 'users' | 'audit';
+
+export type ModuleAvailability = Record<ModuleId, boolean>;
 
 export const APP_MODULES: readonly AppModule[] = [
   {

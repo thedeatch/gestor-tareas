@@ -55,6 +55,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/sessions/**").authenticated()
                 .requestMatchers(
                     "/api/health",
+                    "/api/modules",
                     "/api/auth/**",
                     "/error",
                     "/v3/api-docs/**",

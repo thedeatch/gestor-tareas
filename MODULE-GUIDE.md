@@ -49,7 +49,8 @@ Después:
 
 - Reutiliza el sistema general de archivos; no crees almacenamiento paralelo.
 - Los secretos deben ser variables de entorno y figurar sin valores reales en `.env.example`.
-- Una función opcional deberá poder activarse mediante configuración cuando se implemente el sistema de módulos del punto 12.
+- Una función opcional debe registrarse en `APP_MODULES` y disponer de una
+  bandera de entorno cuando necesite activarse o desactivarse por instalación.
 
 ## 5. Lista de verificación
 

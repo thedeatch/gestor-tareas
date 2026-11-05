@@ -58,6 +58,12 @@ services:
         value: "true"
       - key: FRONTEND_URL
         value: https://gestor-tareas-web-thedeatch.onrender.com
+      - key: MODULE_TASKS_ENABLED
+        value: "true"
+      - key: MODULE_USERS_ENABLED
+        value: "true"
+      - key: MODULE_AUDIT_ENABLED
+        value: "true"
 
   - type: web
     name: gestor-tareas-web-thedeatch

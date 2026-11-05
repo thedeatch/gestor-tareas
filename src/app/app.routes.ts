@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
+import { moduleGuard } from './guards/module.guard';
 export const routes: Routes = [
   {
     path: '',
@@ -16,7 +17,7 @@ export const routes: Routes = [
   },
   {
     path: 'tareas',
-    canActivate: [authGuard],
+    canActivate: [authGuard, moduleGuard('tasks')],
     loadComponent: () =>
       import('./pages/tasks-page/tasks-page')
         .then(module => module.TasksPage)
@@ -36,14 +37,20 @@ export const routes: Routes = [
   },
   {
     path: 'administracion/usuarios',
-    canActivate: [roleGuard(['ADMIN', 'MODERATOR'])],
+    canActivate: [
+      roleGuard(['ADMIN', 'MODERATOR']),
+      moduleGuard('users')
+    ],
     loadComponent: () =>
       import('./pages/admin-users-page/admin-users-page')
         .then(module => module.AdminUsersPage)
   },
   {
     path: 'administracion/auditoria',
-    canActivate: [roleGuard(['ADMIN', 'MODERATOR'])],
+    canActivate: [
+      roleGuard(['ADMIN', 'MODERATOR']),
+      moduleGuard('audit')
+    ],
     loadComponent: () =>
       import('./pages/admin-audit-page/admin-audit-page')
         .then(module => module.AdminAuditPage)
@@ -80,6 +87,6 @@ export const routes: Routes = [
   },
   {
     path: '**',
-    redirectTo: 'tareas'
+    redirectTo: 'inicio'
   }
 ];

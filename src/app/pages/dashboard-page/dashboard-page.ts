@@ -6,6 +6,7 @@ import { RouterLink } from '@angular/router';
 
 import { APP_MODULES } from '../../models/app-module.model';
 import { AuthService } from '../../services/auth';
+import { ModuleConfigurationService } from '../../services/module-configuration';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -20,12 +21,18 @@ import { AuthService } from '../../services/auth';
 })
 export class DashboardPage {
   private readonly authService = inject(AuthService);
+  private readonly moduleConfiguration = inject(ModuleConfigurationService);
 
   protected readonly userName = this.authService.userName;
   protected readonly modules = computed(() => {
     const role = this.authService.userRole();
     return APP_MODULES.filter(module =>
-      !module.roles || (role !== null && module.roles.includes(role))
+      this.moduleConfiguration.isEnabled(module.id) &&
+      (!module.roles || (role !== null && module.roles.includes(role)))
     );
   });
+
+  constructor() {
+    this.moduleConfiguration.load().subscribe({ error: () => undefined });
+  }
 }
