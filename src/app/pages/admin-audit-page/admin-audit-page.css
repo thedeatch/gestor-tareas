@@ -30,11 +30,12 @@ header p { margin-top: 8px; color: var(--mat-sys-on-surface-variant); }
 .filters-card { padding: 16px; }
 .filters {
   display: grid;
-  grid-template-columns: minmax(240px, 2fr) minmax(180px, 1fr) 160px 160px auto auto;
+  grid-template-columns: minmax(240px, 2fr) minmax(180px, 1fr) minmax(260px, 1.4fr) auto auto;
   align-items: center;
   gap: 12px;
 }
 .filters button { min-height: 44px; }
+.date-range-filter { min-width: 260px; }
 .table-wrapper { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 16px; border-bottom: 1px solid var(--mat-sys-outline-variant); text-align: left; vertical-align: middle; }

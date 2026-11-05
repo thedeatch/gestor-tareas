@@ -3,6 +3,11 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import {
+  MAT_DATE_LOCALE,
+  provideNativeDateAdapter
+} from '@angular/material/core';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -23,11 +28,16 @@ import { AdminService } from '../../services/admin';
     FormsModule,
     MatButtonModule,
     MatCardModule,
+    MatDatepickerModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
     MatProgressSpinnerModule,
     MatSelectModule
+  ],
+  providers: [
+    provideNativeDateAdapter(),
+    { provide: MAT_DATE_LOCALE, useValue: 'es-CL' }
   ],
   templateUrl: './admin-audit-page.html',
   styleUrl: './admin-audit-page.css'
@@ -43,8 +53,9 @@ export class AdminAuditPage {
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly search = signal('');
   protected readonly action = signal<AdminAuditAction | ''>('');
-  protected readonly fromDate = signal('');
-  protected readonly toDate = signal('');
+  protected readonly fromDate = signal<Date | null>(null);
+  protected readonly toDate = signal<Date | null>(null);
+  protected readonly maximumDate = new Date();
 
   constructor() {
     this.loadEntries();
@@ -63,7 +74,7 @@ export class AdminAuditPage {
   protected applyFilters(): void {
     if (
       this.fromDate() && this.toDate() &&
-      this.fromDate() > this.toDate()
+      this.fromDate()!.getTime() > this.toDate()!.getTime()
     ) {
       this.errorMessage.set(
         'La fecha inicial no puede ser posterior a la fecha final.'
@@ -76,8 +87,8 @@ export class AdminAuditPage {
   protected clearFilters(): void {
     this.search.set('');
     this.action.set('');
-    this.fromDate.set('');
-    this.toDate.set('');
+    this.fromDate.set(null);
+    this.toDate.set(null);
     this.loadEntries(0);
   }
 
@@ -112,8 +123,8 @@ export class AdminAuditPage {
     this.adminService.findAuditLog(page, {
       search: this.search().trim(),
       action: this.action(),
-      from: this.fromDate(),
-      to: this.toDate()
+      from: this.formatDate(this.fromDate()),
+      to: this.formatDate(this.toDate())
     }).pipe(
       finalize(() => this.isLoading.set(false))
     ).subscribe({
@@ -127,5 +138,13 @@ export class AdminAuditPage {
         'No fue posible cargar el historial de auditoría.'
       )
     });
+  }
+
+  private formatDate(date: Date | null): string {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }

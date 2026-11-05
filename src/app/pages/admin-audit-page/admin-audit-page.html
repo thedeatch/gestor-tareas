@@ -34,26 +34,39 @@
         </mat-select>
       </mat-form-field>
 
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Desde</mat-label>
-        <input
-          matInput
-          type="date"
-          name="auditFrom"
-          [ngModel]="fromDate()"
-          (ngModelChange)="fromDate.set($event)"
+      <mat-form-field
+        appearance="outline"
+        subscriptSizing="dynamic"
+        class="date-range-filter"
+      >
+        <mat-label>Rango de fechas</mat-label>
+        <mat-date-range-input
+          [rangePicker]="auditRangePicker"
+          [max]="maximumDate"
         >
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Hasta</mat-label>
-        <input
-          matInput
-          type="date"
-          name="auditTo"
-          [ngModel]="toDate()"
-          (ngModelChange)="toDate.set($event)"
-        >
+          <input
+            matStartDate
+            name="auditFrom"
+            placeholder="Desde"
+            aria-label="Fecha inicial"
+            [ngModel]="fromDate()"
+            (ngModelChange)="fromDate.set($event)"
+          >
+          <input
+            matEndDate
+            name="auditTo"
+            placeholder="Hasta"
+            aria-label="Fecha final"
+            [ngModel]="toDate()"
+            (ngModelChange)="toDate.set($event)"
+          >
+        </mat-date-range-input>
+        <mat-datepicker-toggle
+          matIconSuffix
+          [for]="auditRangePicker"
+          aria-label="Abrir calendario para elegir el rango de fechas"
+        ></mat-datepicker-toggle>
+        <mat-date-range-picker #auditRangePicker></mat-date-range-picker>
       </mat-form-field>
 
       <button mat-flat-button type="submit">Filtrar</button>
