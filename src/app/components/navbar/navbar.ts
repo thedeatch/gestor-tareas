@@ -1,5 +1,6 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatBadgeModule } from '@angular/material/badge';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -13,9 +14,11 @@ import { ThemePreference } from '../../models/user-preferences.model';
 import { UserPreferencesService } from '../../services/user-preferences';
 import { APP_MODULES } from '../../models/app-module.model';
 import { ModuleConfigurationService } from '../../services/module-configuration';
+import { NotificationService } from '../../services/notification';
 @Component({
   selector: 'app-navbar',
   imports: [
+  MatBadgeModule,
   MatButtonModule,
   MatIconModule,
   MatMenuModule,
@@ -31,6 +34,7 @@ export class Navbar {
   private readonly router = inject(Router);
   private readonly preferencesService = inject(UserPreferencesService);
   private readonly moduleConfiguration = inject(ModuleConfigurationService);
+  private readonly notificationService = inject(NotificationService);
 
   protected readonly isAuthenticated =
     this.authService.isAuthenticated;
@@ -44,6 +48,7 @@ export class Navbar {
   protected readonly avatarUrl = signal<string | null>(null);
   protected readonly isChangingTheme = signal(false);
   protected readonly preferences = this.preferencesService.preferences;
+  protected readonly unreadNotifications = this.notificationService.unreadCount;
   protected readonly navigationModules = computed(() => {
     const role = this.userRole();
     return APP_MODULES.filter(module =>
@@ -59,8 +64,10 @@ export class Navbar {
       this.authService.avatarRevision();
       if (this.isAuthenticated()) {
         this.loadAvatar();
+        this.notificationService.refreshUnreadCount();
       } else {
         this.replaceAvatarUrl(null);
+        this.notificationService.clearCount();
       }
     });
   }

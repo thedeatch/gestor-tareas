@@ -26,6 +26,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final EmailVerificationService emailVerificationService;
     private final RefreshTokenService refreshTokenService;
+    private final NotificationService notificationService;
     private final boolean emailVerificationEnabled;
     private final int maximumLoginAttempts;
     private final long loginLockMinutes;
@@ -36,6 +37,7 @@ public class AuthService {
         JwtService jwtService,
         EmailVerificationService emailVerificationService,
         RefreshTokenService refreshTokenService,
+        NotificationService notificationService,
         @Value("${app.email-verification.enabled:true}")
         boolean emailVerificationEnabled,
         @Value("${security.login.max-attempts:5}") int maximumLoginAttempts,
@@ -46,6 +48,7 @@ public class AuthService {
         this.jwtService = jwtService;
         this.emailVerificationService = emailVerificationService;
         this.refreshTokenService = refreshTokenService;
+        this.notificationService = notificationService;
         this.emailVerificationEnabled = emailVerificationEnabled;
         this.maximumLoginAttempts = maximumLoginAttempts;
         this.loginLockMinutes = loginLockMinutes;
@@ -71,6 +74,7 @@ public class AuthService {
             user.requireEmailVerification();
         }
         userRepository.save(user);
+        notificationService.createWelcome(user);
         if (emailVerificationEnabled) {
             emailVerificationService.issueFor(user);
         }

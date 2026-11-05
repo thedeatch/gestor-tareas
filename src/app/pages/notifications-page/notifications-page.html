@@ -1,0 +1,117 @@
+<main class="notifications-container">
+  <header>
+    <div>
+      <h1>Notificaciones</h1>
+      <p>Mantente al día con la actividad de tu cuenta.</p>
+    </div>
+    <span class="notification-count">{{ totalElements() }} notificaciones</span>
+  </header>
+
+  <mat-card class="toolbar-card">
+    <div class="filter-buttons" role="group" aria-label="Filtrar notificaciones">
+      <button
+        mat-button
+        type="button"
+        [class.selected]="!unreadOnly()"
+        (click)="setUnreadOnly(false)"
+      >
+        Todas
+      </button>
+      <button
+        mat-button
+        type="button"
+        [class.selected]="unreadOnly()"
+        (click)="setUnreadOnly(true)"
+      >
+        No leídas
+      </button>
+    </div>
+    <button
+      mat-stroked-button
+      type="button"
+      [disabled]="isMarkingAll() || unreadCount() === 0"
+      (click)="markAllAsRead()"
+    >
+      <mat-icon>done_all</mat-icon>
+      Marcar todas como leídas
+    </button>
+  </mat-card>
+
+  @if (isLoading()) {
+    <div class="loading" aria-label="Cargando notificaciones">
+      <mat-spinner diameter="42"></mat-spinner>
+    </div>
+  } @else {
+    <section class="notification-list" aria-live="polite">
+      @for (notification of notifications(); track notification.id) {
+        <mat-card
+          class="notification-card"
+          [class.unread]="!notification.readAt"
+        >
+          <button
+            class="notification-content"
+            type="button"
+            (click)="openNotification(notification)"
+          >
+            <span class="notification-icon" aria-hidden="true">
+              <mat-icon>{{ iconFor(notification.type) }}</mat-icon>
+            </span>
+            <span class="notification-copy">
+              <span class="notification-title">
+                {{ notification.title }}
+                @if (!notification.readAt) {
+                  <span class="unread-dot" aria-label="No leída"></span>
+                }
+              </span>
+              <span class="notification-message">{{ notification.message }}</span>
+              <span class="notification-meta">
+                @if (notification.actorName) {
+                  {{ notification.actorName }} ·
+                }
+                {{ notification.createdAt | date:'dd/MM/yyyy HH:mm' }}
+              </span>
+            </span>
+          </button>
+          @if (!notification.readAt) {
+            <button
+              mat-button
+              type="button"
+              (click)="markAsRead(notification)"
+            >
+              Marcar como leída
+            </button>
+          }
+        </mat-card>
+      } @empty {
+        <mat-card class="empty-state">
+          <mat-icon>notifications_none</mat-icon>
+          <h2>No hay notificaciones</h2>
+          <p>
+            {{ unreadOnly()
+              ? 'No tienes notificaciones pendientes.'
+              : 'La actividad importante aparecerá aquí.'
+            }}
+          </p>
+        </mat-card>
+      }
+    </section>
+
+    @if (totalPages() > 1) {
+      <nav class="pagination" aria-label="Paginación de notificaciones">
+        <button mat-button type="button" [disabled]="page() === 0" (click)="previousPage()">
+          <mat-icon>chevron_left</mat-icon>
+          Anterior
+        </button>
+        <span>Página {{ page() + 1 }} de {{ totalPages() }}</span>
+        <button mat-button type="button" [disabled]="page() + 1 >= totalPages()" (click)="nextPage()">
+          Siguiente
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </nav>
+    }
+  }
+
+  @if (errorMessage()) {
+    <p class="error" role="alert">{{ errorMessage() }}</p>
+  }
+</main>

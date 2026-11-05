@@ -1,0 +1,84 @@
+.notifications-container {
+  display: grid;
+  gap: 20px;
+  width: min(900px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 40px 0;
+}
+
+header,
+.toolbar-card,
+.notification-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+header h1,
+header p,
+.empty-state h2,
+.empty-state p { margin: 0; }
+header p { margin-top: 8px; color: var(--mat-sys-on-surface-variant); }
+
+.notification-count {
+  padding: 6px 10px;
+  border-radius: 16px;
+  color: var(--mat-sys-on-primary-container);
+  background: var(--mat-sys-primary-container);
+  white-space: nowrap;
+}
+
+.toolbar-card { padding: 12px 16px; }
+.filter-buttons { display: flex; gap: 4px; }
+.filter-buttons .selected { background: var(--mat-sys-primary-container); }
+.notification-list { display: grid; gap: 10px; }
+.notification-card { padding: 12px 16px; overflow: hidden; }
+.notification-card.unread {
+  border-left: 4px solid var(--mat-sys-primary);
+  background: color-mix(in srgb, var(--mat-sys-primary-container) 28%, var(--mat-sys-surface));
+}
+
+.notification-content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex: 1;
+  padding: 4px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notification-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  color: var(--mat-sys-on-primary-container);
+  background: var(--mat-sys-primary-container);
+}
+
+.notification-copy { display: grid; gap: 4px; min-width: 0; }
+.notification-title { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.notification-message { color: var(--mat-sys-on-surface-variant); }
+.notification-meta { color: var(--mat-sys-on-surface-variant); font-size: 12px; }
+.unread-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mat-sys-primary); }
+.loading { display: flex; justify-content: center; padding: 64px; }
+.empty-state { display: grid; place-items: center; gap: 8px; padding: 56px 24px; text-align: center; }
+.empty-state > mat-icon { width: 48px; height: 48px; font-size: 48px; color: var(--mat-sys-on-surface-variant); }
+.pagination { display: flex; align-items: center; justify-content: center; gap: 16px; }
+.error { margin: 0; color: var(--mat-sys-error); text-align: center; }
+
+@media (max-width: 650px) {
+  .notifications-container { padding: 24px 0; }
+  header, .toolbar-card, .notification-card { align-items: stretch; flex-direction: column; }
+  .notification-count { width: fit-content; }
+  .toolbar-card > button { width: 100%; }
+}

@@ -36,6 +36,13 @@ export const routes: Routes = [
         .then(module => module.ProfilePage)
   },
   {
+    path: 'notificaciones',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/notifications-page/notifications-page')
+        .then(module => module.NotificationsPage)
+  },
+  {
     path: 'administracion/usuarios',
     canActivate: [
       roleGuard(['ADMIN', 'MODERATOR']),

@@ -12,6 +12,7 @@ import cl.gestortareas.api.dto.AdminUserResponse;
 import cl.gestortareas.api.model.AppUser;
 import cl.gestortareas.api.model.AdminAuditAction;
 import cl.gestortareas.api.model.UserRole;
+import cl.gestortareas.api.model.NotificationType;
 import cl.gestortareas.api.repository.AppUserRepository;
 
 @Service
@@ -19,13 +20,16 @@ public class AdminUserService {
 
     private final AppUserRepository userRepository;
     private final AdminAuditService auditService;
+    private final NotificationService notificationService;
 
     public AdminUserService(
         AppUserRepository userRepository,
-        AdminAuditService auditService
+        AdminAuditService auditService,
+        NotificationService notificationService
     ) {
         this.userRepository = userRepository;
         this.auditService = auditService;
+        this.notificationService = notificationService;
     }
 
     @Transactional(readOnly = true)
@@ -59,6 +63,12 @@ public class AdminUserService {
         UserRole newRole,
         String reason
     ) {
+        AppUser actor = userRepository
+            .findByEmailIgnoreCase(authenticatedEmail)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.UNAUTHORIZED,
+                "Sesión no válida"
+            ));
         AppUser user = userRepository.findById(userId)
             .orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.NOT_FOUND,
@@ -99,6 +109,15 @@ public class AdminUserService {
             previousRole.name(),
             newRole.name(),
             normalizedReason
+        );
+        notificationService.create(
+            user,
+            actor,
+            NotificationType.MODERATION,
+            "Tu rol fue actualizado",
+            "Tu rol cambió de " + roleLabel(previousRole)
+                + " a " + roleLabel(newRole) + ".",
+            "/perfil"
         );
         return toResponse(user);
     }
@@ -156,6 +175,18 @@ public class AdminUserService {
             active ? "ACTIVE" : "SUSPENDED",
             normalizedReason
         );
+        notificationService.create(
+            user,
+            actor,
+            NotificationType.MODERATION,
+            active ? "Tu cuenta fue reactivada" : "Tu cuenta fue suspendida",
+            active
+                ? "Ya puedes volver a utilizar tu cuenta. Motivo: "
+                    + normalizedReason
+                : "Se suspendió el acceso a tu cuenta. Motivo: "
+                    + normalizedReason,
+            "/perfil"
+        );
         return toResponse(user);
     }
 
@@ -168,6 +199,14 @@ public class AdminUserService {
             );
         }
         return normalizedReason;
+    }
+
+    private String roleLabel(UserRole role) {
+        return switch (role) {
+            case USER -> "Usuario";
+            case MODERATOR -> "Moderador";
+            case ADMIN -> "Administrador";
+        };
     }
 
     private AdminUserResponse toResponse(AppUser user) {

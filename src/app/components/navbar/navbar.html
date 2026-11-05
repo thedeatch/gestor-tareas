@@ -54,6 +54,20 @@
       </button>
 
       <a
+        mat-icon-button
+        class="notification-button"
+        routerLink="/notificaciones"
+        routerLinkActive="active-link"
+        aria-label="Abrir notificaciones"
+        [matBadge]="unreadNotifications()"
+        [matBadgeHidden]="unreadNotifications() === 0"
+        matBadgeColor="warn"
+        matBadgeSize="small"
+      >
+        <mat-icon>notifications</mat-icon>
+      </a>
+
+      <a
         class="user-profile-link"
         routerLink="/perfil"
         routerLinkActive="active-link"
@@ -125,6 +139,16 @@
       <a mat-menu-item routerLink="/perfil">
         <mat-icon>manage_accounts</mat-icon>
         <span>Mi perfil</span>
+      </a>
+
+      <a mat-menu-item routerLink="/notificaciones">
+        <mat-icon
+          [matBadge]="unreadNotifications()"
+          [matBadgeHidden]="unreadNotifications() === 0"
+          matBadgeColor="warn"
+          matBadgeSize="small"
+        >notifications</mat-icon>
+        <span>Notificaciones</span>
       </a>
 
       <button mat-menu-item type="button" (click)="changeTheme()">
