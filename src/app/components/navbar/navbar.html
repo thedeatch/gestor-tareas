@@ -1,8 +1,8 @@
 <mat-toolbar class="navbar">
   <a
     class="brand"
-    routerLink="/tareas"
-    aria-label="Ir a tareas"
+    routerLink="/inicio"
+    aria-label="Ir al panel principal"
   >
     <mat-icon>task_alt</mat-icon>
     <span>GestorTareas</span>
@@ -10,14 +10,27 @@
 
   <span class="spacer"></span>
 
-  <nav aria-label="Navegación principal">
+  <nav class="desktop-navigation" aria-label="Navegación principal">
     <a
       matButton
-      routerLink="/tareas"
+      routerLink="/inicio"
       routerLinkActive="active-link"
+      [routerLinkActiveOptions]="{ exact: true }"
     >
-      Tareas
+      Inicio
     </a>
+
+    @if (isAuthenticated()) {
+      @for (module of navigationModules(); track module.id) {
+        <a
+          matButton
+          [routerLink]="module.route"
+          routerLinkActive="active-link"
+        >
+          {{ module.label }}
+        </a>
+      }
+    }
 
     <a
       matButton
@@ -28,23 +41,6 @@
     </a>
 
     @if (isAuthenticated()) {
-      @if (userRole() === 'ADMIN' || userRole() === 'MODERATOR') {
-        <a
-          matButton
-          routerLink="/administracion/usuarios"
-          routerLinkActive="active-link"
-        >
-          Administración
-        </a>
-        <a
-          matButton
-          routerLink="/administracion/auditoria"
-          routerLinkActive="active-link"
-        >
-          Auditoría
-        </a>
-      }
-
       <button
         mat-icon-button
         class="theme-button"
@@ -96,4 +92,59 @@
       </a>
     }
   </nav>
+
+  <button
+    mat-icon-button
+    class="mobile-menu-button"
+    type="button"
+    aria-label="Abrir menú de navegación"
+    [matMenuTriggerFor]="mobileMenu"
+  >
+    <mat-icon>menu</mat-icon>
+  </button>
+
+  <mat-menu #mobileMenu="matMenu" xPosition="before">
+    @if (isAuthenticated()) {
+      <a mat-menu-item routerLink="/inicio">
+        <mat-icon>dashboard</mat-icon>
+        <span>Inicio</span>
+      </a>
+
+      @for (module of navigationModules(); track module.id) {
+        <a mat-menu-item [routerLink]="module.route">
+          <mat-icon>{{ module.icon }}</mat-icon>
+          <span>{{ module.label }}</span>
+        </a>
+      }
+
+      <a mat-menu-item routerLink="/acerca-de">
+        <mat-icon>info</mat-icon>
+        <span>Acerca de</span>
+      </a>
+
+      <a mat-menu-item routerLink="/perfil">
+        <mat-icon>manage_accounts</mat-icon>
+        <span>Mi perfil</span>
+      </a>
+
+      <button mat-menu-item type="button" (click)="changeTheme()">
+        <mat-icon>{{ themeIcon() }}</mat-icon>
+        <span>{{ themeTooltip() }}</span>
+      </button>
+
+      <button mat-menu-item type="button" (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        <span>Cerrar sesión</span>
+      </button>
+    } @else {
+      <a mat-menu-item routerLink="/acerca-de">
+        <mat-icon>info</mat-icon>
+        <span>Acerca de</span>
+      </a>
+      <a mat-menu-item routerLink="/login">
+        <mat-icon>login</mat-icon>
+        <span>Iniciar sesión</span>
+      </a>
+    }
+  </mat-menu>
 </mat-toolbar>

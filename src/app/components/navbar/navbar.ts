@@ -1,6 +1,7 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import {
   Router,
@@ -10,11 +11,13 @@ import {
 import { AuthService } from '../../services/auth';
 import { ThemePreference } from '../../models/user-preferences.model';
 import { UserPreferencesService } from '../../services/user-preferences';
+import { APP_MODULES } from '../../models/app-module.model';
 @Component({
   selector: 'app-navbar',
   imports: [
   MatButtonModule,
   MatIconModule,
+  MatMenuModule,
   MatToolbarModule,
   RouterLink,
   RouterLinkActive
@@ -39,6 +42,13 @@ export class Navbar {
   protected readonly avatarUrl = signal<string | null>(null);
   protected readonly isChangingTheme = signal(false);
   protected readonly preferences = this.preferencesService.preferences;
+  protected readonly navigationModules = computed(() => {
+    const role = this.userRole();
+    return APP_MODULES.filter(module =>
+      module.id !== 'profile' &&
+      (!module.roles || (role !== null && module.roles.includes(role)))
+    );
+  });
 
   constructor() {
     effect(() => {

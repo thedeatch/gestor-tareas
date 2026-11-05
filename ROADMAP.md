@@ -12,7 +12,7 @@
 - [x] Configuración y preferencias básicas.
 - [x] Refresh tokens, sesiones y cierre remoto.
 - [x] Pruebas, Docker, CI/CD y documentación.
-- [ ] Panel modular y navegación adaptable.
+- [x] Panel modular y navegación adaptable.
 - [ ] Configuración para activar o desactivar módulos.
 
 ## Hito de separación

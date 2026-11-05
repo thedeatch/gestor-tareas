@@ -18,14 +18,14 @@
   flex: 1;
 }
 
-nav {
+.desktop-navigation {
   display: flex;
   align-items: center;
   gap: 4px;
   height: 100%;
 }
 
-nav a {
+.desktop-navigation a {
   color: var(--mat-sys-on-primary);
 }
 
@@ -154,13 +154,33 @@ nav a {
   object-fit: cover;
 }
 
-@media (max-width: 700px) {
-  .user-name {
+.mobile-menu-button {
+  display: none !important;
+  color: var(--mat-sys-on-primary) !important;
+}
+
+.mobile-menu-button mat-icon {
+  margin: 0 !important;
+}
+
+@media (max-width: 960px) {
+  .navbar {
+    padding: 0 16px;
+  }
+
+  .desktop-navigation {
     display: none;
   }
 
-  .user-profile-link {
-    margin: 0 2px;
-    padding: 0 7px;
+  .mobile-menu-button {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 420px) {
+  .brand span {
+    font-size: 17px;
   }
 }

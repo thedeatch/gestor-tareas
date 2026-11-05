@@ -4,8 +4,15 @@ import { roleGuard } from './guards/role.guard';
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: 'tareas',
+    redirectTo: 'inicio',
     pathMatch: 'full'
+  },
+  {
+    path: 'inicio',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/dashboard-page/dashboard-page')
+        .then(module => module.DashboardPage)
   },
   {
     path: 'tareas',

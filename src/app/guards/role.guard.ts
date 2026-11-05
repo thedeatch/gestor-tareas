@@ -16,5 +16,5 @@ export const roleGuard = (allowedRoles: UserRole[]): CanActivateFn => () => {
     return true;
   }
 
-  return router.createUrlTree(['/tareas']);
+  return router.createUrlTree(['/inicio']);
 };

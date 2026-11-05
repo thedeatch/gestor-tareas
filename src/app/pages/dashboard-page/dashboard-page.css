@@ -1,0 +1,87 @@
+.dashboard-page {
+  box-sizing: border-box;
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+.dashboard-header {
+  margin-bottom: 28px;
+}
+
+.dashboard-header h1,
+.dashboard-header p {
+  margin: 0;
+}
+
+.dashboard-header h1 {
+  margin-bottom: 8px;
+  font-size: clamp(28px, 4vw, 38px);
+}
+
+.dashboard-header .eyebrow {
+  margin-bottom: 8px;
+  color: var(--mat-sys-primary);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.module-card {
+  min-height: 230px;
+}
+
+.module-card mat-card-header {
+  align-items: center;
+  gap: 14px;
+}
+
+.module-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  border-radius: 14px;
+  color: var(--mat-sys-on-primary-container);
+  background: var(--mat-sys-primary-container);
+}
+
+.module-icon mat-icon {
+  width: 28px;
+  height: 28px;
+  font-size: 28px;
+}
+
+.module-card mat-card-content {
+  flex: 1;
+  padding-top: 20px;
+  color: var(--mat-sys-on-surface-variant);
+  line-height: 1.5;
+}
+
+.module-card mat-card-actions {
+  padding: 8px 16px 16px;
+}
+
+@media (max-width: 600px) {
+  .dashboard-page {
+    padding: 28px 16px;
+  }
+
+  .module-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .module-card {
+    min-height: 210px;
+  }
+}

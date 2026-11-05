@@ -84,7 +84,7 @@ export class LoginPage {
       .pipe(finalize(() => this.isSubmitting.set(false)))
       .subscribe({
         next: () => {
-          void this.router.navigateByUrl('/tareas');
+          void this.router.navigateByUrl('/inicio');
         },
         error: error => {
           const suspended = error.status === 403 &&

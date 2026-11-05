@@ -1,0 +1,31 @@
+<main class="dashboard-page">
+  <header class="dashboard-header">
+    <p class="eyebrow">Panel principal</p>
+    <h1>Hola, {{ userName() }}</h1>
+    <p>Selecciona un módulo para continuar.</p>
+  </header>
+
+  <section class="module-grid" aria-label="Módulos disponibles">
+    @for (module of modules(); track module.id) {
+      <mat-card class="module-card">
+        <mat-card-header>
+          <div class="module-icon" aria-hidden="true">
+            <mat-icon>{{ module.icon }}</mat-icon>
+          </div>
+          <mat-card-title>{{ module.title }}</mat-card-title>
+        </mat-card-header>
+
+        <mat-card-content>
+          <p>{{ module.description }}</p>
+        </mat-card-content>
+
+        <mat-card-actions align="end">
+          <a matButton="filled" [routerLink]="module.route">
+            Abrir
+            <mat-icon>arrow_forward</mat-icon>
+          </a>
+        </mat-card-actions>
+      </mat-card>
+    }
+  </section>
+</main>
