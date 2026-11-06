@@ -95,7 +95,7 @@ public class CommunityPostCommentService {
         comments.delete(comment);
     }
 
-    private CommunityPostComment requireComment(Long postId, Long id) {
+    CommunityPostComment requireComment(Long postId, Long id) {
         return comments.findByPostIdAndId(postId, id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comentario no encontrado"));
     }

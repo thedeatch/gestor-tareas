@@ -129,6 +129,9 @@
                       </button>
                     }
                   </div>
+                  @if (!post.editable) {
+                    <app-report-button [groupId]="item.id" [postId]="post.id" />
+                  }
                   <app-post-comments [groupId]="item.id" [postId]="post.id" />
                 </div>
               </article>
@@ -185,6 +188,7 @@
     </mat-card>
 
     @if (canManage(item.currentUserRole)) {
+      <app-community-reports [groupId]="item.id" (contentRemoved)="loadPosts(item.id)" />
       <mat-card class="management-card">
         <mat-card-header>
           <mat-card-title>Invitar a una persona</mat-card-title>

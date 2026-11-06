@@ -28,13 +28,15 @@ import {
 } from '../../components/confirm-dialog/confirm-dialog';
 
 import { confirmCommunityRemoval } from '../../components/admin-reason-dialog/community-removal';
+import { CommunityReports } from '../../components/community-reports/community-reports';
+import { ReportButton } from '../../components/community-reports/report-button';
 import { PostComments } from '../../components/post-comments/post-comments';
 
 @Component({
   selector: 'app-community-detail-page',
   imports: [RouterLink, ReactiveFormsModule, DatePipe, MatButtonModule, MatCardModule,
     MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatSnackBarModule, MatDialogModule, PostComments],
+    MatSnackBarModule, MatDialogModule, PostComments, CommunityReports, ReportButton],
   templateUrl: './community-detail-page.html',
   styleUrl: './community-detail-page.css'
 })
@@ -235,7 +237,7 @@ export class CommunityDetailPage {
     });
   }
 
-  private loadPosts(groupId: number): void {
+  protected loadPosts(groupId: number): void {
     this.postsLoading.set(true);
     this.service.findPosts(groupId).subscribe({
       next: posts => { this.posts.set(posts); this.postsLoading.set(false); },

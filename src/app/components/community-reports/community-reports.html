@@ -1,0 +1,32 @@
+<mat-card>
+  <mat-card-header><mat-card-title>Reportes del grupo</mat-card-title></mat-card-header>
+  <mat-card-content>
+    <button mat-button type="button" [disabled]="busy()" (click)="load()">
+      {{ items() === null ? 'Ver reportes pendientes' : 'Actualizar reportes' }}
+    </button>
+    @if (error()) { <p role="alert">{{ error() }}</p> }
+    @if (message()) { <p role="status">{{ message() }}</p> }
+    @if (items(); as reports) {
+      @for (report of reports; track report.id) {
+        <article>
+          <strong>{{ report.commentId ? 'Comentario' : 'Publicación' }}</strong>
+          <span> · {{ report.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+          <p>Motivo del reporte: {{ report.reason }}</p>
+          @if (report.content !== null) {
+            <blockquote>{{ report.content }}</blockquote>
+            <button mat-button type="button" [disabled]="busy()" (click)="resolve(report, 'REMOVED')">
+              Retirar contenido
+            </button>
+          } @else {
+            <p>El contenido ya no está disponible.</p>
+          }
+          <button mat-button type="button" [disabled]="busy()" (click)="resolve(report, 'DISMISSED')">
+            Descartar reporte
+          </button>
+        </article>
+      } @empty {
+        <p>No hay reportes pendientes.</p>
+      }
+    }
+  </mat-card-content>
+</mat-card>

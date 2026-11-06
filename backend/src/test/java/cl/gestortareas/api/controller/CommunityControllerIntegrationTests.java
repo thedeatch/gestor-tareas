@@ -435,6 +435,82 @@ class CommunityControllerIntegrationTests {
         assertEquals(1, notificationRepository.countByRecipientAndReadAtIsNull(member));
     }
 
+    @Test
+    void shouldReviewReportsWithoutDuplicatingPendingSubmissions() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        var owner = userRepository.findByEmailIgnoreCase(OWNER_EMAIL).orElseThrow();
+        var ownerJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
+        var memberJwt = jwt().jwt(token -> token.subject(OTHER_EMAIL));
+        var groupUrl = "/api/communities/" + group.getId();
+        var reportsUrl = groupUrl + "/reports";
+
+        mockMvc.perform(post(groupUrl + "/posts").with(ownerJwt)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Aviso","content":"Publicación original"}
+                    """))
+            .andExpect(status().isCreated());
+        var postId = postRepository.findAll().get(0).getId();
+        String report = """
+            {"postId":%d,"reason":"Revisar contenido"}
+            """.formatted(postId);
+        mockMvc.perform(post(reportsUrl).with(memberJwt).contentType(MediaType.APPLICATION_JSON)
+                .content(report))
+            .andExpect(status().isNotFound());
+        membershipRepository.save(new CommunityMembership(group, member, CommunityRole.MEMBER));
+        mockMvc.perform(post(reportsUrl).with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content(report))
+            .andExpect(status().isBadRequest());
+        mockMvc.perform(post(reportsUrl).with(memberJwt).contentType(MediaType.APPLICATION_JSON)
+                .content(report))
+            .andExpect(status().isCreated());
+        mockMvc.perform(post(reportsUrl).with(memberJwt).contentType(MediaType.APPLICATION_JSON)
+                .content(report))
+            .andExpect(status().isConflict());
+        mockMvc.perform(get(reportsUrl).with(memberJwt)).andExpect(status().isForbidden());
+        mockMvc.perform(get(reportsUrl).with(ownerJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].content").value("Publicación original"));
+        var reportId = jdbc.sql("SELECT id FROM community_reports WHERE post_id = :id")
+            .param("id", postId).query(Long.class).single();
+        var dismiss = """
+            {"resolution":"DISMISSED","reason":"Revisado"}
+            """;
+        mockMvc.perform(patch(reportsUrl + "/" + reportId).with(memberJwt)
+                .contentType(MediaType.APPLICATION_JSON).content(dismiss))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(patch(reportsUrl + "/" + reportId).with(ownerJwt)
+                .contentType(MediaType.APPLICATION_JSON).content(dismiss))
+            .andExpect(status().isNoContent());
+        mockMvc.perform(get(reportsUrl).with(ownerJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+
+        mockMvc.perform(post(groupUrl + "/posts/" + postId + "/comments").with(memberJwt)
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                    {"content":"Comentario para revisar"}
+                    """))
+            .andExpect(status().isCreated());
+        var commentId = commentRepository.findAllByPostIdOrderByCreatedAtAscIdAsc(postId).get(0).getId();
+        mockMvc.perform(post(reportsUrl).with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"postId":%d,"commentId":%d,"reason":"Infringe las reglas"}
+                    """.formatted(postId, commentId)))
+            .andExpect(status().isCreated());
+        var commentReport = jdbc.sql("SELECT id FROM community_reports WHERE comment_id = :id")
+            .param("id", commentId).query(Long.class).single();
+        mockMvc.perform(patch(reportsUrl + "/" + commentReport).with(ownerJwt)
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                    {"resolution":"REMOVED","reason":"Fuera de las reglas"}
+                    """))
+            .andExpect(status().isNoContent());
+
+        assertEquals(0, commentRepository.findAllByPostIdOrderByCreatedAtAscIdAsc(postId).size());
+        assertEquals(1, notificationRepository.countByRecipientAndReadAtIsNull(member));
+        assertEquals(owner.getId(), jdbc.sql("""
+            SELECT resolved_by FROM community_reports WHERE id = :id AND resolution = 'REMOVED'
+            """).param("id", commentReport).query(Long.class).single());
+    }
     private void createCommunity() throws Exception {
         mockMvc.perform(post("/api/communities")
                 .with(jwt().jwt(token -> token.subject(OWNER_EMAIL)))

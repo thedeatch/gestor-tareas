@@ -29,6 +29,9 @@
         @if (comment.editable) {
           <button mat-button type="button" [disabled]="busy()" (click)="beginEdit(comment)">Editar</button>
         }
+        @if (!comment.editable) {
+          <app-report-button [groupId]="groupId()" [postId]="postId()" [commentId]="comment.id" />
+        }
         @if (comment.deletable) {
           <button mat-button type="button" [disabled]="busy()" (click)="confirmDelete(comment)">Eliminar</button>
         }

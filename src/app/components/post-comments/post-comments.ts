@@ -10,6 +10,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { Observable, finalize } from 'rxjs';
 import { confirmCommunityRemoval } from '../admin-reason-dialog/community-removal';
+import { ReportButton } from '../community-reports/report-button';
 import { ConfirmDialog, ConfirmDialogData } from '../confirm-dialog/confirm-dialog';
 
 interface PostComment {
@@ -28,7 +29,7 @@ interface PostComment {
 @Component({
   selector: 'app-post-comments',
   imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatDialogModule,
-    MatFormFieldModule, MatInputModule],
+    MatFormFieldModule, MatInputModule, ReportButton],
   templateUrl: './post-comments.html',
   styles: [`
     :host { display: block; }
