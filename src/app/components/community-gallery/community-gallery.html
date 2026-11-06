@@ -1,0 +1,71 @@
+<mat-card>
+  <mat-card-header><mat-card-title>Galería del grupo</mat-card-title></mat-card-header>
+  <mat-card-content>
+    @if (canManage() && !creating()) {
+      <button mat-button type="button" [disabled]="busy()" (click)="creating.set(true)">Crear álbum</button>
+    }
+    @if (canManage() && creating()) {
+      <form [formGroup]="form" (ngSubmit)="create()">
+        <mat-form-field appearance="outline">
+          <mat-label>Título del álbum</mat-label>
+          <input matInput formControlName="title" maxlength="120" [readonly]="busy()">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Descripción opcional</mat-label>
+          <textarea matInput formControlName="description" rows="2" maxlength="500" [readonly]="busy()"></textarea>
+        </mat-form-field>
+        <div>
+          <button mat-flat-button type="submit" [disabled]="busy() || form.invalid">Guardar álbum</button>
+          <button mat-button type="button" [disabled]="busy()" (click)="creating.set(false)">Cancelar</button>
+        </div>
+      </form>
+    }
+    @if (message()) { <p role="status">{{ message() }}</p> }
+    @if (error()) {
+      <p role="alert">{{ error() }}</p>
+      <button mat-button type="button" [disabled]="busy()" (click)="load()">Actualizar álbumes</button>
+    }
+    @if (albums(); as items) {
+      @if (items.length) {
+        <ul aria-label="Álbumes">
+          @for (item of items; track item.id) {
+            <li>
+              <button mat-button type="button" [disabled]="busy()" [attr.aria-pressed]="album()?.id === item.id"
+                (click)="open(item)">{{ item.title }}</button>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p>Aún no hay álbumes en este grupo.</p>
+      }
+    } @else if (busy()) {
+      <p role="status">Cargando álbumes...</p>
+    }
+    @if (album(); as selected) {
+      <h3>{{ selected.title }}</h3>
+      @if (selected.description) { <p>{{ selected.description }}</p> }
+      @if (canManage()) {
+        <label for="community-gallery-upload">Añadir imagen (JPEG o PNG, hasta 2 MB)</label>
+        <input #imageInput id="community-gallery-upload" type="file" accept="image/jpeg,image/png"
+          [disabled]="busy()" (change)="upload(imageInput, selected)">
+      }
+      @if (images().length) {
+        <ul aria-label="Imágenes del álbum">
+          @for (image of images(); track image.id) {
+            <li><button mat-button type="button" [disabled]="busy()"
+              (click)="view(selected, image)">{{ image.name }}</button></li>
+          }
+        </ul>
+      } @else {
+        <p>Este álbum aún no tiene imágenes.</p>
+      }
+      @if (preview(); as image) {
+        <figure>
+          <img [src]="image.url" [alt]="image.name">
+          <figcaption>{{ image.name }}</figcaption>
+        </figure>
+        <button mat-button type="button" (click)="clearPreview()">Cerrar imagen</button>
+      }
+    }
+  </mat-card-content>
+</mat-card>

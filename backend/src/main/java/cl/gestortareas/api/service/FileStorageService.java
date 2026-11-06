@@ -68,6 +68,7 @@ public class FileStorageService {
     @Transactional(readOnly = true)
     public StoredFile getOwned(String email, Long id) {
         return repository.findByIdAndOwner(id, findUser(email))
+            .filter(file -> file.getPurpose() != FilePurpose.COMMUNITY_IMAGE)
             .orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.NOT_FOUND, "Archivo no encontrado"
             ));

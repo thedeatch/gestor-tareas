@@ -3,6 +3,8 @@ package cl.gestortareas.api.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -605,6 +607,50 @@ class CommunityControllerIntegrationTests {
         jdbc.sql("UPDATE community_events SET starts_at = :past WHERE id = :id")
             .param("past", now.minusDays(1)).param("id", eventId).update();
         mockMvc.perform(put(registration).with(memberJwt)).andExpect(status().isBadRequest());
+    }
+    @Test
+    void shouldProtectAlbumUploadsAndImageDownloadsByGroupMembership() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var ownerJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
+        var memberJwt = jwt().jwt(token -> token.subject(OTHER_EMAIL));
+        var albums = "/api/communities/" + group.getId() + "/albums";
+        String payload = """
+            {"title":"Encuentro","description":"Fotos del grupo"}
+            """;
+
+        mockMvc.perform(get(albums).with(memberJwt)).andExpect(status().isNotFound());
+        mockMvc.perform(post(albums).with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content(payload)).andExpect(status().isCreated());
+        var albumId = jdbc.sql("SELECT id FROM community_albums WHERE community_id = :id")
+            .param("id", group.getId()).query(Long.class).single();
+        var images = albums + "/" + albumId + "/images";
+        byte[] png = java.util.Base64.getDecoder().decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aN1sAAAAASUVORK5CYII=");
+        var image = new org.springframework.mock.web.MockMultipartFile("file", "foto.png", "image/png", png);
+        var fake = new org.springframework.mock.web.MockMultipartFile(
+            "file", "falso.png", "image/png", new byte[] {1, 2, 3});
+
+        mockMvc.perform(multipart(images).file(fake).with(ownerJwt))
+            .andExpect(status().isUnsupportedMediaType());
+        mockMvc.perform(multipart(images).file(image).with(ownerJwt))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.name").value("foto.png"));
+        var fileId = jdbc.sql("SELECT file_id FROM community_album_images WHERE album_id = :id")
+            .param("id", albumId).query(Long.class).single();
+
+        mockMvc.perform(get(images + "/" + fileId).with(memberJwt)).andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/files/" + fileId).with(ownerJwt)).andExpect(status().isNotFound());
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        membershipRepository.save(new CommunityMembership(group, member, CommunityRole.MEMBER));
+        mockMvc.perform(get(albums).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].title").value("Encuentro"));
+        mockMvc.perform(get(images).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].id").value(fileId));
+        mockMvc.perform(get(images + "/" + fileId).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(content().contentType(MediaType.IMAGE_PNG)).andExpect(content().bytes(png));
+        mockMvc.perform(multipart(images).file(image).with(memberJwt)).andExpect(status().isForbidden());
+        mockMvc.perform(post(albums).with(memberJwt).contentType(MediaType.APPLICATION_JSON)
+                .content(payload)).andExpect(status().isForbidden());
     }
     private void createCommunity() throws Exception {
         mockMvc.perform(post("/api/communities")
