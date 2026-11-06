@@ -56,6 +56,17 @@ public class CommunityController {
         return communityService.pendingJoinRequests(id, authentication.getName());
     }
 
+    @PatchMapping("/{id}/members/{userId}/role")
+    public CommunityMemberResponse updateMemberRole(
+        @PathVariable Long id,
+        @PathVariable Long userId,
+        @Valid @RequestBody UpdateCommunityMemberRoleRequest request,
+        Authentication authentication
+    ) {
+        return communityService.updateMemberRole(
+            id, userId, request.role(), authentication.getName());
+    }
+
     @PatchMapping("/{id}/join-requests/{requestId}/approve")
     public CommunityAccessResponse approveJoinRequest(@PathVariable Long id,
         @PathVariable Long requestId, Authentication authentication) {

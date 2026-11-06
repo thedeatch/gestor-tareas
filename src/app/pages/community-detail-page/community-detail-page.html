@@ -25,7 +25,33 @@
           <div class="member-row">
             <mat-icon>account_circle</mat-icon>
             <div class="member-data"><strong>{{ member.name }}</strong><span>{{ member.email }}</span></div>
-            <span class="role-chip">{{ roleLabel(member.role) }}</span>
+            @if (canManageRoles(item.currentUserRole)
+                && canEditMember(item.currentUserRole, member.role)) {
+              <div class="role-management">
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-label>Rol</mat-label>
+                  <mat-select
+                    [value]="selectedRoles()[member.userId]"
+                    (selectionChange)="selectRole(member.userId, $event.value)"
+                  >
+                    @for (role of availableRoles(item.currentUserRole); track role) {
+                      <mat-option [value]="role">{{ roleLabel(role) }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <button
+                  mat-stroked-button
+                  type="button"
+                  [disabled]="selectedRoles()[member.userId] === member.role
+                    || savingRoleFor() !== null"
+                  (click)="saveRole(member)"
+                >
+                  {{ savingRoleFor() === member.userId ? 'Guardando...' : 'Guardar' }}
+                </button>
+              </div>
+            } @else {
+              <span class="role-chip">{{ roleLabel(member.role) }}</span>
+            }
           </div>
         }
       </mat-card-content>

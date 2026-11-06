@@ -18,6 +18,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import cl.gestortareas.api.model.AppUser;
+import cl.gestortareas.api.model.CommunityMembership;
+import cl.gestortareas.api.model.CommunityRole;
 import cl.gestortareas.api.repository.AppUserRepository;
 import cl.gestortareas.api.repository.CommunityAccessRequestRepository;
 import cl.gestortareas.api.repository.CommunityMembershipRepository;
@@ -174,6 +176,45 @@ class CommunityControllerIntegrationTests {
                 .with(jwt().jwt(token -> token.subject(OWNER_EMAIL))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    void shouldAllowOwnerToPromoteCommunityMember() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        membershipRepository.save(new CommunityMembership(
+            group, member, CommunityRole.MEMBER));
+
+        mockMvc.perform(patch(
+                "/api/communities/{id}/members/{userId}/role",
+                group.getId(), member.getId())
+                .with(jwt().jwt(token -> token.subject(OWNER_EMAIL)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"COMMUNITY_MODERATOR\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.role").value("COMMUNITY_MODERATOR"));
+
+        assertEquals(CommunityRole.COMMUNITY_MODERATOR,
+            membershipRepository.findByCommunityIdAndUserId(
+                group.getId(), member.getId()).orElseThrow().getRole());
+    }
+
+    @Test
+    void shouldRejectRoleChangesFromRegularMembers() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        membershipRepository.save(new CommunityMembership(
+            group, member, CommunityRole.MEMBER));
+
+        mockMvc.perform(patch(
+                "/api/communities/{id}/members/{userId}/role",
+                group.getId(), member.getId())
+                .with(jwt().jwt(token -> token.subject(OTHER_EMAIL)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"COMMUNITY_MODERATOR\"}"))
+            .andExpect(status().isForbidden());
     }
 
     private void createCommunity() throws Exception {

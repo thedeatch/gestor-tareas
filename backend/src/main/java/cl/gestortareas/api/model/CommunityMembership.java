@@ -51,4 +51,8 @@ public class CommunityMembership {
     public AppUser getUser() { return user; }
     public CommunityRole getRole() { return role; }
     public Instant getJoinedAt() { return joinedAt; }
+
+    public void changeRole(CommunityRole role) {
+        this.role = role;
+    }
 }

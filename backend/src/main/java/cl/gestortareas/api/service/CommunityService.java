@@ -225,6 +225,36 @@ public class CommunityService {
         return toAccessResponse(invitation);
     }
 
+    @Transactional
+    public CommunityMemberResponse updateMemberRole(
+        Long communityId,
+        Long userId,
+        CommunityRole newRole,
+        String email
+    ) {
+        CommunityMembership actorMembership = membershipRepository
+            .findByCommunityIdAndUserEmailIgnoreCase(communityId, email)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "Grupo no encontrado"));
+        CommunityMembership targetMembership = membershipRepository
+            .findByCommunityIdAndUserId(communityId, userId)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "Miembro no encontrado"));
+
+        validateRoleChange(actorMembership, targetMembership, newRole);
+        CommunityRole previousRole = targetMembership.getRole();
+        if (previousRole == newRole) return toMember(targetMembership);
+
+        targetMembership.changeRole(newRole);
+        notificationService.create(targetMembership.getUser(),
+            actorMembership.getUser(), NotificationType.MODERATION,
+            "Tu rol en el grupo cambió",
+            "Ahora eres " + roleLabel(newRole) + " en "
+                + targetMembership.getCommunity().getName() + ".",
+            "/grupos/" + communityId);
+        return toMember(targetMembership);
+    }
+
     private CommunitySummaryResponse toSummary(CommunityMembership membership) {
         Community community = membership.getCommunity();
         return new CommunitySummaryResponse(
@@ -274,6 +304,35 @@ public class CommunityService {
                 "No tienes permisos para administrar este grupo");
         }
         return membership;
+    }
+
+    private void validateRoleChange(CommunityMembership actor,
+                                    CommunityMembership target,
+                                    CommunityRole newRole) {
+        CommunityRole actorRole = actor.getRole();
+        CommunityRole targetRole = target.getRole();
+        if (newRole == CommunityRole.OWNER || targetRole == CommunityRole.OWNER) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "El rol de propietario no puede modificarse aquí");
+        }
+        if (actorRole == CommunityRole.OWNER) return;
+        boolean adminCanChange = actorRole == CommunityRole.COMMUNITY_ADMIN
+            && targetRole != CommunityRole.COMMUNITY_ADMIN
+            && Set.of(CommunityRole.COMMUNITY_MODERATOR, CommunityRole.MEMBER)
+                .contains(newRole);
+        if (!adminCanChange) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "No tienes permisos para cambiar este rol");
+        }
+    }
+
+    private String roleLabel(CommunityRole role) {
+        return switch (role) {
+            case OWNER -> "propietario";
+            case COMMUNITY_ADMIN -> "administrador";
+            case COMMUNITY_MODERATOR -> "moderador";
+            case MEMBER -> "miembro";
+        };
     }
 
     private void ensureNotMember(Long communityId, Long userId) {

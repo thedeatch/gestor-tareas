@@ -6,6 +6,8 @@ import {
   CommunityDetail,
   CommunityAccess,
   CommunityDiscovery,
+  CommunityMember,
+  CommunityRole,
   CommunitySummary,
   CreateCommunityRequest
 } from '../models/community.model';
@@ -74,6 +76,16 @@ export class CommunityService {
     const action = approve ? 'approve' : 'reject';
     return this.http.patch<CommunityAccess>(
       `${this.apiUrl}/${groupId}/join-requests/${requestId}/${action}`, {}
+    );
+  }
+
+  updateMemberRole(
+    groupId: number,
+    userId: number,
+    role: CommunityRole
+  ): Observable<CommunityMember> {
+    return this.http.patch<CommunityMember>(
+      `${this.apiUrl}/${groupId}/members/${userId}/role`, { role }
     );
   }
 }

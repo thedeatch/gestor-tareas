@@ -5,12 +5,14 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import {
   CommunityAccess,
   CommunityDetail,
+  CommunityMember,
   CommunityRole,
   CommunityVisibility
 } from '../../models/community.model';
@@ -19,7 +21,8 @@ import { CommunityService } from '../../services/community';
 @Component({
   selector: 'app-community-detail-page',
   imports: [RouterLink, ReactiveFormsModule, MatButtonModule, MatCardModule,
-    MatIconModule, MatFormFieldModule, MatInputModule, MatSnackBarModule],
+    MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule,
+    MatSnackBarModule],
   templateUrl: './community-detail-page.html',
   styleUrl: './community-detail-page.css'
 })
@@ -31,6 +34,8 @@ export class CommunityDetailPage {
   protected readonly joinRequests = signal<CommunityAccess[]>([]);
   protected readonly isLoading = signal(true);
   protected readonly isInviting = signal(false);
+  protected readonly selectedRoles = signal<Record<number, CommunityRole>>({});
+  protected readonly savingRoleFor = signal<number | null>(null);
   protected readonly error = signal<string | null>(null);
   protected readonly invitationEmail = new FormControl('', {
     nonNullable: true,
@@ -50,6 +55,9 @@ export class CommunityDetailPage {
     this.service.findById(id).subscribe({
       next: community => {
         this.community.set(community);
+        this.selectedRoles.set(Object.fromEntries(
+          community.members.map(member => [member.userId, member.role])
+        ));
         this.isLoading.set(false);
         if (this.canManage(community.currentUserRole)) this.loadJoinRequests(id);
       },
@@ -60,6 +68,55 @@ export class CommunityDetailPage {
   protected canManage(role: CommunityRole): boolean {
     return role === 'OWNER' || role === 'COMMUNITY_ADMIN'
       || role === 'COMMUNITY_MODERATOR';
+  }
+
+  protected canManageRoles(role: CommunityRole): boolean {
+    return role === 'OWNER' || role === 'COMMUNITY_ADMIN';
+  }
+
+  protected canEditMember(
+    currentUserRole: CommunityRole,
+    memberRole: CommunityRole
+  ): boolean {
+    if (memberRole === 'OWNER') return false;
+    if (currentUserRole === 'OWNER') return true;
+    return currentUserRole === 'COMMUNITY_ADMIN'
+      && memberRole !== 'COMMUNITY_ADMIN';
+  }
+
+  protected availableRoles(currentUserRole: CommunityRole): CommunityRole[] {
+    return currentUserRole === 'OWNER'
+      ? ['COMMUNITY_ADMIN', 'COMMUNITY_MODERATOR', 'MEMBER']
+      : ['COMMUNITY_MODERATOR', 'MEMBER'];
+  }
+
+  protected selectRole(userId: number, role: CommunityRole): void {
+    this.selectedRoles.update(roles => ({ ...roles, [userId]: role }));
+  }
+
+  protected saveRole(member: CommunityMember): void {
+    const group = this.community();
+    const role = this.selectedRoles()[member.userId];
+    if (!group || !role || role === member.role || this.savingRoleFor()) return;
+    this.savingRoleFor.set(member.userId);
+    this.service.updateMemberRole(group.id, member.userId, role).subscribe({
+      next: updated => {
+        this.savingRoleFor.set(null);
+        this.community.update(current => current ? ({
+          ...current,
+          members: current.members.map(item =>
+            item.userId === updated.userId ? updated : item)
+        }) : current);
+        this.snackBar.open('Rol actualizado correctamente.', 'Cerrar',
+          { duration: 2500 });
+      },
+      error: () => {
+        this.savingRoleFor.set(null);
+        this.selectRole(member.userId, member.role);
+        this.snackBar.open('No fue posible actualizar el rol.', 'Cerrar',
+          { duration: 3000 });
+      }
+    });
   }
 
   protected invite(): void {

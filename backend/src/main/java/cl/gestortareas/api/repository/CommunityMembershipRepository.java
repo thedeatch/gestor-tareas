@@ -21,6 +21,11 @@ public interface CommunityMembershipRepository
         String email
     );
 
+    Optional<CommunityMembership> findByCommunityIdAndUserId(
+        Long communityId,
+        Long userId
+    );
+
     boolean existsByCommunityIdAndUserId(Long communityId, Long userId);
 
     List<CommunityMembership> findAllByCommunityIdAndRoleIn(

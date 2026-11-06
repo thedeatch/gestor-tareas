@@ -16,5 +16,7 @@
 .invite-form { display: flex; align-items: flex-start; gap: .75rem; padding-top: 1rem; }
 .invite-form mat-form-field { flex: 1; }
 .request-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
+.role-management { display: flex; align-items: center; gap: .6rem; }
+.role-management mat-form-field { width: 180px; }
 @media (max-width: 520px) { .member-row { align-items: flex-start; flex-wrap: wrap; }.role-chip { margin-left: 36px; } }
-@media (max-width: 600px) { .invite-form { flex-direction: column; }.invite-form mat-form-field { width: 100%; }.request-actions { margin-left: 36px; } }
+@media (max-width: 600px) { .invite-form { flex-direction: column; }.invite-form mat-form-field { width: 100%; }.request-actions, .role-management { margin-left: 36px; }.role-management { width: calc(100% - 36px); flex-wrap: wrap; }.role-management mat-form-field { flex: 1; min-width: 160px; } }
