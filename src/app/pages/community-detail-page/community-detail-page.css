@@ -6,6 +6,26 @@
 .community-icon mat-icon { font-size: 34px; width: 34px; height: 34px; }
 .summary { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: 1.5rem; }
 .summary span, .role-chip { padding: .35rem .7rem; border-radius: 999px; background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
+.posts-card { margin-bottom: 1rem; }
+.post-form { display: flex; align-items: flex-end; gap: .75rem; padding-top: 1rem; }
+.post-fields { display: flex; flex: 1; flex-direction: column; gap: .75rem; }
+.post-fields mat-form-field { width: 100%; }
+.posts-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--mat-sys-on-surface-variant); padding: 2rem 1rem; text-align: center; }
+.posts-empty p { margin: .5rem 0 0; }
+.post-list { margin-top: 1rem; }
+.post-item { display: flex; gap: .85rem; padding: 1rem 0; border-top: 1px solid var(--mat-sys-outline-variant); }
+.post-avatar { display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; overflow: hidden; border-radius: 50%; background: var(--mat-sys-primary-container); color: var(--mat-sys-on-primary-container); }
+.post-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.post-body { flex: 1; min-width: 0; }
+.post-body > p { margin: .7rem 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.post-body h3 { margin: .7rem 0 0; overflow-wrap: anywhere; }
+.post-body mat-form-field { width: 100%; margin-top: .7rem; }
+.post-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; }
+.post-meta a { color: inherit; text-decoration: none; }
+.post-meta a:hover { color: var(--mat-sys-primary); text-decoration: underline; }
+.post-meta span { color: var(--mat-sys-on-surface-variant); font-size: .85rem; }
+.post-actions { display: flex; flex-wrap: wrap; gap: .25rem; }
+.delete-action { color: var(--mat-sys-error) !important; }
 .member-list { padding-top: 1rem; }
 .member-row { display: flex; align-items: center; gap: .75rem; padding: .9rem 0; border-bottom: 1px solid var(--mat-sys-outline-variant); }
 .member-row:last-child { border-bottom: 0; }
@@ -22,3 +42,4 @@
 .role-management mat-form-field { width: 180px; }
 @media (max-width: 520px) { .member-row { align-items: flex-start; flex-wrap: wrap; }.role-chip { margin-left: 36px; } }
 @media (max-width: 600px) { .invite-form { flex-direction: column; }.invite-form mat-form-field { width: 100%; }.request-actions, .role-management { margin-left: 36px; }.role-management { width: calc(100% - 36px); flex-wrap: wrap; }.role-management mat-form-field { flex: 1; min-width: 160px; } }
+@media (max-width: 600px) { .post-form { align-items: stretch; flex-direction: column; }.post-fields, .post-form button { width: 100%; } }

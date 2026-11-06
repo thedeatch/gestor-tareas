@@ -7,6 +7,7 @@ import {
   CommunityAccess,
   CommunityDiscovery,
   CommunityMember,
+  CommunityPost,
   CommunityRole,
   CommunitySummary,
   CreateCommunityRequest
@@ -86,6 +87,39 @@ export class CommunityService {
   ): Observable<CommunityMember> {
     return this.http.patch<CommunityMember>(
       `${this.apiUrl}/${groupId}/members/${userId}/role`, { role }
+    );
+  }
+
+  findPosts(groupId: number): Observable<CommunityPost[]> {
+    return this.http.get<CommunityPost[]>(
+      `${this.apiUrl}/${groupId}/posts`
+    );
+  }
+
+  createPost(
+    groupId: number,
+    title: string | null,
+    content: string
+  ): Observable<CommunityPost> {
+    return this.http.post<CommunityPost>(
+      `${this.apiUrl}/${groupId}/posts`, { title, content }
+    );
+  }
+
+  updatePost(
+    groupId: number,
+    postId: number,
+    title: string | null,
+    content: string
+  ): Observable<CommunityPost> {
+    return this.http.patch<CommunityPost>(
+      `${this.apiUrl}/${groupId}/posts/${postId}`, { title, content }
+    );
+  }
+
+  deletePost(groupId: number, postId: number): Observable<void> {
+    return this.http.delete<void>(
+      `${this.apiUrl}/${groupId}/posts/${postId}`
     );
   }
 }

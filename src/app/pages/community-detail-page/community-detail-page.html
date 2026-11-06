@@ -16,6 +16,116 @@
       <span>{{ roleLabel(item.currentUserRole) }}</span>
       <span>{{ item.members.length }} miembros</span>
     </div>
+
+    <mat-card class="posts-card">
+      <mat-card-header>
+        <mat-card-title>Publicaciones</mat-card-title>
+        <mat-card-subtitle>Comparte novedades con los miembros del grupo</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <form class="post-form" (submit)="publish($event)">
+          <div class="post-fields">
+            @if (!postsLoading() && !posts().length) {
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Título de la publicación principal</mat-label>
+                <input matInput [formControl]="postTitle">
+                <mat-hint align="end">{{ postTitle.value.length }}/150</mat-hint>
+                @if (postTitle.touched && postTitle.hasError('required')) {
+                  <mat-error>Escribe un título.</mat-error>
+                }
+              </mat-form-field>
+            }
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>¿Qué quieres compartir?</mat-label>
+              <textarea matInput rows="3" [formControl]="postContent"></textarea>
+              <mat-hint align="end">{{ postContent.value.length }}/2000</mat-hint>
+              @if (postContent.touched && postContent.hasError('required')) {
+                <mat-error>Escribe el contenido de la publicación.</mat-error>
+              }
+            </mat-form-field>
+          </div>
+          <button mat-flat-button type="submit"
+            [disabled]="savingPost()">
+            <mat-icon>send</mat-icon>
+            {{ savingPost() ? 'Publicando...' : 'Publicar' }}
+          </button>
+        </form>
+
+        @if (postsLoading()) {
+          <p class="posts-empty">Cargando publicaciones...</p>
+        } @else if (!posts().length) {
+          <div class="posts-empty">
+            <mat-icon>forum</mat-icon>
+            <p>Aún no hay publicaciones. Inicia la conversación.</p>
+          </div>
+        } @else {
+          <div class="post-list">
+            @for (post of posts(); track post.id) {
+              <article class="post-item">
+                <a class="post-avatar" [routerLink]="['/usuarios', post.authorId]">
+                  @if (post.authorHasAvatar) {
+                    <img [src]="'/api/users/' + post.authorId + '/avatar'"
+                      [alt]="'Foto de ' + post.authorName">
+                  } @else {
+                    <mat-icon>person</mat-icon>
+                  }
+                </a>
+                <div class="post-body">
+                  <div class="post-meta">
+                    <a [routerLink]="['/usuarios', post.authorId]">
+                      <strong>{{ post.authorName }}</strong>
+                    </a>
+                    <span>{{ post.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                    @if (post.updatedAt !== post.createdAt) { <span>Editada</span> }
+                  </div>
+                  @if (editingPostId() === post.id) {
+                    @if (post.title !== null) {
+                      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                        <mat-label>Título de la publicación principal</mat-label>
+                        <input matInput [formControl]="editTitle">
+                        <mat-hint align="end">{{ editTitle.value.length }}/150</mat-hint>
+                        @if (editTitle.touched && editTitle.hasError('required')) {
+                          <mat-error>Escribe un título.</mat-error>
+                        }
+                      </mat-form-field>
+                    }
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <textarea matInput rows="3" [formControl]="editContent"></textarea>
+                      <mat-hint align="end">{{ editContent.value.length }}/2000</mat-hint>
+                    </mat-form-field>
+                    <div class="post-actions">
+                      <button mat-flat-button type="button" (click)="savePost(post)"
+                        [disabled]="editTitle.invalid || editContent.invalid
+                          || savingPost()">Guardar</button>
+                      <button mat-button type="button" (click)="cancelEdit()">Cancelar</button>
+                    </div>
+                  } @else {
+                    @if (post.title) { <h3>{{ post.title }}</h3> }
+                    <p>{{ post.content }}</p>
+                    @if (post.editable || post.deletable) {
+                      <div class="post-actions">
+                        @if (post.editable) {
+                          <button mat-button type="button" (click)="beginEdit(post)">
+                            <mat-icon>edit</mat-icon>Editar
+                          </button>
+                        }
+                        @if (post.deletable) {
+                          <button mat-button type="button" class="delete-action"
+                            (click)="confirmDelete(post)">
+                            <mat-icon>delete</mat-icon>Eliminar
+                          </button>
+                        }
+                      </div>
+                    }
+                  }
+                </div>
+              </article>
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+
     <mat-card>
       <mat-card-header><mat-card-title>Miembros</mat-card-title>
         <mat-card-subtitle>Personas que forman parte de este grupo</mat-card-subtitle>

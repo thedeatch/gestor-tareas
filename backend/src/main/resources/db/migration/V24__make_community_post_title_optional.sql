@@ -1,0 +1,1 @@
+ALTER TABLE community_posts ALTER COLUMN title DROP NOT NULL;

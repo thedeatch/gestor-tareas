@@ -61,3 +61,16 @@ export interface CommunityDiscovery {
   memberCount: number;
   requestStatus: CommunityAccessStatus | null;
 }
+
+export interface CommunityPost {
+  id: number;
+  authorId: number;
+  authorName: string;
+  authorHasAvatar: boolean;
+  title: string | null;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  editable: boolean;
+  deletable: boolean;
+}

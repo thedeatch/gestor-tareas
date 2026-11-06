@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,22 +8,28 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import {
   CommunityAccess,
   CommunityDetail,
   CommunityMember,
+  CommunityPost,
   CommunityRole,
   CommunityVisibility
 } from '../../models/community.model';
 import { CommunityService } from '../../services/community';
+import {
+  ConfirmDialog,
+  ConfirmDialogData
+} from '../../components/confirm-dialog/confirm-dialog';
 
 @Component({
   selector: 'app-community-detail-page',
-  imports: [RouterLink, ReactiveFormsModule, MatButtonModule, MatCardModule,
+  imports: [RouterLink, ReactiveFormsModule, DatePipe, MatButtonModule, MatCardModule,
     MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatSnackBarModule],
+    MatSnackBarModule, MatDialogModule],
   templateUrl: './community-detail-page.html',
   styleUrl: './community-detail-page.css'
 })
@@ -30,8 +37,13 @@ export class CommunityDetailPage {
   private readonly route = inject(ActivatedRoute);
   private readonly service = inject(CommunityService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
   protected readonly community = signal<CommunityDetail | null>(null);
   protected readonly joinRequests = signal<CommunityAccess[]>([]);
+  protected readonly posts = signal<CommunityPost[]>([]);
+  protected readonly postsLoading = signal(true);
+  protected readonly savingPost = signal(false);
+  protected readonly editingPostId = signal<number | null>(null);
   protected readonly isLoading = signal(true);
   protected readonly isInviting = signal(false);
   protected readonly selectedRoles = signal<Record<number, CommunityRole>>({});
@@ -40,6 +52,22 @@ export class CommunityDetailPage {
   protected readonly invitationEmail = new FormControl('', {
     nonNullable: true,
     validators: [Validators.required, Validators.email]
+  });
+  protected readonly postContent = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required, Validators.maxLength(2000)]
+  });
+  protected readonly postTitle = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.maxLength(150)]
+  });
+  protected readonly editContent = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required, Validators.maxLength(2000)]
+  });
+  protected readonly editTitle = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.maxLength(150)]
   });
 
   constructor() { this.load(); }
@@ -59,9 +87,114 @@ export class CommunityDetailPage {
           community.members.map(member => [member.userId, member.role])
         ));
         this.isLoading.set(false);
+        this.loadPosts(id);
         if (this.canManage(community.currentUserRole)) this.loadJoinRequests(id);
       },
       error: () => { this.error.set('No fue posible abrir el grupo.'); this.isLoading.set(false); }
+    });
+  }
+
+  protected publish(event?: Event): void {
+    event?.preventDefault();
+    const group = this.community();
+    const needsTitle = this.posts().length === 0;
+    if (needsTitle && !this.postTitle.value.trim()) {
+      this.postTitle.setErrors({ required: true });
+    }
+    if (!group || this.postTitle.invalid || this.postContent.invalid
+        || this.savingPost()) {
+      this.postTitle.markAsTouched();
+      this.postContent.markAsTouched();
+      return;
+    }
+    this.savingPost.set(true);
+    this.service.createPost(group.id,
+      needsTitle ? this.postTitle.value : null,
+      this.postContent.value).subscribe({
+      next: post => {
+        this.posts.update(items => [post, ...items]);
+        this.postTitle.reset('');
+        this.postContent.reset('');
+        this.savingPost.set(false);
+        this.snackBar.open('Publicación creada.', 'Cerrar', { duration: 2500 });
+      },
+      error: () => {
+        this.savingPost.set(false);
+        this.snackBar.open('No fue posible crear la publicación.', 'Cerrar',
+          { duration: 3000 });
+      }
+    });
+  }
+
+  protected beginEdit(post: CommunityPost): void {
+    this.editingPostId.set(post.id);
+    this.editTitle.setValue(post.title ?? '');
+    this.editContent.setValue(post.content);
+  }
+
+  protected cancelEdit(): void {
+    this.editingPostId.set(null);
+    this.editTitle.reset('');
+    this.editContent.reset('');
+  }
+
+  protected savePost(post: CommunityPost): void {
+    const group = this.community();
+    if (post.title !== null && !this.editTitle.value.trim()) {
+      this.editTitle.setErrors({ required: true });
+      this.editTitle.markAsTouched();
+    }
+    if (!group || this.editTitle.invalid || this.editContent.invalid
+        || this.savingPost()) return;
+    this.savingPost.set(true);
+    this.service.updatePost(group.id, post.id,
+      post.title !== null ? this.editTitle.value : null,
+      this.editContent.value).subscribe({
+      next: updated => {
+        this.posts.update(items => items.map(item =>
+          item.id === updated.id ? updated : item));
+        this.cancelEdit();
+        this.savingPost.set(false);
+        this.snackBar.open('Publicación actualizada.', 'Cerrar', { duration: 2500 });
+      },
+      error: () => {
+        this.savingPost.set(false);
+        this.snackBar.open('No fue posible actualizar la publicación.', 'Cerrar',
+          { duration: 3000 });
+      }
+    });
+  }
+
+  protected confirmDelete(post: CommunityPost): void {
+    const group = this.community();
+    if (!group) return;
+    const data: ConfirmDialogData = {
+      title: 'Eliminar publicación',
+      itemLabel: 'la publicación de',
+      itemName: post.authorName,
+      confirmLabel: 'Eliminar'
+    };
+    this.dialog.open(ConfirmDialog, { data, width: '420px' })
+      .afterClosed().subscribe(confirmed => {
+        if (!confirmed) return;
+        this.service.deletePost(group.id, post.id).subscribe({
+          next: () => {
+            this.posts.update(items => items.filter(item => item.id !== post.id));
+            this.snackBar.open('Publicación eliminada.', 'Cerrar',
+              { duration: 2500 });
+          },
+          error: () => this.snackBar.open(
+            'No fue posible eliminar la publicación.', 'Cerrar',
+            { duration: 3000 })
+        });
+      });
+  }
+
+  private loadPosts(groupId: number): void {
+    this.postsLoading.set(true);
+    this.service.findPosts(groupId).subscribe({
+      next: posts => { this.posts.set(posts); this.postsLoading.set(false); },
+      error: () => { this.posts.set([]); this.postsLoading.set(false); }
     });
   }
 

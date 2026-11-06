@@ -24,6 +24,7 @@ import cl.gestortareas.api.repository.AppUserRepository;
 import cl.gestortareas.api.repository.CommunityAccessRequestRepository;
 import cl.gestortareas.api.repository.CommunityMembershipRepository;
 import cl.gestortareas.api.repository.CommunityRepository;
+import cl.gestortareas.api.repository.CommunityPostRepository;
 import cl.gestortareas.api.repository.NotificationRepository;
 
 @SpringBootTest
@@ -34,6 +35,7 @@ class CommunityControllerIntegrationTests {
 
     @Autowired MockMvc mockMvc;
     @Autowired CommunityRepository communityRepository;
+    @Autowired CommunityPostRepository postRepository;
     @Autowired CommunityMembershipRepository membershipRepository;
     @Autowired CommunityAccessRequestRepository accessRepository;
     @Autowired NotificationRepository notificationRepository;
@@ -43,6 +45,7 @@ class CommunityControllerIntegrationTests {
     void cleanDatabase() {
         notificationRepository.deleteAll();
         accessRepository.deleteAll();
+        postRepository.deleteAll();
         membershipRepository.deleteAll();
         communityRepository.deleteAll();
         userRepository.deleteAll();
@@ -214,6 +217,61 @@ class CommunityControllerIntegrationTests {
                 .with(jwt().jwt(token -> token.subject(OTHER_EMAIL)))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"role\":\"COMMUNITY_MODERATOR\"}"))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldAllowMembersToCreateAndReadPosts() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        membershipRepository.save(new CommunityMembership(
+            group, member, CommunityRole.MEMBER));
+
+        mockMvc.perform(post("/api/communities/{id}/posts", group.getId())
+                .with(jwt().jwt(token -> token.subject(OTHER_EMAIL)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"Bienvenida\",\"content\":\"Hola comunidad\"}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.title").value("Bienvenida"))
+            .andExpect(jsonPath("$.content").value("Hola comunidad"))
+            .andExpect(jsonPath("$.editable").value(true));
+
+        mockMvc.perform(post("/api/communities/{id}/posts", group.getId())
+                .with(jwt().jwt(token -> token.subject(OTHER_EMAIL)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":null,\"content\":\"Segunda publicación\"}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.title").doesNotExist())
+            .andExpect(jsonPath("$.content").value("Segunda publicación"));
+
+        mockMvc.perform(get("/api/communities/{id}/posts", group.getId())
+                .with(jwt().jwt(token -> token.subject(OWNER_EMAIL))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].authorName").value("Otra persona"))
+            .andExpect(jsonPath("$[0].deletable").value(true));
+    }
+
+    @Test
+    void shouldPreventMembersFromEditingAnotherUsersPost() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        membershipRepository.save(new CommunityMembership(
+            group, member, CommunityRole.MEMBER));
+
+        mockMvc.perform(post("/api/communities/{id}/posts", group.getId())
+                .with(jwt().jwt(token -> token.subject(OWNER_EMAIL)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"Aviso\",\"content\":\"Publicación original\"}"))
+            .andExpect(status().isCreated());
+        Long postId = postRepository.findAll().get(0).getId();
+
+        mockMvc.perform(patch("/api/communities/{id}/posts/{postId}",
+                group.getId(), postId)
+                .with(jwt().jwt(token -> token.subject(OTHER_EMAIL)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"Cambio\",\"content\":\"Intento de edición\"}"))
             .andExpect(status().isForbidden());
     }
 
