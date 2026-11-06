@@ -4,8 +4,6 @@ import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,8 +18,6 @@ import cl.gestortareas.api.repository.CommunityPostCommentRepository;
 @Service
 @Transactional
 public class CommunityPostCommentService {
-    private static final Logger LOG = LoggerFactory.getLogger(CommunityPostCommentService.class);
-
     public record Comment(Long id, Long authorId, String authorName, boolean authorHasAvatar,
                           Long parentId, String content, Instant createdAt, Instant updatedAt,
                           boolean editable, boolean deletable) {}
@@ -29,12 +25,15 @@ public class CommunityPostCommentService {
     private final CommunityPostService posts;
     private final CommunityPostCommentRepository comments;
     private final NotificationService notifications;
+    private final CommunityModerationService moderation;
 
     public CommunityPostCommentService(CommunityPostService posts,
-        CommunityPostCommentRepository comments, NotificationService notifications) {
+        CommunityPostCommentRepository comments, NotificationService notifications,
+        CommunityModerationService moderation) {
         this.posts = posts;
         this.comments = comments;
         this.notifications = notifications;
+        this.moderation = moderation;
     }
 
     @Transactional(readOnly = true)
@@ -82,20 +81,18 @@ public class CommunityPostCommentService {
         return response(comment, member);
     }
 
-    public void delete(Long groupId, Long postId, Long id, String email) {
+    public void delete(Long groupId, Long postId, Long id, String email, String reason) {
         var member = posts.requireMembership(groupId, email);
-        posts.requirePost(groupId, postId);
+        posts.lockPost(groupId, postId);
         var comment = requireComment(postId, id);
         boolean author = isAuthor(comment, member);
         if (!author && !CommunityPostService.MODERATION_ROLES.contains(member.getRole())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tienes permisos para eliminar el comentario");
         }
-        comments.delete(comment);
         if (!author) {
-            comments.flush();
-            LOG.info("Community comment removed by moderator: groupId={}, postId={}, commentId={}, actorId={}",
-                groupId, postId, id, member.getUser().getId());
+            moderation.recordRemoval(member, comment.getAuthor(), postId, id, reason);
         }
+        comments.delete(comment);
     }
 
     private CommunityPostComment requireComment(Long postId, Long id) {

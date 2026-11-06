@@ -18,6 +18,7 @@ import cl.gestortareas.api.dto.CommunityPostRequest;
 import cl.gestortareas.api.dto.CommunityPostResponse;
 import cl.gestortareas.api.service.CommunityPostService;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import cl.gestortareas.api.dto.CommunityModerationRequest;
 import jakarta.validation.Valid;
 
 @Tag(name = "Publicaciones", description = "Publicaciones dentro de los grupos")
@@ -55,7 +56,9 @@ public class CommunityPostController {
     @DeleteMapping("/{postId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long communityId, @PathVariable Long postId,
+                       @RequestBody(required = false) CommunityModerationRequest request,
                        Authentication authentication) {
-        postService.delete(communityId, postId, authentication.getName());
+        postService.delete(communityId, postId, authentication.getName(),
+            request == null ? null : request.reason());
     }
 }

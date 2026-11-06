@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import cl.gestortareas.api.service.CommunityPostCommentService;
 import cl.gestortareas.api.service.CommunityPostCommentService.Comment;
+import cl.gestortareas.api.dto.CommunityModerationRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -46,7 +47,9 @@ public class CommunityPostCommentController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long communityId, @PathVariable Long postId, @PathVariable Long id,
+                       @RequestBody(required = false) CommunityModerationRequest request,
                        Authentication auth) {
-        comments.delete(communityId, postId, id, auth.getName());
+        comments.delete(communityId, postId, id, auth.getName(),
+            request == null ? null : request.reason());
     }
 }

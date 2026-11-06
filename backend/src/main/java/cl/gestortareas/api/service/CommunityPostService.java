@@ -33,15 +33,18 @@ public class CommunityPostService {
 
     private final CommunityPostReactionRepository reactions;
     private final NotificationService notifications;
+    private final CommunityModerationService moderation;
 
     public CommunityPostService(CommunityPostRepository postRepository,
                                 CommunityMembershipRepository membershipRepository,
                                 CommunityPostReactionRepository reactions,
-                                NotificationService notifications) {
+                                NotificationService notifications,
+                                CommunityModerationService moderation) {
         this.postRepository = postRepository;
         this.membershipRepository = membershipRepository;
         this.reactions = reactions;
         this.notifications = notifications;
+        this.moderation = moderation;
     }
 
     @Transactional(readOnly = true)
@@ -85,13 +88,16 @@ public class CommunityPostService {
     }
 
     @Transactional
-    public void delete(Long communityId, Long postId, String email) {
+    public void delete(Long communityId, Long postId, String email, String reason) {
         CommunityMembership membership = requireMembership(communityId, email);
-        CommunityPost post = requirePost(communityId, postId);
+        CommunityPost post = lockPost(communityId, postId);
         boolean author = post.getAuthor().getId().equals(membership.getUser().getId());
         if (!author && !MODERATION_ROLES.contains(membership.getRole())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                 "No tienes permisos para eliminar esta publicación");
+        }
+        if (!author) {
+            moderation.recordRemoval(membership, post.getAuthor(), postId, null, reason);
         }
         postRepository.delete(post);
     }
@@ -101,9 +107,7 @@ public class CommunityPostService {
         String email, Type type, boolean selected) {
         var actor = requireMembership(communityId, email).getUser();
         // Serialize changes for this post so a repeated request cannot insert or notify twice.
-        var post = postRepository.findByIdAndCommunityId(postId, communityId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                "Publicación no encontrada"));
+        var post = lockPost(communityId, postId);
 
         if (selected) {
             boolean added = reactions.add(postId, actor.getId(), type);
@@ -128,6 +132,12 @@ public class CommunityPostService {
                 communityId, email)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                 "Grupo no encontrado"));
+    }
+
+    CommunityPost lockPost(Long communityId, Long postId) {
+        return postRepository.findByIdAndCommunityId(postId, communityId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "Publicación no encontrada"));
     }
 
     CommunityPost requirePost(Long communityId, Long postId) {

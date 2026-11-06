@@ -1,3 +1,4 @@
+import { Observable } from 'rxjs';
 import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -26,6 +27,7 @@ import {
   ConfirmDialogData
 } from '../../components/confirm-dialog/confirm-dialog';
 
+import { confirmCommunityRemoval } from '../../components/admin-reason-dialog/community-removal';
 import { PostComments } from '../../components/post-comments/post-comments';
 
 @Component({
@@ -213,20 +215,24 @@ export class CommunityDetailPage {
       itemName: post.authorName,
       confirmLabel: 'Eliminar'
     };
-    this.dialog.open(ConfirmDialog, { data, width: '420px' })
-      .afterClosed().subscribe(confirmed => {
-        if (!confirmed) return;
-        this.service.deletePost(group.id, post.id).subscribe({
-          next: () => {
-            this.posts.update(items => items.filter(item => item.id !== post.id));
-            this.snackBar.open('Publicación eliminada.', 'Cerrar',
-              { duration: 2500 });
-          },
-          error: () => this.snackBar.open(
-            'No fue posible eliminar la publicación.', 'Cerrar',
-            { duration: 3000 })
-        });
+    const confirmation: Observable<boolean | string | undefined> = post.editable
+      ? this.dialog.open<ConfirmDialog, ConfirmDialogData, boolean>(
+        ConfirmDialog, { data, width: '420px' }).afterClosed()
+      : confirmCommunityRemoval(this.dialog, 'publicación', post.authorName);
+    confirmation.subscribe(confirmed => {
+      if (!confirmed) return;
+      const reason = typeof confirmed === 'string' ? confirmed : undefined;
+      this.service.deletePost(group.id, post.id, reason).subscribe({
+        next: () => {
+          this.posts.update(items => items.filter(item => item.id !== post.id));
+          this.snackBar.open('Publicación eliminada.', 'Cerrar',
+            { duration: 2500 });
+        },
+        error: () => this.snackBar.open(
+          'No fue posible eliminar la publicación.', 'Cerrar',
+          { duration: 3000 })
       });
+    });
   }
 
   private loadPosts(groupId: number): void {

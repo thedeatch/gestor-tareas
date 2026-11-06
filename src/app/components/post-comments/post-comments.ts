@@ -9,6 +9,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { Observable, finalize } from 'rxjs';
+import { confirmCommunityRemoval } from '../admin-reason-dialog/community-removal';
 import { ConfirmDialog, ConfirmDialogData } from '../confirm-dialog/confirm-dialog';
 
 interface PostComment {
@@ -120,14 +121,18 @@ export class PostComments {
       itemName: comment.authorName,
       confirmLabel: 'Eliminar'
     };
-    this.dialog.open(ConfirmDialog, { data, width: '420px' })
-      .afterClosed().subscribe(confirmed => {
-        if (!confirmed) return;
-        this.run(this.http.delete<void>(`${this.url()}/${comment.id}`), () => {
-          this.comments.update(items => items.filter(item => item.id !== comment.id));
-          if (this.edit()?.id === comment.id || this.reply()?.id === comment.id) this.reset();
-        }, 'No se pudo eliminar el comentario.');
-      });
+    const confirmation: Observable<boolean | string | undefined> = comment.editable
+      ? this.dialog.open<ConfirmDialog, ConfirmDialogData, boolean>(
+        ConfirmDialog, { data, width: '420px' }).afterClosed()
+      : confirmCommunityRemoval(this.dialog, 'comentario', comment.authorName);
+    confirmation.subscribe(confirmed => {
+      if (!confirmed) return;
+      const reason = typeof confirmed === 'string' ? confirmed : undefined;
+      this.run(this.http.delete<void>(`${this.url()}/${comment.id}`, { body: reason ? { reason } : undefined }), () => {
+        this.comments.update(items => items.filter(item => item.id !== comment.id));
+        if (this.edit()?.id === comment.id || this.reply()?.id === comment.id) this.reset();
+      }, 'No se pudo eliminar el comentario.');
+    });
   }
 
   private run<T>(request: Observable<T>, success: (value: T) => void, message: string): void {

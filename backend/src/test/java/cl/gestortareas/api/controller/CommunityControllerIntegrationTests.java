@@ -36,6 +36,7 @@ class CommunityControllerIntegrationTests {
     private static final String OTHER_EMAIL = "other@community.cl";
 
     @Autowired MockMvc mockMvc;
+    @Autowired org.springframework.jdbc.core.simple.JdbcClient jdbc;
     @Autowired CommunityRepository communityRepository;
     @Autowired CommunityPostRepository postRepository;
     @Autowired CommunityPostCommentRepository commentRepository;
@@ -46,6 +47,7 @@ class CommunityControllerIntegrationTests {
 
     @BeforeEach
     void cleanDatabase() {
+        jdbc.sql("DELETE FROM community_moderation_log").update();
         notificationRepository.deleteAll();
         accessRepository.deleteAll();
         postRepository.deleteAll();
@@ -338,7 +340,16 @@ class CommunityControllerIntegrationTests {
         var replyId = commentRepository.findAllByPostIdOrderByCreatedAtAscIdAsc(postId).get(1).getId();
         mockMvc.perform(delete(url + "/" + replyId).with(memberJwt))
             .andExpect(status().isForbidden());
-        mockMvc.perform(delete(commentUrl).with(ownerJwt)).andExpect(status().isNoContent());
+        mockMvc.perform(delete(commentUrl).with(ownerJwt)).andExpect(status().isBadRequest());
+        mockMvc.perform(delete(commentUrl).with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"reason":"  Fuera de las reglas  "}
+                    """))
+            .andExpect(status().isNoContent());
+        assertEquals("Fuera de las reglas", jdbc.sql("""
+            SELECT reason FROM community_moderation_log WHERE comment_id = :id
+            """).param("id", commentId).query(String.class).single());
+        assertEquals(2, notificationRepository.countByRecipientAndReadAtIsNull(member));
         mockMvc.perform(get(url).with(memberJwt))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].content").value("Gracias"))
@@ -392,6 +403,38 @@ class CommunityControllerIntegrationTests {
         mockMvc.perform(delete(postsUrl + "/" + postId).with(ownerJwt))
             .andExpect(status().isNoContent());
     }
+    @Test
+    void shouldRequireCommunityRoleAndReasonToModeratePost() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        membershipRepository.save(new CommunityMembership(group, member, CommunityRole.MEMBER));
+        var ownerJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
+        var memberJwt = jwt().jwt(token -> token.subject(OTHER_EMAIL));
+        var postsUrl = "/api/communities/" + group.getId() + "/posts";
+
+        mockMvc.perform(post(postsUrl).with(memberJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Aviso","content":"Publicación"}
+                    """))
+            .andExpect(status().isCreated());
+        var postId = postRepository.findAll().get(0).getId();
+        var url = postsUrl + "/" + postId;
+        mockMvc.perform(delete(url).with(ownerJwt)).andExpect(status().isBadRequest());
+        mockMvc.perform(get(postsUrl).with(memberJwt))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1));
+        mockMvc.perform(delete(url).with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"reason":"Contenido fuera de tema"}
+                    """))
+            .andExpect(status().isNoContent());
+        mockMvc.perform(delete(url).with(ownerJwt)).andExpect(status().isNotFound());
+        assertEquals(1L, jdbc.sql("""
+            SELECT COUNT(*) FROM community_moderation_log WHERE post_id = :id AND comment_id IS NULL
+            """).param("id", postId).query(Long.class).single());
+        assertEquals(1, notificationRepository.countByRecipientAndReadAtIsNull(member));
+    }
+
     private void createCommunity() throws Exception {
         mockMvc.perform(post("/api/communities")
                 .with(jwt().jwt(token -> token.subject(OWNER_EMAIL)))

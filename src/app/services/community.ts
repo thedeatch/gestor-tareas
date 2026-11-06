@@ -127,9 +127,10 @@ export class CommunityService {
       : this.http.delete<CommunityPostReaction[]>(url);
   }
 
-  deletePost(groupId: number, postId: number): Observable<void> {
+  deletePost(groupId: number, postId: number, reason?: string): Observable<void> {
     return this.http.delete<void>(
-      `${this.apiUrl}/${groupId}/posts/${postId}`
+      `${this.apiUrl}/${groupId}/posts/${postId}`,
+      { body: reason ? { reason } : undefined }
     );
   }
 }
