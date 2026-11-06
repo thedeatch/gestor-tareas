@@ -564,6 +564,48 @@ class CommunityControllerIntegrationTests {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.rules").value(""));
     }
+    @Test
+    void shouldAllowGroupEventRegistrationOncePerMember() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        var ownerJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
+        var memberJwt = jwt().jwt(token -> token.subject(OTHER_EMAIL));
+        var events = "/api/communities/" + group.getId() + "/events";
+        String payload = """
+            {"title":"Encuentro","description":"Actividad del grupo","startsAt":"%s"}
+            """;
+        var now = java.time.OffsetDateTime.now();
+        String future = payload.formatted(now.plusDays(2));
+
+        mockMvc.perform(get(events).with(memberJwt)).andExpect(status().isNotFound());
+        membershipRepository.save(new CommunityMembership(group, member, CommunityRole.MEMBER));
+        mockMvc.perform(post(events).with(memberJwt).contentType(MediaType.APPLICATION_JSON)
+                .content(future)).andExpect(status().isForbidden());
+        mockMvc.perform(post(events).with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content(payload.formatted(now.minusDays(1)))).andExpect(status().isBadRequest());
+        mockMvc.perform(post(events).with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content(future)).andExpect(status().isCreated());
+        var eventId = jdbc.sql("SELECT id FROM community_events WHERE community_id = :group")
+            .param("group", group.getId()).query(Long.class).single();
+        var registration = events + "/" + eventId + "/registration";
+
+        mockMvc.perform(put(registration).with(memberJwt)).andExpect(status().isNoContent());
+        mockMvc.perform(put(registration).with(memberJwt)).andExpect(status().isNoContent());
+        mockMvc.perform(get(events).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].participantCount").value(1))
+            .andExpect(jsonPath("$[0].registered").value(true));
+        mockMvc.perform(get(events).with(ownerJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].registered").value(false));
+        mockMvc.perform(delete(registration).with(memberJwt)).andExpect(status().isNoContent());
+        mockMvc.perform(get(events).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].participantCount").value(0))
+            .andExpect(jsonPath("$[0].registered").value(false));
+
+        jdbc.sql("UPDATE community_events SET starts_at = :past WHERE id = :id")
+            .param("past", now.minusDays(1)).param("id", eventId).update();
+        mockMvc.perform(put(registration).with(memberJwt)).andExpect(status().isBadRequest());
+    }
     private void createCommunity() throws Exception {
         mockMvc.perform(post("/api/communities")
                 .with(jwt().jwt(token -> token.subject(OWNER_EMAIL)))

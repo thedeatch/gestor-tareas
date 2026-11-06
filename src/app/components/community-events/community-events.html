@@ -1,0 +1,55 @@
+<mat-card>
+  <mat-card-header><mat-card-title>Eventos del grupo</mat-card-title></mat-card-header>
+  <mat-card-content>
+    @if (canCreate() && !creating()) {
+      <button mat-button type="button" [disabled]="busy()" (click)="creating.set(true)">Crear evento</button>
+    }
+    @if (canCreate() && creating()) {
+      <form [formGroup]="form" (ngSubmit)="create()">
+        <mat-form-field appearance="outline">
+          <mat-label>Título</mat-label>
+          <input matInput formControlName="title" maxlength="120" [readonly]="busy()">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Descripción</mat-label>
+          <textarea matInput formControlName="description" rows="3" maxlength="2000" [readonly]="busy()"></textarea>
+        </mat-form-field>
+        <mat-form-field appearance="outline" floatLabel="always">
+          <mat-label>Fecha y hora local</mat-label>
+          <input matInput type="datetime-local" formControlName="startsAt" [readonly]="busy()">
+        </mat-form-field>
+        <div>
+          <button mat-flat-button type="submit" [disabled]="busy() || form.invalid">Publicar evento</button>
+          <button mat-button type="button" [disabled]="busy()" (click)="creating.set(false)">Cancelar</button>
+        </div>
+      </form>
+    }
+
+    @if (message()) { <p role="status">{{ message() }}</p> }
+    @if (error()) {
+      <p role="alert">{{ error() }}</p>
+      <button mat-button type="button" [disabled]="busy()" (click)="load()">Actualizar eventos</button>
+    }
+    @if (events(); as items) {
+      @for (event of items; track event.id) {
+        <article>
+          <h3>{{ event.title }}</h3>
+          <time [attr.datetime]="event.startsAt">{{ event.startsAt | date:'dd/MM/yyyy HH:mm' }}</time>
+          <p>{{ event.description }}</p>
+          <p>{{ event.participantCount }} {{ event.participantCount === 1 ? 'inscrito' : 'inscritos' }}</p>
+          @if (started(event)) {
+            <span>{{ event.registered ? 'Estabas inscrito · Evento iniciado' : 'Evento iniciado' }}</span>
+          } @else {
+            <button mat-stroked-button type="button" [disabled]="busy()" (click)="toggleRegistration(event)">
+              {{ event.registered ? 'Cancelar inscripción' : 'Inscribirme' }}
+            </button>
+          }
+        </article>
+      } @empty {
+        <p>Aún no hay eventos en este grupo.</p>
+      }
+    } @else if (busy()) {
+      <p role="status">Cargando eventos...</p>
+    }
+  </mat-card-content>
+</mat-card>

@@ -71,7 +71,7 @@ public class CommunityService {
         return toDetail(membership);
     }
 
-    private CommunityMembership requireMembership(Long id, String email) {
+    CommunityMembership requireMembership(Long id, String email) {
         return membershipRepository.findByCommunityIdAndUserEmailIgnoreCase(id, email)
             .orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.NOT_FOUND, "Grupo no encontrado"));
@@ -313,7 +313,7 @@ public class CommunityService {
                 HttpStatus.NOT_FOUND, "Grupo no encontrado"));
     }
 
-    private CommunityMembership requireManager(Long communityId, String email) {
+    CommunityMembership requireManager(Long communityId, String email) {
         CommunityMembership membership = membershipRepository
             .findByCommunityIdAndUserEmailIgnoreCase(communityId, email)
             .orElseThrow(() -> new ResponseStatusException(
