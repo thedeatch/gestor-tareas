@@ -1,6 +1,6 @@
 import { Observable } from 'rxjs';
 import { DatePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -30,6 +30,7 @@ import {
 import { getApiErrorMessage } from '../../models/api-error.model';
 import { confirmCommunityRemoval } from '../../components/admin-reason-dialog/community-removal';
 import { CommunityChat } from '../../components/community-chat/community-chat';
+import { CommunityActivity } from '../../components/community-activity/community-activity';
 import { CommunityGallery } from '../../components/community-gallery/community-gallery';
 import { CommunityEvents } from '../../components/community-events/community-events';
 import { CommunityReports } from '../../components/community-reports/community-reports';
@@ -40,11 +41,12 @@ import { PostComments } from '../../components/post-comments/post-comments';
   selector: 'app-community-detail-page',
   imports: [RouterLink, ReactiveFormsModule, DatePipe, MatButtonModule, MatCardModule,
     MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatSnackBarModule, MatDialogModule, PostComments, CommunityReports, ReportButton, CommunityEvents, CommunityGallery, CommunityChat],
+    MatSnackBarModule, MatDialogModule, PostComments, CommunityReports, ReportButton, CommunityEvents, CommunityGallery, CommunityChat, CommunityActivity],
   templateUrl: './community-detail-page.html',
   styleUrl: './community-detail-page.css'
 })
 export class CommunityDetailPage {
+  protected readonly activity = viewChild(CommunityActivity);
   private readonly route = inject(ActivatedRoute);
   private readonly service = inject(CommunityService);
   private readonly snackBar = inject(MatSnackBar);
@@ -167,6 +169,7 @@ export class CommunityDetailPage {
       this.postContent.value).subscribe({
       next: post => {
         this.posts.update(items => [post, ...items]);
+        this.activity()?.load();
         this.postTitle.reset('');
         this.postContent.reset('');
         this.savingPost.set(false);
@@ -208,6 +211,7 @@ export class CommunityDetailPage {
         this.posts.update(items => items.map(item =>
           item.id === updated.id ? { ...updated, reactions: item.reactions } : item));
         this.cancelEdit();
+        this.activity()?.load();
         this.savingPost.set(false);
         this.snackBar.open('Publicación actualizada.', 'Cerrar', { duration: 2500 });
       },
@@ -268,6 +272,7 @@ export class CommunityDetailPage {
       this.service.deletePost(group.id, post.id, reason).subscribe({
         next: () => {
           this.posts.update(items => items.filter(item => item.id !== post.id));
+          this.activity()?.load();
           this.snackBar.open('Publicación eliminada.', 'Cerrar',
             { duration: 2500 });
         },

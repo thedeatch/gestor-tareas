@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, DestroyRef, inject, input, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, inject, input, OnInit, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -36,6 +36,7 @@ interface AlbumImage {
 export class CommunityGallery implements OnInit {
   readonly groupId = input.required<number>();
   readonly canManage = input(false);
+  readonly albumCreated = output<void>();
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly albums = signal<Album[] | null>(null);
@@ -74,6 +75,7 @@ export class CommunityGallery implements OnInit {
       this.form.reset();
       this.creating.set(false);
       this.message.set('Álbum creado.');
+      this.albumCreated.emit();
       return this.http.get<Album[]>(this.url());
     })), 'No se pudo completar la actualización de los álbumes.', albums => this.albums.set(albums));
   }

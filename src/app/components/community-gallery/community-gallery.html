@@ -30,7 +30,7 @@
         <ul aria-label="Álbumes">
           @for (item of items; track item.id) {
             <li>
-              <button mat-button type="button" [disabled]="busy()" [attr.aria-pressed]="album()?.id === item.id"
+              <button mat-button type="button" [id]="'album-' + item.id" [disabled]="busy()" [attr.aria-pressed]="album()?.id === item.id"
                 (click)="open(item)">{{ item.title }}</button>
             </li>
           }

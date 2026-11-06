@@ -690,6 +690,63 @@ class CommunityControllerIntegrationTests {
                     """))
             .andExpect(status().isBadRequest());
     }
+    @Test
+    void shouldShowOnlyDatedActivityFromTheMembersGroupInReverseOrder() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var ownerJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
+        var outsiderJwt = jwt().jwt(token -> token.subject(OTHER_EMAIL));
+        var url = "/api/communities/" + group.getId();
+
+        mockMvc.perform(post(url + "/posts").with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Publicación inicial","content":"Contenido"}
+                    """))
+            .andExpect(status().isCreated());
+        var postId = postRepository.findAll().get(0).getId();
+        mockMvc.perform(post(url + "/albums").with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Fotos nuevas","description":""}
+                    """))
+            .andExpect(status().isCreated());
+        String startsAt = java.time.OffsetDateTime.now().plusDays(1).toString();
+        mockMvc.perform(post(url + "/events").with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Encuentro","description":"Actividad","startsAt":"%s"}
+                    """.formatted(startsAt)))
+            .andExpect(status().isCreated());
+
+        jdbc.sql("""
+            UPDATE community_posts SET created_at = :date WHERE id = :id
+            """).param("date", java.time.OffsetDateTime.parse("2025-01-01T00:00:00Z"))
+            .param("id", postId).update();
+        jdbc.sql("""
+            UPDATE community_albums SET created_at = :date WHERE community_id = :id
+            """).param("date", java.time.OffsetDateTime.parse("2025-01-02T00:00:00Z"))
+            .param("id", group.getId()).update();
+        jdbc.sql("""
+            INSERT INTO community_albums (community_id, title, description, created_at)
+            VALUES (:id, 'Álbum antiguo', '', NULL)
+            """).param("id", group.getId()).update();
+        createPublicCommunity();
+        var otherGroup = communityRepository.findAll().stream()
+            .filter(item -> !item.getId().equals(group.getId())).findFirst().orElseThrow();
+        jdbc.sql("""
+            INSERT INTO community_albums (community_id, title, description)
+            VALUES (:id, 'De otro grupo', '')
+            """).param("id", otherGroup.getId()).update();
+
+        mockMvc.perform(get(url + "/activity").with(outsiderJwt)).andExpect(status().isNotFound());
+        mockMvc.perform(get(url + "/activity").with(ownerJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(3))
+            .andExpect(jsonPath("$[0].type").value("EVENT"))
+            .andExpect(jsonPath("$[1].type").value("ALBUM"))
+            .andExpect(jsonPath("$[2].type").value("POST"))
+            .andExpect(jsonPath("$[2].resourceId").value(postId));
+        mockMvc.perform(delete(url + "/posts/" + postId).with(ownerJwt)).andExpect(status().isNoContent());
+        mockMvc.perform(get(url + "/activity").with(ownerJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(2));
+    }
     private void createCommunity() throws Exception {
         mockMvc.perform(post("/api/communities")
                 .with(jwt().jwt(token -> token.subject(OWNER_EMAIL)))

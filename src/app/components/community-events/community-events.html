@@ -32,7 +32,7 @@
     }
     @if (events(); as items) {
       @for (event of items; track event.id) {
-        <article>
+        <article [id]="'evento-' + event.id" tabindex="-1">
           <h3>{{ event.title }}</h3>
           <time [attr.datetime]="event.startsAt">{{ event.startsAt | date:'dd/MM/yyyy HH:mm' }}</time>
           <p>{{ event.description }}</p>

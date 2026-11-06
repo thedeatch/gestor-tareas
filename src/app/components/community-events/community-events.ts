@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, computed, inject, input, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, input, OnInit, output, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -34,6 +34,7 @@ interface CommunityEvent {
 export class CommunityEvents implements OnInit {
   readonly groupId = input.required<number>();
   readonly canCreate = input(false);
+  readonly eventCreated = output<void>();
   private readonly http = inject(HttpClient);
   private readonly url = computed(() => `/api/communities/${this.groupId()}/events`);
   protected readonly events = signal<CommunityEvent[] | null>(null);
@@ -76,6 +77,7 @@ export class CommunityEvents implements OnInit {
       this.form.reset();
       this.creating.set(false);
       this.message.set('Evento creado.');
+      this.eventCreated.emit();
       this.load();
     });
   }

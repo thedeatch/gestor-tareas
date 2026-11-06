@@ -1,0 +1,22 @@
+<mat-card>
+  <mat-card-header><mat-card-title>Actividad reciente</mat-card-title></mat-card-header>
+  <mat-card-content>
+    <button mat-button type="button" [disabled]="loading()" (click)="load()">Actualizar actividad</button>
+    @if (error()) { <p role="alert">{{ error() }}</p> }
+    @if (loading() && !items().length) {
+      <p role="status">Cargando actividad…</p>
+    } @else if (items().length) {
+      <ul>
+        @for (item of items(); track item.type + '-' + item.resourceId) {
+          <li>
+            <strong>{{ labels[item.type] }}</strong>
+            <time [attr.datetime]="item.createdAt">{{ item.createdAt | date:'dd/MM/yyyy HH:mm' }}</time>
+            <div><button mat-button type="button" (click)="goTo(item)">{{ item.title }}</button></div>
+          </li>
+        }
+      </ul>
+    } @else if (!error()) {
+      <p>Aún no hay actividad para mostrar.</p>
+    }
+  </mat-card-content>
+</mat-card>

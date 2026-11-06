@@ -57,9 +57,11 @@
       </mat-card-content>
     </mat-card>
 
-    <app-community-events [groupId]="item.id" [canCreate]="canManage(item.currentUserRole)" />
+    <app-community-activity #activityFeed [groupId]="item.id" />
 
-    <app-community-gallery [groupId]="item.id" [canManage]="canManage(item.currentUserRole)" />
+    <app-community-events [groupId]="item.id" [canCreate]="canManage(item.currentUserRole)" (eventCreated)="activityFeed.load()" />
+
+    <app-community-gallery [groupId]="item.id" [canManage]="canManage(item.currentUserRole)" (albumCreated)="activityFeed.load()" />
 
     <app-community-chat [groupId]="item.id" />
 
@@ -107,7 +109,7 @@
         } @else {
           <div class="post-list">
             @for (post of posts(); track post.id) {
-              <article class="post-item" [id]="'publicacion-' + post.id">
+              <article class="post-item" [id]="'publicacion-' + post.id" tabindex="-1">
                 <a class="post-avatar" [routerLink]="['/usuarios', post.authorId]">
                   @if (post.authorHasAvatar) {
                     <img [src]="'/api/users/' + post.authorId + '/avatar'"
@@ -234,7 +236,7 @@
     </mat-card>
 
     @if (canManage(item.currentUserRole)) {
-      <app-community-reports [groupId]="item.id" (contentRemoved)="loadPosts(item.id)" />
+      <app-community-reports [groupId]="item.id" (contentRemoved)="loadPosts(item.id); activityFeed.load()" />
       <mat-card class="management-card">
         <mat-card-header>
           <mat-card-title>Invitar a una persona</mat-card-title>
