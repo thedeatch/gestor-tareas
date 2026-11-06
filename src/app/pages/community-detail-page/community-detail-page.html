@@ -1,0 +1,34 @@
+<main class="detail-page">
+  <a mat-button routerLink="/grupos"><mat-icon>arrow_back</mat-icon>Grupos</a>
+  @if (isLoading()) {
+    <p class="status">Cargando grupo...</p>
+  } @else if (error()) {
+    <div class="status error"><p>{{ error() }}</p>
+      <button mat-stroked-button type="button" (click)="load()">Reintentar</button>
+    </div>
+  } @else if (community(); as item) {
+    <header class="community-header">
+      <div class="community-icon"><mat-icon>groups</mat-icon></div>
+      <div><h1>{{ item.name }}</h1><p>{{ item.description }}</p></div>
+    </header>
+    <div class="summary">
+      <span>{{ visibilityLabel(item.visibility) }}</span>
+      <span>{{ roleLabel(item.currentUserRole) }}</span>
+      <span>{{ item.members.length }} miembros</span>
+    </div>
+    <mat-card>
+      <mat-card-header><mat-card-title>Miembros</mat-card-title>
+        <mat-card-subtitle>Personas que forman parte de este grupo</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content class="member-list">
+        @for (member of item.members; track member.userId) {
+          <div class="member-row">
+            <mat-icon>account_circle</mat-icon>
+            <div class="member-data"><strong>{{ member.name }}</strong><span>{{ member.email }}</span></div>
+            <span class="role-chip">{{ roleLabel(member.role) }}</span>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+</main>

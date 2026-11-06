@@ -23,6 +23,25 @@ export const routes: Routes = [
         .then(module => module.TasksPage)
   },
   {
+    path: 'grupos',
+    canActivate: [authGuard, moduleGuard('communities')],
+    loadComponent: () =>
+      import('./pages/communities-page/communities-page')
+        .then(module => module.CommunitiesPage)
+  },
+  {
+    path: 'grupos/:id',
+    canActivate: [authGuard, moduleGuard('communities')],
+    loadComponent: () =>
+      import('./pages/community-detail-page/community-detail-page')
+        .then(module => module.CommunityDetailPage)
+  },
+  {
+    path: 'comunidades',
+    redirectTo: 'grupos',
+    pathMatch: 'full'
+  },
+  {
     path: 'acerca-de',
     loadComponent: () =>
       import('./pages/about-page/about-page')

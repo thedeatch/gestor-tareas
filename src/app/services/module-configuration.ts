@@ -13,6 +13,7 @@ export class ModuleConfigurationService {
   private readonly loaded = signal(false);
   private readonly availabilityState = signal<ModuleAvailability>({
     tasks: true,
+    communities: true,
     profile: true,
     users: true,
     audit: true

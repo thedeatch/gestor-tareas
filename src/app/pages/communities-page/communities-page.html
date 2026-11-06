@@ -1,0 +1,82 @@
+<main class="communities-page">
+  <header class="page-header">
+    <div>
+      <h1>Mis grupos</h1>
+      <p>Crea grupos dentro de la comunidad y organiza a sus miembros.</p>
+    </div>
+    <button mat-flat-button type="button" (click)="showForm.set(!showForm())">
+      <mat-icon>{{ showForm() ? 'close' : 'add' }}</mat-icon>
+      {{ showForm() ? 'Cancelar' : 'Crear grupo' }}
+    </button>
+  </header>
+
+  @if (showForm()) {
+    <mat-card class="create-card">
+      <mat-card-header><mat-card-title>Nuevo grupo</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <form [formGroup]="form" (ngSubmit)="create()">
+          <mat-form-field appearance="outline">
+            <mat-label>Nombre</mat-label>
+            <input matInput formControlName="name" maxlength="100">
+            @if (form.controls.name.touched && form.controls.name.invalid) {
+              <mat-error>Ingresa un nombre válido.</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Descripción</mat-label>
+            <textarea matInput formControlName="description" maxlength="500" rows="3"></textarea>
+            <mat-hint align="end">{{ form.controls.description.value.length }}/500</mat-hint>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Visibilidad</mat-label>
+            <mat-select formControlName="visibility">
+              <mat-option value="PUBLIC">Pública</mat-option>
+              <mat-option value="PRIVATE">Privada</mat-option>
+              <mat-option value="HIDDEN">Oculta</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <button mat-flat-button type="submit" [disabled]="isCreating()">
+            <mat-icon>groups</mat-icon>
+            {{ isCreating() ? 'Creando...' : 'Crear grupo' }}
+          </button>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (isLoading()) {
+    <p class="status">Cargando grupos...</p>
+  } @else if (error()) {
+    <div class="status error"><p>{{ error() }}</p>
+      <button mat-stroked-button type="button" (click)="load()">Reintentar</button>
+    </div>
+  } @else {
+    <section class="community-grid">
+      @for (community of communities(); track community.id) {
+        <mat-card class="community-card">
+          <mat-card-header>
+            <mat-icon mat-card-avatar>groups</mat-icon>
+            <mat-card-title>{{ community.name }}</mat-card-title>
+            <mat-card-subtitle>{{ visibilityLabel(community.visibility) }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <p>{{ community.description }}</p>
+            <div class="metadata">
+              <span><mat-icon>person</mat-icon>{{ roleLabel(community.currentUserRole) }}</span>
+              <span><mat-icon>group</mat-icon>{{ community.memberCount }} miembros</span>
+            </div>
+          </mat-card-content>
+          <mat-card-actions align="end">
+            <a mat-button [routerLink]="['/grupos', community.id]">Abrir</a>
+          </mat-card-actions>
+        </mat-card>
+      } @empty {
+        <div class="empty-state">
+          <mat-icon>diversity_3</mat-icon>
+          <h2>Aún no perteneces a un grupo</h2>
+          <p>Crea el primero para comenzar a reunir miembros.</p>
+        </div>
+      }
+    </section>
+  }
+</main>

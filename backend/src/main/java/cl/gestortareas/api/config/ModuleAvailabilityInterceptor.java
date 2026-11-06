@@ -28,6 +28,10 @@ public class ModuleAvailabilityInterceptor implements HandlerInterceptor {
         if (path.startsWith("/api/tasks") && !modules.tasksEnabled()) {
             disabled();
         }
+        if (path.startsWith("/api/communities")
+            && !modules.communitiesEnabled()) {
+            disabled();
+        }
         if (path.startsWith("/api/admin/users") && !modules.usersEnabled()) {
             disabled();
         }

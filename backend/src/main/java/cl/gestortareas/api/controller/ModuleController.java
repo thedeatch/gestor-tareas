@@ -22,6 +22,7 @@ public class ModuleController {
     public Map<String, Boolean> findAll() {
         return Map.of(
             "tasks", modules.tasksEnabled(),
+            "communities", modules.communitiesEnabled(),
             "profile", true,
             "users", modules.usersEnabled(),
             "audit", modules.auditEnabled()

@@ -10,7 +10,7 @@ export interface AppModule {
   roles?: UserRole[];
 }
 
-export type ModuleId = 'tasks' | 'profile' | 'users' | 'audit';
+export type ModuleId = 'tasks' | 'communities' | 'profile' | 'users' | 'audit';
 
 export type ModuleAvailability = Record<ModuleId, boolean>;
 
@@ -22,6 +22,14 @@ export const APP_MODULES: readonly AppModule[] = [
     description: 'Crea, organiza y completa tus actividades pendientes.',
     icon: 'task_alt',
     route: '/tareas'
+  },
+  {
+    id: 'communities',
+    label: 'Grupos',
+    title: 'Grupos de la comunidad',
+    description: 'Crea grupos, reúne miembros y colabora dentro de la comunidad.',
+    icon: 'groups',
+    route: '/grupos'
   },
   {
     id: 'profile',
