@@ -824,6 +824,59 @@ class CommunityControllerIntegrationTests {
         mockMvc.perform(asyncDispatch(restored)).andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(2));
     }
+    @Test
+    void shouldRankMembersAndAwardBadgesForTheSelectedMonth() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        var ownerJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
+        var memberJwt = jwt().jwt(token -> token.subject(OTHER_EMAIL));
+        var groupUrl = "/api/communities/" + group.getId();
+        var ranking = groupUrl + "/ranking";
+
+        mockMvc.perform(get(ranking).with(memberJwt)).andExpect(status().isNotFound());
+        membershipRepository.save(new CommunityMembership(group, member, CommunityRole.MEMBER));
+        mockMvc.perform(get(ranking).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.leaders.length()").value(0))
+            .andExpect(jsonPath("$.viewer.points").value(0));
+
+        mockMvc.perform(post(groupUrl + "/posts").with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Aviso","content":"Publicación inicial"}
+                    """))
+            .andExpect(status().isCreated());
+        var postId = postRepository.findAll().get(0).getId();
+        for (int i = 0; i < 5; i++) {
+            mockMvc.perform(post(groupUrl + "/posts/" + postId + "/comments").with(memberJwt)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {"content":"Comentario de la temporada"}
+                        """))
+                .andExpect(status().isCreated());
+        }
+
+        mockMvc.perform(get(ranking).with(ownerJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.leaders[0].name").value("Otra persona"))
+            .andExpect(jsonPath("$.leaders[0].points").value(10))
+            .andExpect(jsonPath("$.leaders[0].badges[0]").value("CONVERSATION"))
+            .andExpect(jsonPath("$.viewer.position").value(2))
+            .andExpect(jsonPath("$.viewer.points").value(5))
+            .andExpect(jsonPath("$.viewer.badges[0]").value("FIRST_POST"));
+        mockMvc.perform(get(ranking).param("season", "invalid").with(ownerJwt))
+            .andExpect(status().isBadRequest());
+
+        var previous = java.time.YearMonth.now(java.time.ZoneOffset.UTC).minusMonths(1);
+        var date = previous.atDay(1).atStartOfDay().atOffset(java.time.ZoneOffset.UTC);
+        jdbc.sql("UPDATE communities SET created_at = :date WHERE id = :id")
+            .param("date", date).param("id", group.getId()).update();
+        jdbc.sql("UPDATE community_posts SET created_at = :date WHERE id = :id")
+            .param("date", date).param("id", postId).update();
+        mockMvc.perform(get(ranking).param("season", previous.toString()).with(ownerJwt))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.season").value(previous.toString()))
+            .andExpect(jsonPath("$.leaders.length()").value(1))
+            .andExpect(jsonPath("$.viewer.points").value(5));
+    }
     private void createCommunity() throws Exception {
         mockMvc.perform(post("/api/communities")
                 .with(jwt().jwt(token -> token.subject(OWNER_EMAIL)))

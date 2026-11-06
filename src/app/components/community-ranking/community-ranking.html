@@ -1,0 +1,55 @@
+<mat-card>
+  <mat-card-header><mat-card-title>Ranking del grupo</mat-card-title></mat-card-header>
+  <mat-card-content>
+    @if (error()) { <p role="alert">{{ error() }}</p> }
+    @if (ranking(); as board) {
+      <nav aria-label="Temporadas del ranking">
+        <button mat-button type="button" [disabled]="loading() || board.season === board.firstSeason"
+          (click)="move(board.season, -1)">Mes anterior</button>
+        <strong>{{ (board.season + '-01T00:00:00Z') | date:'MMMM yyyy':'UTC' }}</strong>
+        <button mat-button type="button" [disabled]="loading() || board.season === board.currentSeason"
+          (click)="move(board.season, 1)">Mes siguiente</button>
+        <button mat-button type="button" [disabled]="loading()" (click)="load(board.season)">Actualizar</button>
+      </nav>
+      @if (board.viewer; as viewer) {
+        <p>
+          <strong>Tu resultado</strong> · {{ viewer.points }} pts
+          @if (viewer.position !== null) { · Puesto {{ viewer.position }} }
+        </p>
+        @for (badge of viewer.badges; track badge) {
+          <span class="badge">{{ badgeLabels[badge] }}</span>
+        }
+      }
+      @if (board.leaders.length) {
+        <ul aria-label="Clasificación">
+          @for (entry of board.leaders; track entry.userId) {
+            <li>
+              <strong>{{ entry.position }}. {{ entry.name }}</strong>
+              @if (entry.viewer) { (tú) }
+              · {{ entry.points }} pts · {{ entry.posts }} publ. · {{ entry.comments }} com.
+              @for (badge of entry.badges; track badge) {
+                <span class="badge">{{ badgeLabels[badge] }}</span>
+              }
+            </li>
+          }
+        </ul>
+      } @else {
+        <p>Aún no hay actividad con puntos en esta temporada.</p>
+      }
+    } @else if (loading()) {
+      <p role="status">Cargando ranking…</p>
+    } @else {
+      <button mat-button type="button" (click)="load()">Reintentar</button>
+    }
+    <details>
+      <summary>Cómo se calculan los puntos y las insignias</summary>
+      <p>Cada mes se calcula en UTC. Una publicación suma 5 puntos y un comentario suma 2 puntos.
+        El ranking se calcula con el contenido disponible y los miembros activos del grupo.</p>
+      <ul>
+        <li>Primera publicación · publica una vez en la temporada.</li>
+        <li>Conversación activa · escribe al menos 5 comentarios.</li>
+        <li>Gran aporte · alcanza 25 puntos.</li>
+      </ul>
+    </details>
+  </mat-card-content>
+</mat-card>
