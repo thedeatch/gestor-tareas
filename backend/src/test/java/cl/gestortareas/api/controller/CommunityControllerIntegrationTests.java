@@ -3,6 +3,8 @@ package cl.gestortareas.api.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -651,6 +653,42 @@ class CommunityControllerIntegrationTests {
         mockMvc.perform(multipart(images).file(image).with(memberJwt)).andExpect(status().isForbidden());
         mockMvc.perform(post(albums).with(memberJwt).contentType(MediaType.APPLICATION_JSON)
                 .content(payload)).andExpect(status().isForbidden());
+    }
+    @Test
+    void shouldDeliverNewChatMessagesToWaitingGroupMembers() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        var ownerJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
+        var memberJwt = jwt().jwt(token -> token.subject(OTHER_EMAIL));
+        var chat = "/api/communities/" + group.getId() + "/chat";
+        String message = """
+            {"content":"Hola, grupo"}
+            """;
+
+        mockMvc.perform(get(chat).with(memberJwt)).andExpect(status().isNotFound());
+        mockMvc.perform(post(chat).with(memberJwt).contentType(MediaType.APPLICATION_JSON).content(message))
+            .andExpect(status().isNotFound());
+        membershipRepository.save(new CommunityMembership(group, member, CommunityRole.MEMBER));
+
+        var waiting = mockMvc.perform(get(chat).param("after", "0").with(memberJwt))
+            .andExpect(request().asyncStarted()).andReturn();
+        mockMvc.perform(post(chat).with(ownerJwt).contentType(MediaType.APPLICATION_JSON).content(message))
+            .andExpect(status().isCreated());
+        waiting.getAsyncResult(5000);
+        mockMvc.perform(asyncDispatch(waiting)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].content").value("Hola, grupo"))
+            .andExpect(jsonPath("$[0].authorName").value("Propietaria"));
+
+        var history = mockMvc.perform(get(chat).with(memberJwt))
+            .andExpect(request().asyncStarted()).andReturn();
+        mockMvc.perform(asyncDispatch(history)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1));
+        mockMvc.perform(post(chat).with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"content":"   "}
+                    """))
+            .andExpect(status().isBadRequest());
     }
     private void createCommunity() throws Exception {
         mockMvc.perform(post("/api/communities")

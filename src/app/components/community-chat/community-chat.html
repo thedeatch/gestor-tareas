@@ -1,0 +1,40 @@
+<mat-card>
+  <mat-card-header><mat-card-title>Chat del grupo</mat-card-title></mat-card-header>
+  <mat-card-content>
+    <button mat-button type="button" [attr.aria-expanded]="open()" (click)="toggle()">
+      {{ open() ? 'Cerrar chat' : 'Abrir chat' }}
+    </button>
+    @if (open()) {
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+        <button mat-button type="button" (click)="connect()">Reconectar</button>
+      } @else if (reconnecting()) {
+        <p role="status">Reconectando al chat…</p>
+      } @else if (!connected()) {
+        <p role="status">Conectando al chat…</p>
+      }
+      @if (messages().length) {
+        <ol #log role="log" aria-label="Mensajes del grupo" tabindex="0">
+          @for (message of messages(); track message.id) {
+            <li>
+              <strong>{{ message.authorName || 'Usuario eliminado' }}</strong>
+              <time [attr.datetime]="message.createdAt">{{ message.createdAt | date:'dd/MM HH:mm' }}</time>
+              <p>{{ message.content }}</p>
+            </li>
+          }
+        </ol>
+      } @else if (connected()) {
+        <p>Aún no hay mensajes en el grupo.</p>
+      }
+      <form (submit)="send($event)">
+        <mat-form-field appearance="outline">
+          <mat-label>Mensaje</mat-label>
+          <textarea matInput rows="2" maxlength="1000" [formControl]="content" [readonly]="sending()"></textarea>
+        </mat-form-field>
+        <button mat-flat-button type="submit"
+          [disabled]="!connected() || reconnecting() || sending() || !content.value.trim()">Enviar</button>
+      </form>
+      @if (sendError()) { <p role="alert">{{ sendError() }}</p> }
+    }
+  </mat-card-content>
+</mat-card>
