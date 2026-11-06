@@ -53,19 +53,21 @@
         <mat-icon>{{ themeIcon() }}</mat-icon>
       </button>
 
-      <a
+      <button
+        #notificationTrigger="matMenuTrigger"
         mat-icon-button
         class="notification-button"
-        routerLink="/notificaciones"
-        routerLinkActive="active-link"
+        type="button"
         aria-label="Abrir notificaciones"
+        [matMenuTriggerFor]="notificationMenu"
+        (menuOpened)="loadNotificationPreview()"
         [matBadge]="unreadNotifications()"
         [matBadgeHidden]="unreadNotifications() === 0"
         matBadgeColor="warn"
         matBadgeSize="small"
       >
         <mat-icon>notifications</mat-icon>
-      </a>
+      </button>
 
       <a
         class="user-profile-link"
@@ -106,6 +108,68 @@
       </a>
     }
   </nav>
+
+  <mat-menu
+    #notificationMenu="matMenu"
+    class="notification-menu-panel"
+    xPosition="before"
+  >
+    <div class="notification-popover" (click)="$event.stopPropagation()">
+      <div class="notification-popover-header">
+        <div>
+          <strong>Notificaciones</strong>
+          <span>{{ unreadNotifications() }} sin leer</span>
+        </div>
+        <button
+          mat-button
+          type="button"
+          [disabled]="isMarkingNotifications() || unreadNotifications() === 0"
+          (click)="markAllNotificationsAsRead($event)"
+        >
+          Marcar todas como leídas
+        </button>
+      </div>
+
+      @if (isLoadingNotifications()) {
+        <p class="notification-popover-state">Cargando...</p>
+      } @else if (notificationError()) {
+        <p class="notification-popover-state error">{{ notificationError() }}</p>
+      } @else {
+        <div class="notification-popover-list">
+          @for (notification of notificationPreview(); track notification.id) {
+            <button
+              class="notification-popover-item"
+              [class.unread]="!notification.readAt"
+              type="button"
+              (click)="openNotification(notification)"
+            >
+              <span class="notification-popover-icon">
+                <mat-icon>{{ notificationIcon(notification.type) }}</mat-icon>
+              </span>
+              <span class="notification-popover-copy">
+                <strong>{{ notification.title }}</strong>
+                <span>{{ notification.message }}</span>
+                <small>{{ notification.createdAt | date:'dd/MM/yyyy HH:mm' }}</small>
+              </span>
+              @if (!notification.readAt) {
+                <span class="notification-unread-dot" aria-label="No leída"></span>
+              }
+            </button>
+          } @empty {
+            <p class="notification-popover-state">No tienes notificaciones.</p>
+          }
+        </div>
+      }
+
+      <a
+        class="notification-popover-footer"
+        routerLink="/notificaciones"
+        (click)="closeNotificationMenu()"
+      >
+        Ver todas las notificaciones
+      </a>
+    </div>
+  </mat-menu>
 
   <button
     mat-icon-button

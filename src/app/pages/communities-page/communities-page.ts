@@ -10,7 +10,12 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
 
-import { CommunitySummary, CommunityVisibility } from '../../models/community.model';
+import {
+  CommunityAccess,
+  CommunityDiscovery,
+  CommunitySummary,
+  CommunityVisibility
+} from '../../models/community.model';
 import { CommunityService } from '../../services/community';
 
 @Component({
@@ -26,6 +31,8 @@ export class CommunitiesPage {
   private readonly snackBar = inject(MatSnackBar);
 
   protected readonly communities = signal<CommunitySummary[]>([]);
+  protected readonly discoverable = signal<CommunityDiscovery[]>([]);
+  protected readonly invitations = signal<CommunityAccess[]>([]);
   protected readonly isLoading = signal(true);
   protected readonly isCreating = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -40,7 +47,7 @@ export class CommunitiesPage {
     })
   });
 
-  constructor() { this.load(); }
+  constructor() { this.load(); this.loadDiscovery(); this.loadInvitations(); }
 
   protected load(): void {
     this.isLoading.set(true);
@@ -68,9 +75,61 @@ export class CommunitiesPage {
           this.snackBar.open('Grupo creado correctamente.', 'Cerrar',
             { duration: 2500 });
         },
-        error: () => this.snackBar.open('No fue posible crear la comunidad.',
+        error: () => this.snackBar.open('No fue posible crear el grupo.',
           'Cerrar', { duration: 3000 })
       });
+  }
+
+  protected requestToJoin(group: CommunityDiscovery): void {
+    this.service.requestToJoin(group.id).subscribe({
+      next: request => {
+        this.discoverable.update(items => items.map(item => item.id === group.id
+          ? { ...item, requestStatus: request.status } : item));
+        this.snackBar.open('Solicitud enviada.', 'Cerrar', { duration: 2500 });
+      },
+      error: () => this.snackBar.open('No fue posible enviar la solicitud.',
+        'Cerrar', { duration: 3000 })
+    });
+  }
+
+  protected cancelJoinRequest(group: CommunityDiscovery): void {
+    this.service.cancelJoinRequest(group.id).subscribe({
+      next: () => {
+        this.discoverable.update(items => items.map(item => item.id === group.id
+          ? { ...item, requestStatus: 'CANCELLED' } : item));
+        this.snackBar.open('Solicitud cancelada.', 'Cerrar', { duration: 2500 });
+      },
+      error: () => this.snackBar.open('No fue posible cancelar la solicitud.',
+        'Cerrar', { duration: 3000 })
+    });
+  }
+
+  protected resolveInvitation(invitation: CommunityAccess, accept: boolean): void {
+    this.service.resolveInvitation(invitation.id, accept).subscribe({
+      next: () => {
+        this.invitations.update(items =>
+          items.filter(item => item.id !== invitation.id));
+        if (accept) this.load();
+        this.snackBar.open(accept ? 'Invitación aceptada.' : 'Invitación rechazada.',
+          'Cerrar', { duration: 2500 });
+      },
+      error: () => this.snackBar.open('No fue posible responder la invitación.',
+        'Cerrar', { duration: 3000 })
+    });
+  }
+
+  private loadDiscovery(): void {
+    this.service.discover().subscribe({
+      next: groups => this.discoverable.set(groups),
+      error: () => this.discoverable.set([])
+    });
+  }
+
+  private loadInvitations(): void {
+    this.service.findInvitations().subscribe({
+      next: invitations => this.invitations.set(invitations),
+      error: () => this.invitations.set([])
+    });
   }
 
   protected visibilityLabel(value: CommunityVisibility): string {

@@ -4,6 +4,8 @@ import { Observable } from 'rxjs';
 
 import {
   CommunityDetail,
+  CommunityAccess,
+  CommunityDiscovery,
   CommunitySummary,
   CreateCommunityRequest
 } from '../models/community.model';
@@ -23,5 +25,55 @@ export class CommunityService {
 
   create(request: CreateCommunityRequest): Observable<CommunitySummary> {
     return this.http.post<CommunitySummary>(this.apiUrl, request);
+  }
+
+  discover(): Observable<CommunityDiscovery[]> {
+    return this.http.get<CommunityDiscovery[]>(`${this.apiUrl}/discover`);
+  }
+
+  requestToJoin(id: number): Observable<CommunityAccess> {
+    return this.http.post<CommunityAccess>(
+      `${this.apiUrl}/${id}/join-requests`, {}
+    );
+  }
+
+  cancelJoinRequest(id: number): Observable<CommunityAccess> {
+    return this.http.delete<CommunityAccess>(
+      `${this.apiUrl}/${id}/join-requests/mine`
+    );
+  }
+
+  findInvitations(): Observable<CommunityAccess[]> {
+    return this.http.get<CommunityAccess[]>(`${this.apiUrl}/invitations`);
+  }
+
+  resolveInvitation(id: number, accept: boolean): Observable<CommunityAccess> {
+    const action = accept ? 'accept' : 'reject';
+    return this.http.patch<CommunityAccess>(
+      `${this.apiUrl}/invitations/${id}/${action}`, {}
+    );
+  }
+
+  invite(groupId: number, email: string): Observable<CommunityAccess> {
+    return this.http.post<CommunityAccess>(
+      `${this.apiUrl}/${groupId}/invitations`, { email }
+    );
+  }
+
+  findJoinRequests(groupId: number): Observable<CommunityAccess[]> {
+    return this.http.get<CommunityAccess[]>(
+      `${this.apiUrl}/${groupId}/join-requests`
+    );
+  }
+
+  resolveJoinRequest(
+    groupId: number,
+    requestId: number,
+    approve: boolean
+  ): Observable<CommunityAccess> {
+    const action = approve ? 'approve' : 'reject';
+    return this.http.patch<CommunityAccess>(
+      `${this.apiUrl}/${groupId}/join-requests/${requestId}/${action}`, {}
+    );
   }
 }

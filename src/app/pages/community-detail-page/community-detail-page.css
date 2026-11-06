@@ -12,4 +12,9 @@
 .member-data { display: flex; flex: 1; min-width: 0; flex-direction: column; }
 .member-data span { color: var(--mat-sys-on-surface-variant); overflow: hidden; text-overflow: ellipsis; }
 .status { text-align: center; padding: 3rem 1rem; }.error { color: var(--mat-sys-error); }
+.management-card { margin-top: 1rem; }
+.invite-form { display: flex; align-items: flex-start; gap: .75rem; padding-top: 1rem; }
+.invite-form mat-form-field { flex: 1; }
+.request-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
 @media (max-width: 520px) { .member-row { align-items: flex-start; flex-wrap: wrap; }.role-chip { margin-left: 36px; } }
+@media (max-width: 600px) { .invite-form { flex-direction: column; }.invite-form mat-form-field { width: 100%; }.request-actions { margin-left: 36px; } }

@@ -1,8 +1,16 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
+import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import {
   Router,
@@ -15,9 +23,12 @@ import { UserPreferencesService } from '../../services/user-preferences';
 import { APP_MODULES } from '../../models/app-module.model';
 import { ModuleConfigurationService } from '../../services/module-configuration';
 import { NotificationService } from '../../services/notification';
+import { NotificationType, UserNotification } from '../../models/notification.model';
+import { finalize } from 'rxjs';
 @Component({
   selector: 'app-navbar',
   imports: [
+  DatePipe,
   MatBadgeModule,
   MatButtonModule,
   MatIconModule,
@@ -35,6 +46,8 @@ export class Navbar {
   private readonly preferencesService = inject(UserPreferencesService);
   private readonly moduleConfiguration = inject(ModuleConfigurationService);
   private readonly notificationService = inject(NotificationService);
+  private readonly notificationMenuTrigger =
+    viewChild<MatMenuTrigger>('notificationTrigger');
 
   protected readonly isAuthenticated =
     this.authService.isAuthenticated;
@@ -49,6 +62,10 @@ export class Navbar {
   protected readonly isChangingTheme = signal(false);
   protected readonly preferences = this.preferencesService.preferences;
   protected readonly unreadNotifications = this.notificationService.unreadCount;
+  protected readonly notificationPreview = signal<UserNotification[]>([]);
+  protected readonly isLoadingNotifications = signal(false);
+  protected readonly isMarkingNotifications = signal(false);
+  protected readonly notificationError = signal<string | null>(null);
   protected readonly navigationModules = computed(() => {
     const role = this.userRole();
     return APP_MODULES.filter(module =>
@@ -93,6 +110,78 @@ export class Navbar {
       error: () => this.isChangingTheme.set(false),
       complete: () => this.isChangingTheme.set(false)
     });
+  }
+
+  protected loadNotificationPreview(): void {
+    if (this.isLoadingNotifications()) return;
+    this.notificationError.set(null);
+    this.isLoadingNotifications.set(true);
+    this.notificationService.findAll(0, false, 6).pipe(
+      finalize(() => this.isLoadingNotifications.set(false))
+    ).subscribe({
+      next: response => this.notificationPreview.set(response.content),
+      error: () => this.notificationError.set(
+        'No fue posible cargar las notificaciones.'
+      )
+    });
+  }
+
+  protected openNotification(notification: UserNotification): void {
+    const navigate = () => {
+      this.closeNotificationMenu();
+      if (notification.targetUrl) {
+        void this.router.navigateByUrl(notification.targetUrl);
+      }
+    };
+    if (notification.readAt) {
+      navigate();
+      return;
+    }
+    this.notificationService.markAsRead(notification).subscribe({
+      next: updated => {
+        this.notificationPreview.update(items => items.map(item =>
+          item.id === updated.id ? updated : item
+        ));
+        navigate();
+      },
+      error: () => this.notificationError.set(
+        'No fue posible actualizar la notificación.'
+      )
+    });
+  }
+
+  protected closeNotificationMenu(): void {
+    this.notificationMenuTrigger()?.closeMenu();
+  }
+
+  protected markAllNotificationsAsRead(event: Event): void {
+    event.stopPropagation();
+    if (this.isMarkingNotifications() || this.unreadNotifications() === 0) {
+      return;
+    }
+    this.isMarkingNotifications.set(true);
+    this.notificationService.markAllAsRead().pipe(
+      finalize(() => this.isMarkingNotifications.set(false))
+    ).subscribe({
+      next: () => this.notificationPreview.update(items => items.map(item => ({
+        ...item,
+        readAt: item.readAt ?? new Date().toISOString()
+      }))),
+      error: () => this.notificationError.set(
+        'No fue posible marcar las notificaciones como leídas.'
+      )
+    });
+  }
+
+  protected notificationIcon(type: NotificationType): string {
+    return {
+      SYSTEM: 'info',
+      INVITATION: 'group_add',
+      TASK: 'task_alt',
+      COMMENT: 'comment',
+      EVENT: 'event',
+      MODERATION: 'admin_panel_settings'
+    }[type];
   }
 
   protected themeIcon(): string {

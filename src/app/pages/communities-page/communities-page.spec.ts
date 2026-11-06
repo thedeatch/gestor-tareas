@@ -22,6 +22,8 @@ describe('CommunitiesPage', () => {
     const fixture = TestBed.createComponent(CommunitiesPage);
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/communities').flush([]);
+    http.expectOne('/api/communities/discover').flush([]);
+    http.expectOne('/api/communities/invitations').flush([]);
     await fixture.whenStable();
     fixture.detectChanges();
 

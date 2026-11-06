@@ -14,6 +14,13 @@ form button { justify-self: start; }
 .metadata mat-icon { font-size: 18px; width: 18px; height: 18px; }
 .status, .empty-state { text-align: center; padding: 3rem 1rem; }
 .error { color: var(--mat-sys-error); }
+.access-section, .discover-section { margin-top: 2rem; }
+.access-section h2, .discover-section h2, .discover-section > p { margin: 0 0 .5rem; }
+.discover-section > p { color: var(--mat-sys-on-surface-variant); }
+.access-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: .75rem; padding: 1rem; }
+.access-row > div:first-child { display: flex; flex-direction: column; gap: .2rem; }
+.access-row span { color: var(--mat-sys-on-surface-variant); }
+.actions { display: flex; flex-wrap: wrap; gap: .5rem; }
 .empty-state { grid-column: 1 / -1; border: 1px dashed var(--mat-sys-outline-variant); border-radius: 1rem; }
 .empty-state > mat-icon { font-size: 48px; width: 48px; height: 48px; }
-@media (max-width: 600px) { .page-header { align-items: stretch; flex-direction: column; } }
+@media (max-width: 600px) { .page-header, .access-row { align-items: stretch; flex-direction: column; } }

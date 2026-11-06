@@ -41,6 +41,11 @@ body {
   align-self: stretch;
 }
 
+.notification-menu-panel.mat-mdc-menu-panel {
+  max-width: none;
+  border-radius: 14px;
+}
+
 html.reduced-motion *,
 html.reduced-motion *::before,
 html.reduced-motion *::after {

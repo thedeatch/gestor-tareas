@@ -44,6 +44,24 @@
     </mat-card>
   }
 
+  @if (invitations().length) {
+    <section class="access-section">
+      <h2>Invitaciones pendientes</h2>
+      @for (invitation of invitations(); track invitation.id) {
+        <mat-card class="access-row">
+          <div><strong>{{ invitation.communityName }}</strong>
+            <span>Te invitaron a formar parte de este grupo.</span></div>
+          <div class="actions">
+            <button mat-flat-button type="button"
+              (click)="resolveInvitation(invitation, true)">Aceptar</button>
+            <button mat-button type="button"
+              (click)="resolveInvitation(invitation, false)">Rechazar</button>
+          </div>
+        </mat-card>
+      }
+    </section>
+  }
+
   @if (isLoading()) {
     <p class="status">Cargando grupos...</p>
   } @else if (error()) {
@@ -77,6 +95,38 @@
           <p>Crea el primero para comenzar a reunir miembros.</p>
         </div>
       }
+    </section>
+  }
+
+
+  @if (discoverable().length) {
+    <section class="discover-section">
+      <h2>Descubrir grupos</h2>
+      <p>Encuentra otros grupos de la comunidad y solicita ingresar.</p>
+      <div class="community-grid">
+        @for (group of discoverable(); track group.id) {
+          <mat-card class="community-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar>travel_explore</mat-icon>
+              <mat-card-title>{{ group.name }}</mat-card-title>
+              <mat-card-subtitle>{{ group.memberCount }} miembros</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content><p>{{ group.description }}</p></mat-card-content>
+            <mat-card-actions align="end">
+              @if (group.requestStatus === 'PENDING') {
+                <span>Solicitud pendiente</span>
+                <button mat-button type="button" (click)="cancelJoinRequest(group)">
+                  Cancelar solicitud
+                </button>
+              } @else {
+                <button mat-button type="button" (click)="requestToJoin(group)">
+                  Solicitar ingreso
+                </button>
+              }
+            </mat-card-actions>
+          </mat-card>
+        }
+      </div>
     </section>
   }
 </main>

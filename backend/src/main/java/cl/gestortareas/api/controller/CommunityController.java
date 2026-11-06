@@ -6,9 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import cl.gestortareas.api.dto.CommunityDetailResponse;
-import cl.gestortareas.api.dto.CommunitySummaryResponse;
-import cl.gestortareas.api.dto.CreateCommunityRequest;
+import cl.gestortareas.api.dto.*;
 import cl.gestortareas.api.service.CommunityService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -32,6 +30,72 @@ public class CommunityController {
     public CommunityDetailResponse findById(@PathVariable Long id,
                                             Authentication authentication) {
         return communityService.findById(id, authentication.getName());
+    }
+
+    @GetMapping("/discover")
+    public List<CommunityDiscoveryResponse> discover(Authentication authentication) {
+        return communityService.discover(authentication.getName());
+    }
+
+    @PostMapping("/{id}/join-requests")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CommunityAccessResponse requestToJoin(@PathVariable Long id,
+                                                  Authentication authentication) {
+        return communityService.requestToJoin(id, authentication.getName());
+    }
+
+    @DeleteMapping("/{id}/join-requests/mine")
+    public CommunityAccessResponse cancelMyJoinRequest(
+        @PathVariable Long id, Authentication authentication) {
+        return communityService.cancelJoinRequest(id, authentication.getName());
+    }
+
+    @GetMapping("/{id}/join-requests")
+    public List<CommunityAccessResponse> pendingJoinRequests(
+        @PathVariable Long id, Authentication authentication) {
+        return communityService.pendingJoinRequests(id, authentication.getName());
+    }
+
+    @PatchMapping("/{id}/join-requests/{requestId}/approve")
+    public CommunityAccessResponse approveJoinRequest(@PathVariable Long id,
+        @PathVariable Long requestId, Authentication authentication) {
+        return communityService.resolveJoinRequest(id, requestId, true,
+            authentication.getName());
+    }
+
+    @PatchMapping("/{id}/join-requests/{requestId}/reject")
+    public CommunityAccessResponse rejectJoinRequest(@PathVariable Long id,
+        @PathVariable Long requestId, Authentication authentication) {
+        return communityService.resolveJoinRequest(id, requestId, false,
+            authentication.getName());
+    }
+
+    @PostMapping("/{id}/invitations")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CommunityAccessResponse invite(@PathVariable Long id,
+        @Valid @RequestBody CreateCommunityInvitationRequest request,
+        Authentication authentication) {
+        return communityService.invite(id, request.email(), authentication.getName());
+    }
+
+    @GetMapping("/invitations")
+    public List<CommunityAccessResponse> pendingInvitations(
+        Authentication authentication) {
+        return communityService.pendingInvitations(authentication.getName());
+    }
+
+    @PatchMapping("/invitations/{invitationId}/accept")
+    public CommunityAccessResponse acceptInvitation(
+        @PathVariable Long invitationId, Authentication authentication) {
+        return communityService.resolveInvitation(invitationId, true,
+            authentication.getName());
+    }
+
+    @PatchMapping("/invitations/{invitationId}/reject")
+    public CommunityAccessResponse rejectInvitation(
+        @PathVariable Long invitationId, Authentication authentication) {
+        return communityService.resolveInvitation(invitationId, false,
+            authentication.getName());
     }
 
     @PostMapping

@@ -30,5 +30,55 @@
         }
       </mat-card-content>
     </mat-card>
+
+    @if (canManage(item.currentUserRole)) {
+      <mat-card class="management-card">
+        <mat-card-header>
+          <mat-card-title>Invitar a una persona</mat-card-title>
+          <mat-card-subtitle>Debe tener una cuenta registrada en la plataforma</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <form class="invite-form" (ngSubmit)="invite()">
+            <mat-form-field appearance="outline">
+              <mat-label>Correo electrónico</mat-label>
+              <input matInput type="email" [formControl]="invitationEmail">
+              @if (invitationEmail.touched && invitationEmail.invalid) {
+                <mat-error>Ingresa un correo válido.</mat-error>
+              }
+            </mat-form-field>
+            <button mat-flat-button type="submit" [disabled]="isInviting()">
+              <mat-icon>person_add</mat-icon>
+              {{ isInviting() ? 'Enviando...' : 'Enviar invitación' }}
+            </button>
+          </form>
+        </mat-card-content>
+      </mat-card>
+
+      @if (joinRequests().length) {
+        <mat-card class="management-card">
+          <mat-card-header>
+            <mat-card-title>Solicitudes de ingreso</mat-card-title>
+            <mat-card-subtitle>Personas que desean entrar al grupo</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content class="member-list">
+            @for (request of joinRequests(); track request.id) {
+              <div class="member-row">
+                <mat-icon>person_search</mat-icon>
+                <div class="member-data">
+                  <strong>{{ request.userName }}</strong>
+                  <span>{{ request.userEmail }}</span>
+                </div>
+                <div class="request-actions">
+                  <button mat-flat-button type="button"
+                    (click)="resolveRequest(request, true)">Aceptar</button>
+                  <button mat-button type="button"
+                    (click)="resolveRequest(request, false)">Rechazar</button>
+                </div>
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+    }
   }
 </main>

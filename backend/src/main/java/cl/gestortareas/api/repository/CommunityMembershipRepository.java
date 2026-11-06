@@ -21,5 +21,12 @@ public interface CommunityMembershipRepository
         String email
     );
 
+    boolean existsByCommunityIdAndUserId(Long communityId, Long userId);
+
+    List<CommunityMembership> findAllByCommunityIdAndRoleIn(
+        Long communityId,
+        List<cl.gestortareas.api.model.CommunityRole> roles
+    );
+
     long countByCommunityId(Long communityId);
 }

@@ -33,3 +33,31 @@ export interface CreateCommunityRequest {
   description: string;
   visibility: CommunityVisibility;
 }
+
+export type CommunityAccessStatus =
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'CANCELLED';
+export type CommunityAccessType = 'JOIN_REQUEST' | 'INVITATION';
+
+export interface CommunityAccess {
+  id: number;
+  communityId: number;
+  communityName: string;
+  userId: number;
+  userName: string;
+  userEmail: string;
+  type: CommunityAccessType;
+  status: CommunityAccessStatus;
+  createdAt: string;
+}
+
+export interface CommunityDiscovery {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  memberCount: number;
+  requestStatus: CommunityAccessStatus | null;
+}
