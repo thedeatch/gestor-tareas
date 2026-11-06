@@ -7,6 +7,9 @@ import { MatIconModule } from '@angular/material/icon';
 
 import { PublicUserProfile } from '../../models/auth.model';
 import { CommunityRole } from '../../models/community.model';
+import { finalize } from 'rxjs';
+import { BlockStatus, UserBlocksService } from '../../services/user-blocks';
+import { getApiErrorMessage } from '../../models/api-error.model';
 import { AuthService } from '../../services/auth';
 
 @Component({
@@ -18,6 +21,10 @@ import { AuthService } from '../../services/auth';
 export class PublicProfilePage implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(AuthService);
+  private readonly blocks = inject(UserBlocksService);
+  protected readonly block = signal<BlockStatus | null>(null);
+  protected readonly blockBusy = signal(false);
+  protected readonly blockError = signal('');
   protected readonly profile = signal<PublicUserProfile | null>(null);
   protected readonly avatarUrl = signal<string | null>(null);
   protected readonly isLoading = signal(true);
@@ -34,12 +41,28 @@ export class PublicProfilePage implements OnDestroy {
       next: profile => {
         this.profile.set(profile);
         this.isLoading.set(false);
+        this.blocks.status(id).subscribe({
+          next: status => this.block.set(status),
+          error: () => this.blockError.set('No se pudo consultar el estado del bloqueo.')
+        });
         if (profile.hasAvatar) this.loadAvatar(id);
       },
       error: () => {
         this.error.set('Este perfil no está disponible o es privado.');
         this.isLoading.set(false);
       }
+    });
+  }
+
+  protected toggleBlock(id: number): void {
+    const status = this.block();
+    if (!status?.canBlock || this.blockBusy()) return;
+    this.blockBusy.set(true);
+    this.blockError.set('');
+    const blocked = !status.blocked;
+    this.blocks.set(id, blocked).pipe(finalize(() => this.blockBusy.set(false))).subscribe({
+      next: () => this.block.set({ ...status, blocked }),
+      error: error => this.blockError.set(getApiErrorMessage(error, 'No se pudo actualizar el bloqueo.'))
     });
   }
 

@@ -20,13 +20,16 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final AppUserRepository userRepository;
+    private final UserBlockService blocks;
 
     public NotificationService(
         NotificationRepository notificationRepository,
-        AppUserRepository userRepository
+        AppUserRepository userRepository,
+        UserBlockService blocks
     ) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.blocks = blocks;
     }
 
     @Transactional(readOnly = true)
@@ -85,6 +88,10 @@ public class NotificationService {
         String message,
         String targetUrl
     ) {
+        if (actor != null && (type == NotificationType.COMMENT || type == NotificationType.REACTION)
+            && blocks.between(recipient.getId(), actor.getId())) {
+            return;
+        }
         notificationRepository.save(new Notification(
             recipient, actor, type, title, message, targetUrl
         ));

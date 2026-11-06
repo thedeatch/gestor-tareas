@@ -53,6 +53,8 @@ export class CommunityChat {
       this.open.set(false);
       return;
     }
+    this.messages.set([]);
+    this.cursor = null;
     this.open.set(true);
     this.connect();
   }

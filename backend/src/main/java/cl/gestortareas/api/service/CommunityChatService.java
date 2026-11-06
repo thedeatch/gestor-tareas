@@ -21,21 +21,33 @@ public class CommunityChatService {
 
     @Transactional(readOnly = true)
     public List<Message> messages(Long groupId, String email, Long after) {
-        communities.requireMembership(groupId, email);
+        Long viewer = communities.requireMembership(groupId, email).getUser().getId();
         if (after == null) {
             return jdbc.sql("""
                 SELECT id, author_name, content, created_at FROM (
                     SELECT m.id, u.name AS author_name, m.content, m.created_at
                     FROM community_chat_messages m LEFT JOIN users u ON u.id = m.author_id
-                    WHERE m.community_id = :groupId ORDER BY m.id DESC LIMIT 50
+                    WHERE m.community_id = :groupId
+                    AND NOT EXISTS (
+                        SELECT 1 FROM user_blocks b
+                        WHERE (b.blocker_id = :viewer AND b.blocked_id = m.author_id)
+                            OR (b.blocked_id = :viewer AND b.blocker_id = m.author_id)
+                    )
+                    ORDER BY m.id DESC LIMIT 50
                 ) recent ORDER BY id
-                """).param("groupId", groupId).query(Message.class).list();
+                """).param("groupId", groupId).param("viewer", viewer).query(Message.class).list();
         }
         return jdbc.sql("""
             SELECT m.id, u.name AS author_name, m.content, m.created_at
             FROM community_chat_messages m LEFT JOIN users u ON u.id = m.author_id
-            WHERE m.community_id = :groupId AND m.id > :after ORDER BY m.id LIMIT 50
-            """).param("groupId", groupId).param("after", after).query(Message.class).list();
+            WHERE m.community_id = :groupId AND m.id > :after
+                AND NOT EXISTS (
+                    SELECT 1 FROM user_blocks b
+                    WHERE (b.blocker_id = :viewer AND b.blocked_id = m.author_id)
+                        OR (b.blocked_id = :viewer AND b.blocker_id = m.author_id)
+                )
+            ORDER BY m.id LIMIT 50
+            """).param("groupId", groupId).param("after", after).param("viewer", viewer).query(Message.class).list();
     }
 
     @Transactional

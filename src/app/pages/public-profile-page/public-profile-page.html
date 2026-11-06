@@ -15,6 +15,15 @@
         <p>Miembro desde {{ user.joinedAt | date:'MMMM yyyy' }}</p>
       </div>
     </header>
+    @if (block()?.canBlock) {
+      <button mat-stroked-button type="button" [disabled]="blockBusy()" (click)="toggleBlock(user.id)">
+        {{ block()?.blocked ? 'Desbloquear usuario' : 'Bloquear usuario' }}
+      </button>
+      @if (block()?.blocked) {
+        <p role="status">Usuario bloqueado. Sus mensajes de chat e invitaciones directas se ocultan.</p>
+      }
+    }
+    @if (blockError()) { <p role="alert">{{ blockError() }}</p> }
 
     <mat-card>
       <mat-card-header><mat-card-title>Acerca de mí</mat-card-title></mat-card-header>

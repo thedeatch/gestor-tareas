@@ -747,6 +747,83 @@ class CommunityControllerIntegrationTests {
         mockMvc.perform(get(url + "/activity").with(ownerJwt)).andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(2));
     }
+    @Test
+    void shouldHideChatAndDirectInvitationsBetweenBlockedUsers() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var owner = userRepository.findByEmailIgnoreCase(OWNER_EMAIL).orElseThrow();
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        var ownerJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
+        var memberJwt = jwt().jwt(token -> token.subject(OTHER_EMAIL));
+        var groupUrl = "/api/communities/" + group.getId();
+        var blocks = "/api/users/me/blocks";
+        String invitation = """
+            {"email":"%s"}
+            """.formatted(OTHER_EMAIL);
+
+        mockMvc.perform(post(groupUrl + "/invitations").with(ownerJwt)
+                .contentType(MediaType.APPLICATION_JSON).content(invitation))
+            .andExpect(status().isCreated());
+        mockMvc.perform(put(blocks + "/" + member.getId()).with(memberJwt))
+            .andExpect(status().isBadRequest());
+        mockMvc.perform(put(blocks + "/" + owner.getId()).with(memberJwt))
+            .andExpect(status().isNoContent());
+        mockMvc.perform(put(blocks + "/" + owner.getId()).with(memberJwt))
+            .andExpect(status().isNoContent());
+        mockMvc.perform(get(blocks).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].id").value(owner.getId()));
+        mockMvc.perform(get(blocks).with(ownerJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+
+        mockMvc.perform(get("/api/communities/invitations").with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+        var invitationId = accessRepository.findAll().get(0).getId();
+        mockMvc.perform(patch("/api/communities/invitations/" + invitationId + "/accept").with(memberJwt))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(post(groupUrl + "/invitations").with(ownerJwt)
+                .contentType(MediaType.APPLICATION_JSON).content(invitation))
+            .andExpect(status().isForbidden());
+
+        membershipRepository.save(new CommunityMembership(group, member, CommunityRole.MEMBER));
+        mockMvc.perform(post(groupUrl + "/posts").with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Aviso","content":"Publicación compartida"}
+                    """))
+            .andExpect(status().isCreated());
+        var postId = postRepository.findAll().get(0).getId();
+        mockMvc.perform(put(groupUrl + "/posts/" + postId + "/reactions/LIKE").with(memberJwt))
+            .andExpect(status().isOk());
+        assertEquals(0, notificationRepository.countByRecipientAndReadAtIsNull(owner));
+        var chat = groupUrl + "/chat";
+        mockMvc.perform(post(chat).with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"content":"Mensaje del propietario"}
+                    """))
+            .andExpect(status().isCreated());
+        mockMvc.perform(post(chat).with(memberJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"content":"Mensaje del miembro"}
+                    """))
+            .andExpect(status().isCreated());
+        var memberHistory = mockMvc.perform(get(chat).with(memberJwt))
+            .andExpect(request().asyncStarted()).andReturn();
+        mockMvc.perform(asyncDispatch(memberHistory)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].content").value("Mensaje del miembro"));
+        var ownerHistory = mockMvc.perform(get(chat).with(ownerJwt))
+            .andExpect(request().asyncStarted()).andReturn();
+        mockMvc.perform(asyncDispatch(ownerHistory)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].content").value("Mensaje del propietario"));
+
+        mockMvc.perform(delete(blocks + "/" + owner.getId()).with(memberJwt))
+            .andExpect(status().isNoContent());
+        var restored = mockMvc.perform(get(chat).with(memberJwt))
+            .andExpect(request().asyncStarted()).andReturn();
+        mockMvc.perform(asyncDispatch(restored)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(2));
+    }
     private void createCommunity() throws Exception {
         mockMvc.perform(post("/api/communities")
                 .with(jwt().jwt(token -> token.subject(OWNER_EMAIL)))

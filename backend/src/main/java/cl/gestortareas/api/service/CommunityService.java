@@ -32,17 +32,19 @@ public class CommunityService {
     private final CommunityAccessRequestRepository accessRepository;
     private final AppUserRepository userRepository;
     private final NotificationService notificationService;
+    private final UserBlockService blocks;
 
     public CommunityService(CommunityRepository communityRepository,
                             CommunityMembershipRepository membershipRepository,
                             CommunityAccessRequestRepository accessRepository,
                             AppUserRepository userRepository,
-                            NotificationService notificationService) {
+                            NotificationService notificationService, UserBlockService blocks) {
         this.communityRepository = communityRepository;
         this.membershipRepository = membershipRepository;
         this.accessRepository = accessRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
+        this.blocks = blocks;
     }
 
     @Transactional(readOnly = true)
@@ -197,6 +199,7 @@ public class CommunityService {
         AppUser invited = userRepository.findByEmailIgnoreCase(invitedEmail.trim())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                 "No existe una cuenta con ese correo"));
+        requireInvitationAllowed(manager, invited);
         ensureNotMember(communityId, invited.getId());
         Community group = managerMembership.getCommunity();
         CommunityAccessRequest invitation = accessRepository
@@ -220,7 +223,9 @@ public class CommunityService {
             .findAllByUserEmailIgnoreCaseAndTypeAndStatusOrderByCreatedAtDesc(
                 email, CommunityAccessType.INVITATION,
                 CommunityAccessStatus.PENDING)
-            .stream().map(this::toAccessResponse).toList();
+            .stream().filter(invitation -> !blocks.between(
+                invitation.getUser().getId(), invitation.getCreatedBy().getId()))
+            .map(this::toAccessResponse).toList();
     }
 
     @Transactional
@@ -233,6 +238,7 @@ public class CommunityService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                 "Invitación no encontrada"));
         requirePending(invitation);
+        if (accept) requireInvitationAllowed(invitation.getCreatedBy(), invited);
         invitation.resolve(accept ? CommunityAccessStatus.APPROVED
             : CommunityAccessStatus.REJECTED, invited);
         if (accept) addMemberIfMissing(invitation.getCommunity(), invited);
@@ -353,6 +359,12 @@ public class CommunityService {
             case COMMUNITY_MODERATOR -> "moderador";
             case MEMBER -> "miembro";
         };
+    }
+
+    private void requireInvitationAllowed(AppUser sender, AppUser recipient) {
+        if (blocks.between(sender.getId(), recipient.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "La invitación no está disponible");
+        }
     }
 
     private void ensureNotMember(Long communityId, Long userId) {
