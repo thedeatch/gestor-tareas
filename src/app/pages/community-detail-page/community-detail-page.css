@@ -25,6 +25,7 @@
 .post-meta a:hover { color: var(--mat-sys-primary); text-decoration: underline; }
 .post-meta span { color: var(--mat-sys-on-surface-variant); font-size: .85rem; }
 .post-actions { display: flex; flex-wrap: wrap; gap: .25rem; }
+.post-actions button[aria-pressed=true] { background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
 .delete-action { color: var(--mat-sys-error) !important; }
 .member-list { padding-top: 1rem; }
 .member-row { display: flex; align-items: center; gap: .75rem; padding: .9rem 0; border-bottom: 1px solid var(--mat-sys-outline-variant); }

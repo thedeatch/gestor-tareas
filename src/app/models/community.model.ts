@@ -62,6 +62,14 @@ export interface CommunityDiscovery {
   requestStatus: CommunityAccessStatus | null;
 }
 
+export type CommunityPostReactionType = 'LIKE' | 'LOVE' | 'CELEBRATE';
+
+export interface CommunityPostReaction {
+  type: CommunityPostReactionType;
+  count: number;
+  selected: boolean;
+}
+
 export interface CommunityPost {
   id: number;
   authorId: number;
@@ -73,4 +81,5 @@ export interface CommunityPost {
   updatedAt: string;
   editable: boolean;
   deletable: boolean;
+  reactions: CommunityPostReaction[];
 }

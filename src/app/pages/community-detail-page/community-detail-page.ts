@@ -16,6 +16,7 @@ import {
   CommunityDetail,
   CommunityMember,
   CommunityPost,
+  CommunityPostReactionType,
   CommunityRole,
   CommunityVisibility
 } from '../../models/community.model';
@@ -43,6 +44,12 @@ export class CommunityDetailPage {
   protected readonly community = signal<CommunityDetail | null>(null);
   protected readonly joinRequests = signal<CommunityAccess[]>([]);
   protected readonly posts = signal<CommunityPost[]>([]);
+  protected readonly reactionTypes: { type: CommunityPostReactionType; icon: string; label: string }[] = [
+    { type: 'LIKE', icon: 'thumb_up', label: 'Me gusta' },
+    { type: 'LOVE', icon: 'favorite', label: 'Me encanta' },
+    { type: 'CELEBRATE', icon: 'celebration', label: 'Celebrar' }
+  ];
+  protected readonly reacting = signal(new Set<number>());
   protected readonly postsLoading = signal(true);
   protected readonly savingPost = signal(false);
   protected readonly editingPostId = signal<number | null>(null);
@@ -154,7 +161,7 @@ export class CommunityDetailPage {
       this.editContent.value).subscribe({
       next: updated => {
         this.posts.update(items => items.map(item =>
-          item.id === updated.id ? updated : item));
+          item.id === updated.id ? { ...updated, reactions: item.reactions } : item));
         this.cancelEdit();
         this.savingPost.set(false);
         this.snackBar.open('Publicación actualizada.', 'Cerrar', { duration: 2500 });
@@ -164,6 +171,36 @@ export class CommunityDetailPage {
         this.snackBar.open('No fue posible actualizar la publicación.', 'Cerrar',
           { duration: 3000 });
       }
+    });
+  }
+
+  protected reactionFor(post: CommunityPost, type: CommunityPostReactionType) {
+    return post.reactions.find(reaction => reaction.type === type);
+  }
+
+  protected toggleReaction(post: CommunityPost, type: CommunityPostReactionType): void {
+    const group = this.community();
+    if (!group || this.reacting().has(post.id)) return;
+
+    const selected = post.reactions.some(reaction => reaction.type === type && reaction.selected);
+    this.reacting.update(ids => new Set(ids).add(post.id));
+    this.service.setPostReaction(group.id, post.id, type, !selected).subscribe({
+      next: reactions => {
+        this.posts.update(items => items.map(item => item.id === post.id ? { ...item, reactions } : item));
+        this.finishReaction(post.id);
+      },
+      error: () => {
+        this.finishReaction(post.id);
+        this.snackBar.open('No se pudo actualizar la reacción.', 'Cerrar', { duration: 3500 });
+      }
+    });
+  }
+
+  private finishReaction(postId: number): void {
+    this.reacting.update(ids => {
+      const pending = new Set(ids);
+      pending.delete(postId);
+      return pending;
     });
   }
 

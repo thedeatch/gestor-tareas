@@ -5,6 +5,7 @@ public enum NotificationType {
     INVITATION,
     TASK,
     COMMENT,
+    REACTION,
     EVENT,
     MODERATION
 }

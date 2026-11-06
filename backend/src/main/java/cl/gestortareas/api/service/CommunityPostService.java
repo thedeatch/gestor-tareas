@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import cl.gestortareas.api.dto.CommunityPostReaction;
+import cl.gestortareas.api.dto.CommunityPostReaction.Type;
 import cl.gestortareas.api.dto.CommunityPostRequest;
 import cl.gestortareas.api.dto.CommunityPostResponse;
 import cl.gestortareas.api.model.CommunityMembership;
@@ -15,6 +17,8 @@ import cl.gestortareas.api.model.CommunityPost;
 import cl.gestortareas.api.model.CommunityRole;
 import cl.gestortareas.api.repository.CommunityMembershipRepository;
 import cl.gestortareas.api.repository.CommunityPostRepository;
+import cl.gestortareas.api.repository.CommunityPostReactionRepository;
+import cl.gestortareas.api.model.NotificationType;
 
 @Service
 public class CommunityPostService {
@@ -27,17 +31,27 @@ public class CommunityPostService {
     private final CommunityPostRepository postRepository;
     private final CommunityMembershipRepository membershipRepository;
 
+    private final CommunityPostReactionRepository reactions;
+    private final NotificationService notifications;
+
     public CommunityPostService(CommunityPostRepository postRepository,
-                                CommunityMembershipRepository membershipRepository) {
+                                CommunityMembershipRepository membershipRepository,
+                                CommunityPostReactionRepository reactions,
+                                NotificationService notifications) {
         this.postRepository = postRepository;
         this.membershipRepository = membershipRepository;
+        this.reactions = reactions;
+        this.notifications = notifications;
     }
 
     @Transactional(readOnly = true)
     public List<CommunityPostResponse> findAll(Long communityId, String email) {
         CommunityMembership membership = requireMembership(communityId, email);
-        return postRepository.findAllByCommunityIdOrderByCreatedAtDesc(communityId)
-            .stream().map(post -> toResponse(post, membership)).toList();
+        var posts = postRepository.findAllByCommunityIdOrderByCreatedAtDesc(communityId);
+        var summaries = reactions.summarize(posts.stream().map(CommunityPost::getId).toList(),
+            membership.getUser().getId());
+        return posts.stream().map(post -> toResponse(post, membership,
+            summaries.getOrDefault(post.getId(), List.of()))).toList();
     }
 
     @Transactional
@@ -51,7 +65,7 @@ public class CommunityPostService {
             membership.getCommunity(), membership.getUser(),
             title,
             request.content().trim()));
-        return toResponse(post, membership);
+        return toResponse(post, membership, reactionSummary(post.getId(), membership.getUser().getId()));
     }
 
     @Transactional
@@ -67,7 +81,7 @@ public class CommunityPostService {
         String title = post.getTitle() == null
             ? null : requireTitle(request.title());
         post.updateContent(title, request.content().trim());
-        return toResponse(post, membership);
+        return toResponse(post, membership, reactionSummary(post.getId(), membership.getUser().getId()));
     }
 
     @Transactional
@@ -80,6 +94,33 @@ public class CommunityPostService {
                 "No tienes permisos para eliminar esta publicación");
         }
         postRepository.delete(post);
+    }
+
+    @Transactional
+    public List<CommunityPostReaction> setReaction(Long communityId, Long postId,
+        String email, Type type, boolean selected) {
+        var actor = requireMembership(communityId, email).getUser();
+        // Serialize changes for this post so a repeated request cannot insert or notify twice.
+        var post = postRepository.findByIdAndCommunityId(postId, communityId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "Publicación no encontrada"));
+
+        if (selected) {
+            boolean added = reactions.add(postId, actor.getId(), type);
+            if (added && !post.getAuthor().getId().equals(actor.getId())) {
+                notifications.create(post.getAuthor(), actor, NotificationType.REACTION,
+                    "Nueva reacción en tu publicación",
+                    actor.getName() + " reaccionó a tu publicación.",
+                    "/grupos/" + communityId + "#publicacion-" + postId);
+            }
+        } else {
+            reactions.remove(postId, actor.getId(), type);
+        }
+        return reactionSummary(postId, actor.getId());
+    }
+
+    private List<CommunityPostReaction> reactionSummary(Long postId, Long viewerId) {
+        return reactions.summarize(List.of(postId), viewerId).getOrDefault(postId, List.of());
     }
 
     CommunityMembership requireMembership(Long communityId, String email) {
@@ -105,13 +146,14 @@ public class CommunityPostService {
     }
 
     private CommunityPostResponse toResponse(CommunityPost post,
-                                             CommunityMembership viewer) {
+                                             CommunityMembership viewer,
+                                             List<CommunityPostReaction> summary) {
         boolean author = post.getAuthor().getId().equals(viewer.getUser().getId());
         return new CommunityPostResponse(
             post.getId(), post.getAuthor().getId(), post.getAuthor().getName(),
             post.getAuthor().hasAvatar(), post.getTitle(), post.getContent(),
             post.getCreatedAt(),
             post.getUpdatedAt(), author,
-            author || MODERATION_ROLES.contains(viewer.getRole()));
+            author || MODERATION_ROLES.contains(viewer.getRole()), summary);
     }
 }

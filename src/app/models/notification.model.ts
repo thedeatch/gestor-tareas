@@ -3,6 +3,7 @@ export type NotificationType =
   | 'INVITATION'
   | 'TASK'
   | 'COMMENT'
+  | 'REACTION'
   | 'EVENT'
   | 'MODERATION';
 

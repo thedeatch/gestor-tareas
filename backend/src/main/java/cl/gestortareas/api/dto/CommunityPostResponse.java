@@ -1,6 +1,7 @@
 package cl.gestortareas.api.dto;
 
 import java.time.Instant;
+import java.util.List;
 
 public record CommunityPostResponse(
     Long id,
@@ -12,5 +13,6 @@ public record CommunityPostResponse(
     Instant createdAt,
     Instant updatedAt,
     boolean editable,
-    boolean deletable
+    boolean deletable,
+    List<CommunityPostReaction> reactions
 ) {}

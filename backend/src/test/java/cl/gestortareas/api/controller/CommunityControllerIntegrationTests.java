@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -342,6 +343,54 @@ class CommunityControllerIntegrationTests {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].content").value("Gracias"))
             .andExpect(jsonPath("$[0].parentId").doesNotExist());
+    }
+    @Test
+    void shouldCountDistinctReactionTypesAndNotifyOnlyOnNewReactions() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var owner = userRepository.findByEmailIgnoreCase(OWNER_EMAIL).orElseThrow();
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        var ownerJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
+        var memberJwt = jwt().jwt(token -> token.subject(OTHER_EMAIL));
+
+        var postsUrl = "/api/communities/" + group.getId() + "/posts";
+        mockMvc.perform(post(postsUrl).with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Aviso","content":"Publicación original"}
+                    """))
+            .andExpect(status().isCreated());
+        var postId = postRepository.findAll().get(0).getId();
+        var reactionUrl = postsUrl + "/" + postId + "/reactions/";
+
+        mockMvc.perform(put(reactionUrl + "LIKE").with(memberJwt)).andExpect(status().isNotFound());
+        membershipRepository.save(new CommunityMembership(group, member, CommunityRole.MEMBER));
+        mockMvc.perform(put(reactionUrl + "LIKE").with(memberJwt))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].count").value(1))
+            .andExpect(jsonPath("$[0].selected").value(true));
+        mockMvc.perform(put(reactionUrl + "LIKE").with(memberJwt))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].count").value(1));
+        mockMvc.perform(get(postsUrl).with(ownerJwt))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].reactions[0].selected").value(false));
+        mockMvc.perform(put(reactionUrl + "LIKE").with(ownerJwt))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].count").value(2));
+
+        mockMvc.perform(put(reactionUrl + "LOVE").with(memberJwt))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(2));
+        mockMvc.perform(delete(reactionUrl + "LOVE").with(ownerJwt))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(2));
+        mockMvc.perform(delete(reactionUrl + "LOVE").with(memberJwt))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1));
+        assertEquals(2, notificationRepository.countByRecipientAndReadAtIsNull(owner));
+        assertEquals(0, notificationRepository.countByRecipientAndReadAtIsNull(member));
+        mockMvc.perform(delete(postsUrl + "/" + postId).with(ownerJwt))
+            .andExpect(status().isNoContent());
     }
     private void createCommunity() throws Exception {
         mockMvc.perform(post("/api/communities")

@@ -8,6 +8,8 @@ import {
   CommunityDiscovery,
   CommunityMember,
   CommunityPost,
+  CommunityPostReaction,
+  CommunityPostReactionType,
   CommunityRole,
   CommunitySummary,
   CreateCommunityRequest
@@ -115,6 +117,14 @@ export class CommunityService {
     return this.http.patch<CommunityPost>(
       `${this.apiUrl}/${groupId}/posts/${postId}`, { title, content }
     );
+  }
+
+  setPostReaction(groupId: number, postId: number, type: CommunityPostReactionType,
+    selected: boolean): Observable<CommunityPostReaction[]> {
+    const url = `${this.apiUrl}/${groupId}/posts/${postId}/reactions/${type}`;
+    return selected
+      ? this.http.put<CommunityPostReaction[]>(url, {})
+      : this.http.delete<CommunityPostReaction[]>(url);
   }
 
   deletePost(groupId: number, postId: number): Observable<void> {

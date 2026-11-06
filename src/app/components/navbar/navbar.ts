@@ -179,6 +179,7 @@ export class Navbar {
       INVITATION: 'group_add',
       TASK: 'task_alt',
       COMMENT: 'comment',
+      REACTION: 'favorite',
       EVENT: 'event',
       MODERATION: 'admin_panel_settings'
     }[type];

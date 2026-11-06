@@ -61,7 +61,7 @@
         } @else {
           <div class="post-list">
             @for (post of posts(); track post.id) {
-              <article class="post-item">
+              <article class="post-item" [id]="'publicacion-' + post.id">
                 <a class="post-avatar" [routerLink]="['/usuarios', post.authorId]">
                   @if (post.authorHasAvatar) {
                     <img [src]="'/api/users/' + post.authorId + '/avatar'"
@@ -118,6 +118,17 @@
                       </div>
                     }
                   }
+                  <div class="post-actions" role="group" aria-label="Reacciones">
+                    @for (option of reactionTypes; track option.type) {
+                      @let reaction = reactionFor(post, option.type);
+                      <button mat-stroked-button type="button"
+                        [attr.aria-label]="option.label + ' (' + (reaction?.count ?? 0) + ')'"
+                        [attr.aria-pressed]="reaction?.selected ?? false"
+                        [disabled]="reacting().has(post.id)" (click)="toggleReaction(post, option.type)">
+                        <mat-icon>{{ option.icon }}</mat-icon>{{ reaction?.count ?? 0 }}
+                      </button>
+                    }
+                  </div>
                   <app-post-comments [groupId]="item.id" [postId]="post.id" />
                 </div>
               </article>
