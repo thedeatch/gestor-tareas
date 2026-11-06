@@ -13,13 +13,16 @@ import org.springframework.web.server.ResponseStatusException;
 import cl.gestortareas.api.dto.AuthResponse;
 import cl.gestortareas.api.dto.ChangePasswordRequest;
 import cl.gestortareas.api.dto.ProfileResponse;
+import cl.gestortareas.api.dto.PublicProfileResponse;
 import cl.gestortareas.api.dto.UpdateProfileRequest;
 import cl.gestortareas.api.dto.UpdateUserPreferencesRequest;
 import cl.gestortareas.api.dto.UserPreferencesResponse;
 import cl.gestortareas.api.model.AppUser;
 import cl.gestortareas.api.model.FilePurpose;
 import cl.gestortareas.api.model.StoredFile;
+import cl.gestortareas.api.model.CommunityVisibility;
 import cl.gestortareas.api.repository.AppUserRepository;
+import cl.gestortareas.api.repository.CommunityMembershipRepository;
 
 @Service
 public class ProfileService {
@@ -36,19 +39,22 @@ public class ProfileService {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final FileStorageService fileStorageService;
+    private final CommunityMembershipRepository membershipRepository;
 
     public ProfileService(
         AppUserRepository userRepository,
         PasswordEncoder passwordEncoder,
         JwtService jwtService,
         RefreshTokenService refreshTokenService,
-        FileStorageService fileStorageService
+        FileStorageService fileStorageService,
+        CommunityMembershipRepository membershipRepository
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
         this.fileStorageService = fileStorageService;
+        this.membershipRepository = membershipRepository;
     }
 
     @Transactional(readOnly = true)
@@ -58,7 +64,10 @@ public class ProfileService {
             user.getName(),
             user.getEmail(),
             user.hasAvatar(),
-            user.getRole()
+            user.getRole(),
+            user.getBio(),
+            user.isPublicProfile(),
+            user.isShowPublicCommunities()
         );
     }
 
@@ -84,12 +93,64 @@ public class ProfileService {
         }
 
         user.updateProfile(request.name().trim(), newEmail);
+        user.updatePublicProfile(
+            request.bio(),
+            request.publicProfile() == null
+                ? user.isPublicProfile()
+                : request.publicProfile(),
+            request.showPublicCommunities() == null
+                ? user.isShowPublicCommunities()
+                : request.showPublicCommunities()
+        );
         return new AuthResponse(
             jwtService.generateToken(user),
             newEmail,
             user.getName(),
             user.getRole()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public PublicProfileResponse getPublicProfile(Long userId) {
+        AppUser user = findPublicUser(userId);
+        var communities = user.isShowPublicCommunities()
+            ? membershipRepository.findAllByUserIdOrderByJoinedAtDesc(userId)
+                .stream()
+                .filter(membership -> membership.getCommunity().getVisibility()
+                    == CommunityVisibility.PUBLIC)
+                .map(membership -> new PublicProfileResponse.PublicCommunity(
+                    membership.getCommunity().getId(),
+                    membership.getCommunity().getName(),
+                    membership.getCommunity().getSlug(),
+                    membership.getRole()
+                ))
+                .toList()
+            : java.util.List.<PublicProfileResponse.PublicCommunity>of();
+
+        return new PublicProfileResponse(
+            user.getId(),
+            user.getName(),
+            user.getBio(),
+            user.hasAvatar(),
+            user.getCreatedAt(),
+            communities
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public AvatarData getPublicAvatar(Long userId) {
+        AppUser user = findPublicUser(userId);
+        if (!user.hasAvatar()) {
+            throw new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "El usuario no tiene una foto de perfil"
+            );
+        }
+        if (user.getAvatarFile() != null) {
+            StoredFile file = user.getAvatarFile();
+            return new AvatarData(file.getData(), file.getContentType());
+        }
+        return new AvatarData(user.getAvatarData(), user.getAvatarContentType());
     }
 
     @Transactional(readOnly = true)
@@ -195,6 +256,16 @@ public class ProfileService {
             .orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.UNAUTHORIZED,
                 "Usuario no encontrado"
+            ));
+    }
+
+    private AppUser findPublicUser(Long id) {
+        return userRepository.findById(id)
+            .filter(AppUser::isActive)
+            .filter(AppUser::isPublicProfile)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Perfil público no disponible"
             ));
     }
 

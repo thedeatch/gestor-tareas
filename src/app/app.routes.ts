@@ -55,6 +55,13 @@ export const routes: Routes = [
         .then(module => module.ProfilePage)
   },
   {
+    path: 'usuarios/:id',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/public-profile-page/public-profile-page')
+        .then(module => module.PublicProfilePage)
+  },
+  {
     path: 'notificaciones',
     canActivate: [authGuard],
     loadComponent: () =>

@@ -60,7 +60,10 @@ export class ProfilePage implements OnInit, OnDestroy {
   protected readonly profile = {
     name: '',
     email: '',
-    currentPassword: ''
+    currentPassword: '',
+    bio: '',
+    publicProfile: true,
+    showPublicCommunities: true
   };
 
   protected readonly password = {
@@ -363,6 +366,9 @@ export class ProfilePage implements OnInit, OnDestroy {
       next: profile => {
         this.profile.name = profile.name;
         this.profile.email = profile.email;
+        this.profile.bio = profile.bio;
+        this.profile.publicProfile = profile.publicProfile;
+        this.profile.showPublicCommunities = profile.showPublicCommunities;
         if (profile.hasAvatar) {
           this.loadAvatar();
         }

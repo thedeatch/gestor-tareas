@@ -24,7 +24,12 @@
         @for (member of item.members; track member.userId) {
           <div class="member-row">
             <mat-icon>account_circle</mat-icon>
-            <div class="member-data"><strong>{{ member.name }}</strong><span>{{ member.email }}</span></div>
+            <div class="member-data">
+              <a [routerLink]="['/usuarios', member.userId]">
+                <strong>{{ member.name }}</strong>
+              </a>
+              <span>{{ member.email }}</span>
+            </div>
             @if (canManageRoles(item.currentUserRole)
                 && canEditMember(item.currentUserRole, member.role)) {
               <div class="role-management">

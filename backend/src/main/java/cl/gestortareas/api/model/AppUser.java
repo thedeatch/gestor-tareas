@@ -67,6 +67,15 @@ public class AppUser {
     @Column(name = "reduced_motion", nullable = false)
     private boolean reducedMotion;
 
+    @Column(length = 300)
+    private String bio = "";
+
+    @Column(name = "public_profile", nullable = false)
+    private boolean publicProfile = true;
+
+    @Column(name = "show_public_communities", nullable = false)
+    private boolean showPublicCommunities = true;
+
     protected AppUser() {
     }
 
@@ -108,6 +117,20 @@ public class AppUser {
         this.name = name;
         this.email = email;
     }
+
+    public void updatePublicProfile(
+        String bio,
+        boolean publicProfile,
+        boolean showPublicCommunities
+    ) {
+        this.bio = bio == null ? "" : bio.trim();
+        this.publicProfile = publicProfile;
+        this.showPublicCommunities = showPublicCommunities;
+    }
+
+    public String getBio() { return bio; }
+    public boolean isPublicProfile() { return publicProfile; }
+    public boolean isShowPublicCommunities() { return showPublicCommunities; }
 
     public byte[] getAvatarData() {
         return avatarData;

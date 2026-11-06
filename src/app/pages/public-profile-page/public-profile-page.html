@@ -1,0 +1,40 @@
+<main class="public-profile-page">
+  <a mat-button routerLink="/grupos"><mat-icon>arrow_back</mat-icon>Grupos</a>
+  @if (isLoading()) {
+    <p class="status">Cargando perfil...</p>
+  } @else if (error()) {
+    <section class="status error"><mat-icon>lock</mat-icon><p>{{ error() }}</p></section>
+  } @else if (profile(); as user) {
+    <header class="profile-header">
+      <div class="avatar">
+        @if (avatarUrl()) { <img [src]="avatarUrl()" [alt]="'Foto de ' + user.name"> }
+        @else { <mat-icon>person</mat-icon> }
+      </div>
+      <div>
+        <h1>{{ user.name }}</h1>
+        <p>Miembro desde {{ user.joinedAt | date:'MMMM yyyy' }}</p>
+      </div>
+    </header>
+
+    <mat-card>
+      <mat-card-header><mat-card-title>Acerca de mí</mat-card-title></mat-card-header>
+      <mat-card-content><p>{{ user.bio || 'Este usuario todavía no ha agregado una biografía.' }}</p></mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Grupos públicos</mat-card-title>
+        <mat-card-subtitle>{{ user.communities.length }} grupos visibles</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content class="community-list">
+        @for (community of user.communities; track community.id) {
+          <a [routerLink]="['/grupos', community.id]" class="community-row">
+            <mat-icon>groups</mat-icon>
+            <strong>{{ community.name }}</strong>
+            <span>{{ roleLabel(community.role) }}</span>
+          </a>
+        } @empty { <p>No muestra grupos públicos.</p> }
+      </mat-card-content>
+    </mat-card>
+  }
+</main>

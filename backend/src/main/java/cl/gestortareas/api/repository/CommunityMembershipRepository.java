@@ -14,6 +14,8 @@ public interface CommunityMembershipRepository
         String email
     );
 
+    List<CommunityMembership> findAllByUserIdOrderByJoinedAtDesc(Long userId);
+
     List<CommunityMembership> findAllByCommunityIdOrderByJoinedAtAsc(Long id);
 
     Optional<CommunityMembership> findByCommunityIdAndUserEmailIgnoreCase(

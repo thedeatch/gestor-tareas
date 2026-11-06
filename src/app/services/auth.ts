@@ -8,7 +8,8 @@ import {
   PasswordChangeData,
   ProfileUpdateData,
   RegistrationData,
-  UserProfile
+  UserProfile,
+  PublicUserProfile
 } from '../models/auth.model';
 import { UserSession } from '../models/auth.model';
 import { UserRole } from '../models/auth.model';
@@ -143,6 +144,16 @@ export class AuthService {
 
   getAvatar(): Observable<Blob> {
     return this.http.get(`${this.profileApiUrl}/avatar`, {
+      responseType: 'blob'
+    });
+  }
+
+  getPublicProfile(userId: number): Observable<PublicUserProfile> {
+    return this.http.get<PublicUserProfile>(`/api/users/${userId}/profile`);
+  }
+
+  getPublicAvatar(userId: number): Observable<Blob> {
+    return this.http.get(`/api/users/${userId}/avatar`, {
       responseType: 'blob'
     });
   }

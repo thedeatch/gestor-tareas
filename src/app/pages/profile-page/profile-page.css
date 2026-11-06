@@ -29,6 +29,12 @@ form {
   gap: 8px;
 }
 
+.privacy-options {
+  display: grid;
+  gap: 12px;
+  margin: 4px 0 12px;
+}
+
 form > button {
   justify-self: start;
   min-width: 190px;

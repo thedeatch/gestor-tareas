@@ -6,6 +6,9 @@ public record ProfileResponse(
     String name,
     String email,
     boolean hasAvatar,
-    UserRole role
+    UserRole role,
+    String bio,
+    boolean publicProfile,
+    boolean showPublicCommunities
 ) {
 }

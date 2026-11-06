@@ -21,12 +21,34 @@ export interface UserProfile {
   email: string;
   hasAvatar: boolean;
   role: UserRole;
+  bio: string;
+  publicProfile: boolean;
+  showPublicCommunities: boolean;
 }
 
 export interface ProfileUpdateData {
   name: string;
   email: string;
   currentPassword: string;
+  bio: string;
+  publicProfile: boolean;
+  showPublicCommunities: boolean;
+}
+
+export interface PublicProfileCommunity {
+  id: number;
+  name: string;
+  slug: string;
+  role: import('./community.model').CommunityRole;
+}
+
+export interface PublicUserProfile {
+  id: number;
+  name: string;
+  bio: string;
+  hasAvatar: boolean;
+  joinedAt: string;
+  communities: PublicProfileCommunity[];
 }
 
 export interface PasswordChangeData {
