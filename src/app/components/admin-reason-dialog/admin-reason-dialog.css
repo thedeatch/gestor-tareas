@@ -6,5 +6,9 @@ mat-dialog-content {
 
 p { margin: 0; }
 .warning { color: var(--mat-sys-on-error-container); }
+.report-rules { margin-bottom: 1rem; }
+.report-rules summary { cursor: pointer; }
+.report-rules p { white-space: pre-wrap; overflow-wrap: anywhere; }
+
 mat-form-field { width: 100%; }
 textarea { resize: vertical; }

@@ -32,6 +32,12 @@ public class CommunityController {
         return communityService.findById(id, authentication.getName());
     }
 
+    @PatchMapping("/{id}/guidelines")
+    public CommunityDetailResponse updateGuidelines(@PathVariable Long id,
+        @Valid @RequestBody CommunityGuidelinesRequest request, Authentication authentication) {
+        return communityService.updateGuidelines(id, request, authentication.getName());
+    }
+
     @GetMapping("/discover")
     public List<CommunityDiscoveryResponse> discover(Authentication authentication) {
         return communityService.discover(authentication.getName());

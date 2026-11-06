@@ -31,6 +31,12 @@ public class Community {
     @Column(nullable = false, length = 500)
     private String description;
 
+    @Column(nullable = false, length = 3000)
+    private String extendedDescription = "";
+
+    @Column(nullable = false, length = 5000)
+    private String rules = "";
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private CommunityVisibility visibility;
@@ -57,6 +63,14 @@ public class Community {
     public String getName() { return name; }
     public String getSlug() { return slug; }
     public String getDescription() { return description; }
+    public String getExtendedDescription() { return extendedDescription; }
+    public String getRules() { return rules; }
+
+    public void updateGuidelines(String extendedDescription, String rules) {
+        this.extendedDescription = extendedDescription;
+        this.rules = rules;
+    }
+
     public CommunityVisibility getVisibility() { return visibility; }
     public AppUser getCreatedBy() { return createdBy; }
     public Instant getCreatedAt() { return createdAt; }

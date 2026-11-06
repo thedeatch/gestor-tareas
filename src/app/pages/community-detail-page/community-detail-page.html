@@ -17,6 +17,46 @@
       <span>{{ item.members.length }} miembros</span>
     </div>
 
+    <mat-card class="guidelines-card">
+      <mat-card-header><mat-card-title>Información y reglas del grupo</mat-card-title></mat-card-header>
+      <mat-card-content>
+        @if (editingGuidelines() && canManageRoles(item.currentUserRole)) {
+          <form class="post-fields" (submit)="saveGuidelines($event)">
+            <mat-form-field appearance="outline">
+              <mat-label>Descripción ampliada</mat-label>
+              <textarea matInput rows="4" maxlength="3000" [formControl]="extendedDescription"
+                [attr.readonly]="savingGuidelines() ? '' : null"></textarea>
+              <mat-hint align="end">{{ extendedDescription.value.length }}/3000</mat-hint>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Reglas del grupo</mat-label>
+              <textarea matInput rows="5" maxlength="5000" [formControl]="rules"
+                [attr.readonly]="savingGuidelines() ? '' : null"></textarea>
+              <mat-hint align="end">{{ rules.value.length }}/5000</mat-hint>
+            </mat-form-field>
+            <div class="post-actions">
+              <button mat-flat-button type="submit"
+                [disabled]="savingGuidelines() || extendedDescription.invalid || rules.invalid">
+                Guardar
+              </button>
+              <button mat-button type="button" [disabled]="savingGuidelines()"
+                (click)="editingGuidelines.set(false)">Cancelar</button>
+            </div>
+          </form>
+        } @else {
+          @if (item.extendedDescription) {
+            <h3>Sobre el grupo</h3>
+            <p class="guidelines-text">{{ item.extendedDescription }}</p>
+          }
+          <h3>Reglas</h3>
+          <p class="guidelines-text">{{ item.rules || 'Este grupo aún no ha publicado reglas.' }}</p>
+          @if (canManageRoles(item.currentUserRole)) {
+            <button mat-button type="button" (click)="editGuidelines(item)">Editar información y reglas</button>
+          }
+        }
+      </mat-card-content>
+    </mat-card>
+
     <mat-card class="posts-card">
       <mat-card-header>
         <mat-card-title>Publicaciones</mat-card-title>
@@ -130,9 +170,9 @@
                     }
                   </div>
                   @if (!post.editable) {
-                    <app-report-button [groupId]="item.id" [postId]="post.id" />
+                    <app-report-button [groupId]="item.id" [postId]="post.id" [rules]="item.rules" />
                   }
-                  <app-post-comments [groupId]="item.id" [postId]="post.id" />
+                  <app-post-comments [groupId]="item.id" [postId]="post.id" [rules]="item.rules" />
                 </div>
               </article>
             }

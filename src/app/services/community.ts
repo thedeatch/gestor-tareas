@@ -28,6 +28,12 @@ export class CommunityService {
     return this.http.get<CommunityDetail>(`${this.apiUrl}/${id}`);
   }
 
+  updateGuidelines(groupId: number, extendedDescription: string, rules: string): Observable<CommunityDetail> {
+    return this.http.patch<CommunityDetail>(`${this.apiUrl}/${groupId}/guidelines`, {
+      extendedDescription, rules
+    });
+  }
+
   create(request: CreateCommunityRequest): Observable<CommunitySummary> {
     return this.http.post<CommunitySummary>(this.apiUrl, request);
   }

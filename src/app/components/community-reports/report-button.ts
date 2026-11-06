@@ -17,6 +17,7 @@ export class ReportButton {
   readonly groupId = input.required<number>();
   readonly postId = input.required<number>();
   readonly commentId = input<number>();
+  readonly rules = input('');
 
   private readonly reports = inject(CommunityReportsService);
   private readonly dialog = inject(MatDialog);
@@ -27,6 +28,7 @@ export class ReportButton {
     const data: AdminReasonDialogData = {
       title: this.commentId() ? 'Reportar comentario' : 'Reportar publicación',
       message: 'El equipo de moderación del grupo revisará tu reporte.',
+      rules: this.rules(),
       reasonLabel: 'Motivo del reporte',
       reasonPlaceholder: 'Explica qué debe revisar el equipo',
       confirmText: 'Enviar reporte'

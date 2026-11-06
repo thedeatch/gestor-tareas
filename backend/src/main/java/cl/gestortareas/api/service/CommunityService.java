@@ -54,18 +54,38 @@ public class CommunityService {
 
     @Transactional(readOnly = true)
     public CommunityDetailResponse findById(Long id, String email) {
-        CommunityMembership membership = membershipRepository
-            .findByCommunityIdAndUserEmailIgnoreCase(id, email)
+        return toDetail(requireMembership(id, email));
+    }
+
+    @Transactional
+    public CommunityDetailResponse updateGuidelines(Long id, CommunityGuidelinesRequest request,
+                                                    String email) {
+        var membership = requireMembership(id, email);
+        if (membership.getRole() != CommunityRole.OWNER
+            && membership.getRole() != CommunityRole.COMMUNITY_ADMIN) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "No tienes permisos para editar la descripción y las reglas");
+        }
+        membership.getCommunity().updateGuidelines(request.extendedDescription().strip(),
+            request.rules().strip());
+        return toDetail(membership);
+    }
+
+    private CommunityMembership requireMembership(Long id, String email) {
+        return membershipRepository.findByCommunityIdAndUserEmailIgnoreCase(id, email)
             .orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.NOT_FOUND, "Grupo no encontrado"));
+    }
+
+    private CommunityDetailResponse toDetail(CommunityMembership membership) {
         Community community = membership.getCommunity();
         List<CommunityMemberResponse> members = membershipRepository
-            .findAllByCommunityIdOrderByJoinedAtAsc(id)
+            .findAllByCommunityIdOrderByJoinedAtAsc(community.getId())
             .stream().map(this::toMember).toList();
         return new CommunityDetailResponse(
             community.getId(), community.getName(), community.getSlug(),
-            community.getDescription(), community.getVisibility(),
-            membership.getRole(), community.getCreatedAt(), members);
+            community.getDescription(), community.getExtendedDescription(), community.getRules(),
+            community.getVisibility(), membership.getRole(), community.getCreatedAt(), members);
     }
 
     @Transactional

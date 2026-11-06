@@ -27,6 +27,7 @@ import {
   ConfirmDialogData
 } from '../../components/confirm-dialog/confirm-dialog';
 
+import { getApiErrorMessage } from '../../models/api-error.model';
 import { confirmCommunityRemoval } from '../../components/admin-reason-dialog/community-removal';
 import { CommunityReports } from '../../components/community-reports/community-reports';
 import { ReportButton } from '../../components/community-reports/report-button';
@@ -66,6 +67,15 @@ export class CommunityDetailPage {
     nonNullable: true,
     validators: [Validators.required, Validators.email]
   });
+  protected readonly editingGuidelines = signal(false);
+  protected readonly savingGuidelines = signal(false);
+  protected readonly extendedDescription = new FormControl('', {
+    nonNullable: true, validators: [Validators.maxLength(3000)]
+  });
+  protected readonly rules = new FormControl('', {
+    nonNullable: true, validators: [Validators.maxLength(5000)]
+  });
+
   protected readonly postContent = new FormControl('', {
     nonNullable: true,
     validators: [Validators.required, Validators.maxLength(2000)]
@@ -104,6 +114,34 @@ export class CommunityDetailPage {
         if (this.canManage(community.currentUserRole)) this.loadJoinRequests(id);
       },
       error: () => { this.error.set('No fue posible abrir el grupo.'); this.isLoading.set(false); }
+    });
+  }
+
+  protected editGuidelines(group: CommunityDetail): void {
+    this.extendedDescription.reset(group.extendedDescription);
+    this.rules.reset(group.rules);
+    this.editingGuidelines.set(true);
+  }
+
+  protected saveGuidelines(event: Event): void {
+    event.preventDefault();
+    const group = this.community();
+    if (!group || this.savingGuidelines() || this.extendedDescription.invalid || this.rules.invalid) return;
+
+    this.savingGuidelines.set(true);
+    this.service.updateGuidelines(group.id, this.extendedDescription.value, this.rules.value).subscribe({
+      next: ({ extendedDescription, rules }) => {
+        this.community.update(current => current?.id === group.id
+          ? { ...current, extendedDescription, rules } : current);
+        this.savingGuidelines.set(false);
+        this.editingGuidelines.set(false);
+        this.snackBar.open('Información del grupo actualizada.', 'Cerrar', { duration: 2500 });
+      },
+      error: error => {
+        this.savingGuidelines.set(false);
+        this.snackBar.open(getApiErrorMessage(error, 'No se pudo guardar la información del grupo.'),
+          'Cerrar', { duration: 3500 });
+      }
     });
   }
 

@@ -11,6 +11,8 @@ public record CommunityDetailResponse(
     String name,
     String slug,
     String description,
+    String extendedDescription,
+    String rules,
     CommunityVisibility visibility,
     CommunityRole currentUserRole,
     Instant createdAt,

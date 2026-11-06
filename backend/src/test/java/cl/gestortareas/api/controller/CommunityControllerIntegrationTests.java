@@ -511,6 +511,59 @@ class CommunityControllerIntegrationTests {
             SELECT resolved_by FROM community_reports WHERE id = :id AND resolution = 'REMOVED'
             """).param("id", commentReport).query(Long.class).single());
     }
+    @Test
+    void shouldKeepGuidelinesForMembersAndRestrictEditingToOwnersAndAdmins() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        var url = "/api/communities/" + group.getId();
+        var ownerJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
+        var memberJwt = jwt().jwt(token -> token.subject(OTHER_EMAIL));
+        String guidelines = """
+            {"extendedDescription":"  Detalles del grupo  ","rules":"  Respetar a los miembros  "}
+            """;
+
+        mockMvc.perform(get(url).with(ownerJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.extendedDescription").value(""))
+            .andExpect(jsonPath("$.rules").value(""));
+        mockMvc.perform(patch(url + "/guidelines").with(memberJwt)
+                .contentType(MediaType.APPLICATION_JSON).content(guidelines))
+            .andExpect(status().isNotFound());
+        var membership = membershipRepository.save(new CommunityMembership(group, member, CommunityRole.MEMBER));
+        mockMvc.perform(patch(url + "/guidelines").with(memberJwt)
+                .contentType(MediaType.APPLICATION_JSON).content(guidelines))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(patch(url + "/guidelines").with(ownerJwt)
+                .contentType(MediaType.APPLICATION_JSON).content(guidelines))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.description").value("Aprendizaje colaborativo"))
+            .andExpect(jsonPath("$.extendedDescription").value("Detalles del grupo"))
+            .andExpect(jsonPath("$.rules").value("Respetar a los miembros"));
+        mockMvc.perform(get(url).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.rules").value("Respetar a los miembros"));
+        mockMvc.perform(get("/api/communities").with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].extendedDescription").doesNotExist())
+            .andExpect(jsonPath("$[0].rules").doesNotExist());
+
+        membershipRepository.delete(membership);
+        membershipRepository.save(new CommunityMembership(group, member, CommunityRole.COMMUNITY_MODERATOR));
+        mockMvc.perform(patch(url + "/guidelines").with(memberJwt)
+                .contentType(MediaType.APPLICATION_JSON).content(guidelines))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(patch(url + "/members/" + member.getId() + "/role").with(ownerJwt)
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                    {"role":"COMMUNITY_ADMIN"}
+                    """))
+            .andExpect(status().isOk());
+        mockMvc.perform(patch(url + "/guidelines").with(memberJwt)
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                    {"extendedDescription":"","rules":""}
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.rules").value(""));
+    }
     private void createCommunity() throws Exception {
         mockMvc.perform(post("/api/communities")
                 .with(jwt().jwt(token -> token.subject(OWNER_EMAIL)))

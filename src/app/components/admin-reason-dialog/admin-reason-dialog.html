@@ -6,6 +6,13 @@
     <p class="warning">{{ data.warning }}</p>
   }
 
+  @if (data.rules) {
+    <details class="report-rules">
+      <summary>Consultar las reglas del grupo</summary>
+      <p>{{ data.rules }}</p>
+    </details>
+  }
+
   <mat-form-field appearance="outline" subscriptSizing="dynamic">
     <mat-label>{{ data.reasonLabel }}</mat-label>
     <textarea

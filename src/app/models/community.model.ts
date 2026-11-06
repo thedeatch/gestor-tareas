@@ -26,6 +26,8 @@ export interface CommunityMember {
 
 export interface CommunityDetail extends Omit<CommunitySummary, 'memberCount'> {
   members: CommunityMember[];
+  extendedDescription: string;
+  rules: string;
 }
 
 export interface CreateCommunityRequest {

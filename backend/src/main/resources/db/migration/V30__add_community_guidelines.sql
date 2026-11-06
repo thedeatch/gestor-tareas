@@ -1,0 +1,5 @@
+ALTER TABLE communities
+    ADD COLUMN extended_description VARCHAR(3000) NOT NULL DEFAULT '';
+
+ALTER TABLE communities
+    ADD COLUMN rules VARCHAR(5000) NOT NULL DEFAULT '';

@@ -24,6 +24,8 @@
 .post-meta a { color: inherit; text-decoration: none; }
 .post-meta a:hover { color: var(--mat-sys-primary); text-decoration: underline; }
 .post-meta span { color: var(--mat-sys-on-surface-variant); font-size: .85rem; }
+.guidelines-card { margin-bottom: 1rem; }
+.guidelines-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .post-actions { display: flex; flex-wrap: wrap; gap: .25rem; }
 .post-actions button[aria-pressed=true] { background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
 .delete-action { color: var(--mat-sys-error) !important; }

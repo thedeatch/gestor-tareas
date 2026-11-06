@@ -9,6 +9,7 @@ export interface AdminReasonDialogData {
   title: string;
   message: string;
   warning?: string;
+  rules?: string;
   reasonLabel: string;
   reasonPlaceholder: string;
   confirmText: string;

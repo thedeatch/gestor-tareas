@@ -43,6 +43,7 @@ interface PostComment {
 export class PostComments {
   readonly groupId = input.required<number>();
   readonly postId = input.required<number>();
+  readonly rules = input('');
   private readonly http = inject(HttpClient);
   private readonly dialog = inject(MatDialog);
   private readonly url = computed(() =>
