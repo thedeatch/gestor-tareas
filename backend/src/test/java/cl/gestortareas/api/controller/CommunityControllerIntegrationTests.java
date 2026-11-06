@@ -25,6 +25,7 @@ import cl.gestortareas.api.repository.CommunityAccessRequestRepository;
 import cl.gestortareas.api.repository.CommunityMembershipRepository;
 import cl.gestortareas.api.repository.CommunityRepository;
 import cl.gestortareas.api.repository.CommunityPostRepository;
+import cl.gestortareas.api.repository.CommunityPostCommentRepository;
 import cl.gestortareas.api.repository.NotificationRepository;
 
 @SpringBootTest
@@ -36,6 +37,7 @@ class CommunityControllerIntegrationTests {
     @Autowired MockMvc mockMvc;
     @Autowired CommunityRepository communityRepository;
     @Autowired CommunityPostRepository postRepository;
+    @Autowired CommunityPostCommentRepository commentRepository;
     @Autowired CommunityMembershipRepository membershipRepository;
     @Autowired CommunityAccessRequestRepository accessRepository;
     @Autowired NotificationRepository notificationRepository;
@@ -275,6 +277,72 @@ class CommunityControllerIntegrationTests {
             .andExpect(status().isForbidden());
     }
 
+    @Test
+    void shouldEnforceCommentPermissionsAndNotifyAuthors() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var owner = userRepository.findByEmailIgnoreCase(OWNER_EMAIL).orElseThrow();
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+
+        mockMvc.perform(post("/api/communities/{id}/posts", group.getId())
+                .with(jwt().jwt(token -> token.subject(OWNER_EMAIL)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Aviso","content":"Publicación original"}
+                    """))
+            .andExpect(status().isCreated());
+        var postId = postRepository.findAll().get(0).getId();
+        var url = "/api/communities/" + group.getId() + "/posts/" + postId + "/comments";
+        var ownerJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
+        var memberJwt = jwt().jwt(token -> token.subject(OTHER_EMAIL));
+
+        mockMvc.perform(get(url).with(memberJwt)).andExpect(status().isNotFound());
+        membershipRepository.save(new CommunityMembership(group, member, CommunityRole.MEMBER));
+        mockMvc.perform(post(url).with(memberJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"content":"Buen aporte"}
+                    """))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.editable").value(true));
+        assertEquals(1, notificationRepository.countByRecipientAndReadAtIsNull(owner));
+        assertEquals(0, notificationRepository.countByRecipientAndReadAtIsNull(member));
+
+        var commentId = commentRepository.findAllByPostIdOrderByCreatedAtAscIdAsc(postId).get(0).getId();
+        var commentUrl = url + "/" + commentId;
+        mockMvc.perform(get(url).with(ownerJwt))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].editable").value(false))
+            .andExpect(jsonPath("$[0].deletable").value(true));
+        mockMvc.perform(patch(commentUrl).with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"content":"Cambio ajeno"}
+                    """))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(patch(commentUrl).with(memberJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"content":"Comentario editado"}
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content").value("Comentario editado"));
+
+        mockMvc.perform(post(url).with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"content":"Gracias","parentId":%d}
+                    """.formatted(commentId)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.parentId").value(commentId));
+        assertEquals(1, notificationRepository.countByRecipientAndReadAtIsNull(member));
+        assertEquals(1, notificationRepository.countByRecipientAndReadAtIsNull(owner));
+
+        var replyId = commentRepository.findAllByPostIdOrderByCreatedAtAscIdAsc(postId).get(1).getId();
+        mockMvc.perform(delete(url + "/" + replyId).with(memberJwt))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(delete(commentUrl).with(ownerJwt)).andExpect(status().isNoContent());
+        mockMvc.perform(get(url).with(memberJwt))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].content").value("Gracias"))
+            .andExpect(jsonPath("$[0].parentId").doesNotExist());
+    }
     private void createCommunity() throws Exception {
         mockMvc.perform(post("/api/communities")
                 .with(jwt().jwt(token -> token.subject(OWNER_EMAIL)))

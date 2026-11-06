@@ -25,11 +25,13 @@ import {
   ConfirmDialogData
 } from '../../components/confirm-dialog/confirm-dialog';
 
+import { PostComments } from '../../components/post-comments/post-comments';
+
 @Component({
   selector: 'app-community-detail-page',
   imports: [RouterLink, ReactiveFormsModule, DatePipe, MatButtonModule, MatCardModule,
     MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatSnackBarModule, MatDialogModule],
+    MatSnackBarModule, MatDialogModule, PostComments],
   templateUrl: './community-detail-page.html',
   styleUrl: './community-detail-page.css'
 })

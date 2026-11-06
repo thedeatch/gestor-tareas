@@ -18,7 +18,7 @@ import cl.gestortareas.api.repository.CommunityPostRepository;
 
 @Service
 public class CommunityPostService {
-    private static final Set<CommunityRole> MODERATION_ROLES = Set.of(
+    static final Set<CommunityRole> MODERATION_ROLES = Set.of(
         CommunityRole.OWNER,
         CommunityRole.COMMUNITY_ADMIN,
         CommunityRole.COMMUNITY_MODERATOR
@@ -82,14 +82,14 @@ public class CommunityPostService {
         postRepository.delete(post);
     }
 
-    private CommunityMembership requireMembership(Long communityId, String email) {
+    CommunityMembership requireMembership(Long communityId, String email) {
         return membershipRepository.findByCommunityIdAndUserEmailIgnoreCase(
                 communityId, email)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                 "Grupo no encontrado"));
     }
 
-    private CommunityPost requirePost(Long communityId, Long postId) {
+    CommunityPost requirePost(Long communityId, Long postId) {
         return postRepository.findById(postId)
             .filter(post -> post.getCommunity().getId().equals(communityId))
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,

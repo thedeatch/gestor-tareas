@@ -1,0 +1,52 @@
+<button mat-button type="button" (click)="toggle()" [attr.aria-expanded]="open()">
+  {{ open() ? 'Ocultar comentarios' : 'Ver comentarios' }}
+</button>
+
+@if (open()) {
+  @if (error()) { <p role="alert">{{ error() }}</p> }
+  @if (!loaded()) {
+    @if (busy()) {
+      <p>Cargando comentarios...</p>
+    } @else {
+      <button mat-button type="button" (click)="load()">Reintentar</button>
+    }
+  } @else {
+    @for (comment of comments(); track comment.id) {
+      <article>
+        <header>
+          @if (comment.authorHasAvatar) {
+            <img [src]="'/api/users/' + comment.authorId + '/avatar'" alt="">
+          }
+          <strong>{{ comment.authorName }}</strong>
+          <time [attr.datetime]="comment.createdAt">{{ comment.createdAt | date:'dd/MM/yyyy HH:mm' }}</time>
+          @if (comment.updatedAt !== comment.createdAt) { <span>Editado</span> }
+        </header>
+        @if (authors().get(comment.parentId ?? 0); as author) {
+          <small>En respuesta a {{ author }}</small>
+        }
+        <p>{{ comment.content }}</p>
+        <button mat-button type="button" [disabled]="busy()" (click)="beginReply(comment)">Responder</button>
+        @if (comment.editable) {
+          <button mat-button type="button" [disabled]="busy()" (click)="beginEdit(comment)">Editar</button>
+        }
+        @if (comment.deletable) {
+          <button mat-button type="button" [disabled]="busy()" (click)="confirmDelete(comment)">Eliminar</button>
+        }
+      </article>
+    } @empty {
+      <p>Aún no hay comentarios.</p>
+    }
+    <form (submit)="save($event)">
+      <mat-form-field appearance="outline">
+        <mat-label>{{ edit() ? 'Editar comentario' : reply() ? 'Responder a ' + reply()?.authorName : 'Escribe un comentario' }}</mat-label>
+        <textarea matInput rows="2" maxlength="2000" [formControl]="content"></textarea>
+      </mat-form-field>
+      <button mat-flat-button type="submit" [disabled]="busy() || !content.value.trim()">
+        {{ edit() ? 'Guardar' : reply() ? 'Responder' : 'Comentar' }}
+      </button>
+      @if (edit() || reply()) {
+        <button mat-button type="button" [disabled]="busy()" (click)="reset()">Cancelar</button>
+      }
+    </form>
+  }
+}
