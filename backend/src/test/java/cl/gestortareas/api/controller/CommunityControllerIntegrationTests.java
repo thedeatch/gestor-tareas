@@ -877,6 +877,64 @@ class CommunityControllerIntegrationTests {
             .andExpect(jsonPath("$.leaders.length()").value(1))
             .andExpect(jsonPath("$.viewer.points").value(5));
     }
+    @Test
+    void shouldCountOnlyGroupActivityAndDistinctEventParticipantsInTheSelectedPeriod() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var owner = userRepository.findByEmailIgnoreCase(OWNER_EMAIL).orElseThrow();
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        var ownerJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
+        var memberJwt = jwt().jwt(token -> token.subject(OTHER_EMAIL));
+        var groupUrl = "/api/communities/" + group.getId();
+        var metrics = groupUrl + "/metrics";
+
+        mockMvc.perform(get(metrics).with(memberJwt)).andExpect(status().isNotFound());
+        mockMvc.perform(get(metrics).param("days", "15").with(ownerJwt)).andExpect(status().isBadRequest());
+        membershipRepository.save(new CommunityMembership(group, member, CommunityRole.MEMBER));
+        mockMvc.perform(post(groupUrl + "/posts").with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Aviso","content":"Publicación inicial"}
+                    """))
+            .andExpect(status().isCreated());
+        var postId = postRepository.findAll().get(0).getId();
+        mockMvc.perform(post(groupUrl + "/posts/" + postId + "/comments").with(memberJwt)
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                    {"content":"Comentario reciente"}
+                    """))
+            .andExpect(status().isCreated());
+
+        createPublicCommunity();
+        var otherGroup = communityRepository.findAll().stream()
+            .filter(item -> !item.getId().equals(group.getId())).findFirst().orElseThrow();
+        var now = java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC);
+        jdbc.sql("""
+            INSERT INTO community_events (community_id, title, description, starts_at)
+            VALUES (:group, 'Primero', '', :recent), (:group, 'Segundo', '', :recent),
+                   (:group, 'Anterior', '', :old), (:group, 'Futuro', '', :future),
+                   (:other, 'Otro grupo', '', :recent)
+            """).param("group", group.getId()).param("other", otherGroup.getId())
+            .param("recent", now.minusDays(2)).param("old", now.minusDays(15))
+            .param("future", now.plusDays(2)).update();
+        jdbc.sql("""
+            INSERT INTO community_event_registrations (event_id, user_id)
+            SELECT id, :user FROM community_events WHERE community_id = :group
+            """).param("user", owner.getId()).param("group", group.getId()).update();
+
+        mockMvc.perform(get(metrics).param("days", "7").with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.days").value(7))
+            .andExpect(jsonPath("$.counts.members").value(2))
+            .andExpect(jsonPath("$.counts.newMembers").value(2))
+            .andExpect(jsonPath("$.counts.posts").value(1))
+            .andExpect(jsonPath("$.counts.comments").value(1))
+            .andExpect(jsonPath("$.counts.events").value(2))
+            .andExpect(jsonPath("$.counts.registrations").value(2))
+            .andExpect(jsonPath("$.counts.participants").value(1));
+        mockMvc.perform(get(metrics).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.days").value(30))
+            .andExpect(jsonPath("$.counts.events").value(3))
+            .andExpect(jsonPath("$.counts.registrations").value(3))
+            .andExpect(jsonPath("$.counts.participants").value(1));
+    }
     private void createCommunity() throws Exception {
         mockMvc.perform(post("/api/communities")
                 .with(jwt().jwt(token -> token.subject(OWNER_EMAIL)))

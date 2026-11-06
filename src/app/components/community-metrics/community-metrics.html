@@ -1,0 +1,28 @@
+<mat-card>
+  <mat-card-header><mat-card-title>Estadísticas del grupo</mat-card-title></mat-card-header>
+  <mat-card-content>
+    <div class="filters" role="group" aria-label="Período de las estadísticas">
+      @for (days of periods; track days) {
+        <button mat-stroked-button type="button" [disabled]="loading()"
+          [attr.aria-pressed]="selectedDays() === days" (click)="load(days)">
+          {{ days }} días
+        </button>
+      }
+      <button mat-button type="button" [disabled]="loading()" (click)="load(selectedDays())">Actualizar</button>
+    </div>
+    @if (loading()) {
+      <p role="status">Cargando estadísticas…</p>
+    } @else if (error()) {
+      <p role="alert">{{ error() }}</p>
+    } @else if (metrics(); as data) {
+      <p>{{ data.from | date:'dd/MM/yyyy':'UTC' }} al {{ data.until | date:'dd/MM/yyyy':'UTC' }} (UTC)</p>
+      <dl>
+        @for (card of cards; track card.key) {
+          <div><dt>{{ card.label }}</dt><dd>{{ data.counts[card.key] | number }}</dd></div>
+        }
+      </dl>
+      <p>Las inscripciones corresponden a eventos iniciados en el período. Cada persona cuenta una vez
+        en «Personas inscritas», aunque se haya inscrito a varios eventos.</p>
+    }
+  </mat-card-content>
+</mat-card>
