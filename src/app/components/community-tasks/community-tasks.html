@@ -1,0 +1,76 @@
+<mat-card>
+  <mat-card-header><mat-card-title>Tareas del grupo</mat-card-title></mat-card-header>
+  <mat-card-content>
+    <button mat-button type="button" [disabled]="busy()" (click)="load()">Actualizar tareas</button>
+    @if (canManage() && !creating()) {
+      <button mat-button type="button" [disabled]="busy()" (click)="creating.set(true)">Crear tarea</button>
+    }
+    @if (canManage() && creating()) {
+      <form (ngSubmit)="create()">
+        <label>Descripción
+          <input name="description" maxlength="150" [(ngModel)]="description" [readonly]="busy()">
+        </label>
+        <label>Prioridad
+          <select name="priority" [(ngModel)]="priority" [disabled]="busy()">
+            @for (option of priorityOptions; track option[0]) {
+              <option [value]="option[0]">{{ option[1] }}</option>
+            }
+          </select>
+        </label>
+        <label>Fecha límite opcional
+          <input name="dueDate" type="date" [(ngModel)]="dueDate" [readonly]="busy()">
+        </label>
+        <label>Persona asignada
+          <select name="assignee" [(ngModel)]="assignee" [disabled]="busy()">
+            <option value="">Sin asignar</option>
+            @for (member of members(); track member.userId) {
+              <option [value]="member.userId">{{ member.name }}</option>
+            }
+          </select>
+        </label>
+        <button mat-flat-button type="submit" [disabled]="busy() || !description.trim()">Guardar</button>
+        <button mat-button type="button" [disabled]="busy()" (click)="creating.set(false)">Cancelar</button>
+      </form>
+    }
+    @if (message()) { <p role="status">{{ message() }}</p> }
+    @if (error()) { <p role="alert">{{ error() }}</p> }
+    @if (tasks(); as items) {
+      @for (task of items; track task.id) {
+        <article>
+          <h3>{{ task.description }}</h3>
+          <p>
+            {{ statuses[task.status] }} · Prioridad {{ priorities[task.priority] }}
+            @if (task.dueDate; as date) { · Vence {{ date | date:'dd/MM/yyyy' }} }
+            · {{ task.assigneeName || 'Sin asignar' }}
+          </p>
+          <div class="fields">
+            @if (canManage()) {
+              <label>Persona asignada
+                <select #assignment [value]="task.assigneeId ?? ''" [disabled]="busy()"
+                  (change)="changeAssignment(task, assignment)">
+                  <option value="">Sin asignar</option>
+                  @for (member of members(); track member.userId) {
+                    <option [value]="member.userId" [selected]="member.userId === task.assigneeId">{{ member.name }}</option>
+                  }
+                </select>
+              </label>
+            }
+            @if (task.canChangeStatus) {
+              <label>Estado
+                <select #status [value]="task.status" [disabled]="busy()" (change)="changeStatus(task, status)">
+                  @for (option of statusOptions; track option[0]) {
+                    <option [value]="option[0]" [selected]="option[0] === task.status">{{ option[1] }}</option>
+                  }
+                </select>
+              </label>
+            }
+          </div>
+        </article>
+      } @empty {
+        <p>Aún no hay tareas en este grupo.</p>
+      }
+    } @else if (busy()) {
+      <p role="status">Cargando tareas…</p>
+    }
+  </mat-card-content>
+</mat-card>

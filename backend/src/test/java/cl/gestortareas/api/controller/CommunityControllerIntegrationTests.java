@@ -1193,6 +1193,61 @@ class CommunityControllerIntegrationTests {
             .andExpect(jsonPath("$.points").value(0))
             .andExpect(jsonPath("$.reactionsReceived").value(0));
     }
+    @Test
+    void shouldAssignGroupTasksOnlyToMembersAndKeepPersonalTasksSeparate() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        var ownerJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
+        var memberJwt = jwt().jwt(token -> token.subject(OTHER_EMAIL));
+        var tasks = "/api/communities/" + group.getId() + "/tasks";
+        String payload = """
+            {"description":"Preparar el encuentro","priority":"HIGH","dueDate":"2027-01-02","assigneeId":%d}
+            """.formatted(member.getId());
+
+        mockMvc.perform(get(tasks).with(memberJwt)).andExpect(status().isNotFound());
+        mockMvc.perform(post(tasks).with(ownerJwt).contentType(MediaType.APPLICATION_JSON).content(payload))
+            .andExpect(status().isBadRequest());
+        membershipRepository.save(new CommunityMembership(group, member, CommunityRole.MEMBER));
+        mockMvc.perform(post(tasks).with(memberJwt).contentType(MediaType.APPLICATION_JSON).content(payload))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(post(tasks).with(ownerJwt).contentType(MediaType.APPLICATION_JSON).content(payload))
+            .andExpect(status().isCreated());
+        var taskId = jdbc.sql("SELECT id FROM community_tasks WHERE community_id = :id")
+            .param("id", group.getId()).query(Long.class).single();
+
+        mockMvc.perform(get(tasks).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].assigneeId").value(member.getId()))
+            .andExpect(jsonPath("$[0].canChangeStatus").value(true))
+            .andExpect(jsonPath("$[0].status").value("PENDING"));
+        mockMvc.perform(get("/api/tasks").with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+        assertEquals(1, notificationRepository.countByRecipientAndReadAtIsNull(member));
+
+        var assignment = tasks + "/" + taskId + "/assignment";
+        mockMvc.perform(patch(assignment).with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"assigneeId":%d}
+                    """.formatted(member.getId())))
+            .andExpect(status().isNoContent());
+        assertEquals(1, notificationRepository.countByRecipientAndReadAtIsNull(member));
+        var statusUrl = tasks + "/" + taskId + "/status";
+        String completed = """
+            {"status":"COMPLETED"}
+            """;
+        mockMvc.perform(patch(statusUrl).with(memberJwt).contentType(MediaType.APPLICATION_JSON).content(completed))
+            .andExpect(status().isNoContent());
+        mockMvc.perform(patch(assignment).with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"assigneeId":null}
+                    """))
+            .andExpect(status().isNoContent());
+        mockMvc.perform(patch(statusUrl).with(memberJwt).contentType(MediaType.APPLICATION_JSON).content(completed))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(get(tasks).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].status").value("COMPLETED"))
+            .andExpect(jsonPath("$[0].assigneeId").isEmpty());
+    }
     private void createCommunity() throws Exception {
         mockMvc.perform(post("/api/communities")
                 .with(jwt().jwt(token -> token.subject(OWNER_EMAIL)))

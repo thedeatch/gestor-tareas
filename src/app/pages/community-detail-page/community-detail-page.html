@@ -65,6 +65,8 @@
 
     <app-community-achievements [groupId]="item.id" />
 
+    <app-community-tasks [groupId]="item.id" [members]="item.members" [canManage]="canManage(item.currentUserRole)" />
+
     <app-community-events [groupId]="item.id" [canCreate]="canManage(item.currentUserRole)" (eventCreated)="activityFeed.load()" />
 
     <app-community-gallery [groupId]="item.id" [canManage]="canManage(item.currentUserRole)" (albumCreated)="activityFeed.load()" />
