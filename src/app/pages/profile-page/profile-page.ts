@@ -32,12 +32,14 @@ import {
   ConfirmDialogData
 } from '../../components/confirm-dialog/confirm-dialog';
 
+import { NotificationPreferences } from '../../components/notification-preferences/notification-preferences';
 import { BlockedUsers } from '../../components/blocked-users/blocked-users';
 
 @Component({
   selector: 'app-profile-page',
   imports: [
     BlockedUsers,
+    NotificationPreferences,
     FormsModule,
     MatButtonModule,
     MatCardModule,

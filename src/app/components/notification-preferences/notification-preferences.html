@@ -1,0 +1,22 @@
+<mat-card>
+  <mat-card-header><mat-card-title>Preferencias de notificaciones</mat-card-title></mat-card-header>
+  <mat-card-content>
+    <p>Elige los avisos nuevos que quieres recibir. Los avisos de sistema y moderación siempre están activos.</p>
+    @if (disabled(); as types) {
+      <div class="preferences" role="group" aria-label="Tipos de notificaciones">
+        @for (option of options; track option.type) {
+          <mat-slide-toggle [checked]="!types.includes(option.type)" [disabled]="busy()"
+            (change)="update(option.type, $event.checked)">
+            {{ option.label }}
+          </mat-slide-toggle>
+        }
+      </div>
+    } @else {
+      <button mat-button type="button" [disabled]="busy()" (click)="load()">
+        {{ busy() ? 'Cargando preferencias…' : 'Configurar notificaciones' }}
+      </button>
+    }
+    @if (error()) { <p role="alert">{{ error() }}</p> }
+    @if (message()) { <p role="status">{{ message() }}</p> }
+  </mat-card-content>
+</mat-card>

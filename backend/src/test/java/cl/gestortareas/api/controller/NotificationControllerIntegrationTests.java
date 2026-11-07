@@ -3,6 +3,7 @@ package cl.gestortareas.api.controller;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -12,10 +13,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import cl.gestortareas.api.model.AppUser;
+import cl.gestortareas.api.model.NotificationType;
 import cl.gestortareas.api.repository.AppUserRepository;
 import cl.gestortareas.api.repository.NotificationRepository;
 import cl.gestortareas.api.service.NotificationService;
@@ -114,5 +117,45 @@ class NotificationControllerIntegrationTests {
                 .with(jwt().jwt(token -> token.subject(USER_EMAIL))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.count").value(0));
+    }
+
+    @Test
+    void shouldApplyPreferencesOnlyToNewNotificationsForTheRecipient() throws Exception {
+        String prefs = "/api/users/me/notification-preferences";
+        var viewer = jwt().jwt(token -> token.subject(USER_EMAIL));
+        var other = userRepository.save(new AppUser("Otro usuario", "preferencias@gestor.cl", "hash"));
+        var otherJwt = jwt().jwt(token -> token.subject(other.getEmail()));
+
+        mockMvc.perform(get(prefs).with(viewer)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+        notificationService.create(user, other, NotificationType.COMMENT, "Comentario anterior", "Texto", null);
+
+        var off = "{\"enabled\":false}";
+        mockMvc.perform(put(prefs + "/COMMENT").with(viewer).contentType(MediaType.APPLICATION_JSON).content(off))
+            .andExpect(status().isNoContent());
+        mockMvc.perform(put(prefs + "/COMMENT").with(viewer).contentType(MediaType.APPLICATION_JSON).content(off))
+            .andExpect(status().isNoContent());
+        mockMvc.perform(put(prefs + "/MODERATION").with(viewer).contentType(MediaType.APPLICATION_JSON).content(off))
+            .andExpect(status().isBadRequest());
+        mockMvc.perform(get(prefs).with(viewer)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0]").value("COMMENT"));
+        mockMvc.perform(get(prefs).with(otherJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+
+        notificationService.create(user, other, NotificationType.COMMENT, "Comentario silenciado", "Texto", null);
+        notificationService.create(user, other, NotificationType.MODERATION, "Moderación", "Texto", null);
+        notificationService.create(other, user, NotificationType.COMMENT, "Comentario para otro usuario", "Texto", null);
+        mockMvc.perform(get("/api/notifications/unread-count").with(viewer)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.count").value(2));
+        mockMvc.perform(get("/api/notifications/unread-count").with(otherJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.count").value(1));
+
+        mockMvc.perform(put(prefs + "/COMMENT").with(viewer).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"enabled\":true}"))
+            .andExpect(status().isNoContent());
+        notificationService.create(user, other, NotificationType.COMMENT, "Comentario nuevo", "Texto", null);
+        mockMvc.perform(get("/api/notifications/unread-count").with(viewer)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.count").value(3));
     }
 }

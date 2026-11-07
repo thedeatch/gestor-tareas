@@ -21,15 +21,18 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final AppUserRepository userRepository;
     private final UserBlockService blocks;
+    private final NotificationPreferenceService preferences;
 
     public NotificationService(
         NotificationRepository notificationRepository,
         AppUserRepository userRepository,
-        UserBlockService blocks
+        UserBlockService blocks,
+        NotificationPreferenceService preferences
     ) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
         this.blocks = blocks;
+        this.preferences = preferences;
     }
 
     @Transactional(readOnly = true)
@@ -88,6 +91,9 @@ public class NotificationService {
         String message,
         String targetUrl
     ) {
+        if (preferences.isDisabled(recipient.getId(), type)) {
+            return;
+        }
         if (actor != null && (type == NotificationType.COMMENT || type == NotificationType.REACTION)
             && blocks.between(recipient.getId(), actor.getId())) {
             return;
