@@ -40,6 +40,7 @@ class CommunityControllerIntegrationTests {
     private static final String OTHER_EMAIL = "other@community.cl";
 
     @Autowired MockMvc mockMvc;
+    @Autowired cl.gestortareas.api.service.CommunityEventReminderService eventReminders;
     @Autowired org.springframework.jdbc.core.simple.JdbcClient jdbc;
     @Autowired CommunityRepository communityRepository;
     @Autowired CommunityPostRepository postRepository;
@@ -1038,6 +1039,55 @@ class CommunityControllerIntegrationTests {
             .filter(item -> !item.getId().equals(group.getId())).findFirst().orElseThrow();
         mockMvc.perform(get("/api/communities/" + otherGroup.getId() + "/chat/channels/" + id).with(ownerJwt))
             .andExpect(status().isNotFound());
+    }
+    @Test
+    void shouldSendOneReminderOnlyToRegisteredMembersWhoAllowEventNotifications() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var owner = userRepository.findByEmailIgnoreCase(OWNER_EMAIL).orElseThrow();
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        var ownerJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
+        var memberJwt = jwt().jwt(token -> token.subject(OTHER_EMAIL));
+        membershipRepository.save(new CommunityMembership(group, member, CommunityRole.MEMBER));
+
+        var now = java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC);
+        var url = "/api/communities/" + group.getId() + "/events";
+        mockMvc.perform(post(url).with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Encuentro","description":"Actividad","startsAt":"%s"}
+                    """.formatted(now.plusMinutes(30))))
+            .andExpect(status().isCreated());
+        var eventId = jdbc.sql("SELECT id FROM community_events WHERE community_id = :id")
+            .param("id", group.getId()).query(Long.class).single();
+        var registration = url + "/" + eventId + "/registration";
+        mockMvc.perform(put(registration).with(ownerJwt)).andExpect(status().isNoContent());
+        mockMvc.perform(put(registration).with(memberJwt)).andExpect(status().isNoContent());
+        var preferences = "/api/users/me/notification-preferences/EVENT";
+        mockMvc.perform(put(preferences).with(memberJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"enabled":false}
+                    """))
+            .andExpect(status().isNoContent());
+
+        assertEquals(0, eventReminders.due(now.minusHours(1)).size());
+        var due = eventReminders.due(now);
+        assertEquals(1, due.size());
+        eventReminders.deliver(due.get(0), now);
+        eventReminders.deliver(due.get(0), now);
+        assertEquals(1, notificationRepository.countByRecipientAndReadAtIsNull(owner));
+        assertEquals(0, notificationRepository.countByRecipientAndReadAtIsNull(member));
+
+        mockMvc.perform(put(preferences).with(memberJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"enabled":true}
+                    """))
+            .andExpect(status().isNoContent());
+        var pending = eventReminders.due(now);
+        assertEquals(1, pending.size());
+        mockMvc.perform(delete(registration).with(memberJwt)).andExpect(status().isNoContent());
+        eventReminders.deliver(pending.get(0), now);
+        assertEquals(0, notificationRepository.countByRecipientAndReadAtIsNull(member));
+        assertEquals(0, eventReminders.due(now.plusHours(1)).size());
     }
     private void createCommunity() throws Exception {
         mockMvc.perform(post("/api/communities")

@@ -91,7 +91,7 @@ public class NotificationService {
     }
 
     @Transactional
-    public void create(
+    public boolean create(
         AppUser recipient,
         AppUser actor,
         NotificationType type,
@@ -100,15 +100,16 @@ public class NotificationService {
         String targetUrl
     ) {
         if (preferences.isDisabled(recipient.getId(), type)) {
-            return;
+            return false;
         }
         if (actor != null && (type == NotificationType.COMMENT || type == NotificationType.REACTION)
             && blocks.between(recipient.getId(), actor.getId())) {
-            return;
+            return false;
         }
         notificationRepository.save(new Notification(
             recipient, actor, type, title, message, targetUrl
         ));
+        return true;
     }
 
     public void createWelcome(AppUser user) {

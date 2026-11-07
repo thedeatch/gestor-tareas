@@ -1,6 +1,7 @@
 <mat-card>
   <mat-card-header><mat-card-title>Eventos del grupo</mat-card-title></mat-card-header>
   <mat-card-content>
+    <p>Si estás inscrito, recibirás un aviso en la última hora antes del inicio, según tus preferencias de eventos.</p>
     @if (canCreate() && !creating()) {
       <button mat-button type="button" [disabled]="busy()" (click)="creating.set(true)">Crear evento</button>
     }
