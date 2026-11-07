@@ -1,7 +1,9 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatCardModule } from '@angular/material/card';
 
 import { TaskFilters } from '../../components/task-filters/task-filters';
+import { TaskKanban, TaskMove } from '../../components/task-kanban/task-kanban';
 import { EMPTY_TASK_FILTER, TaskFilter, filterTasks } from '../../models/task-filter.model';
 import { TaskForm } from '../../components/task-form/task-form';
 import { TaskSubtasks } from '../../components/task-subtasks/task-subtasks';
@@ -36,7 +38,8 @@ import { finalize } from 'rxjs';
     TaskItem,
     TaskOrganization,
     TaskSubtasks,
-    TaskFilters
+    TaskFilters,
+    TaskKanban
   ],
   templateUrl: './tasks-page.html',
   styleUrl: './tasks-page.css'
@@ -46,6 +49,9 @@ export class TasksPage {
   private readonly snackBar = inject(MatSnackBar);
   private readonly taskService = inject(TaskService);
   private readonly dialog = inject(MatDialog);
+  private readonly destroyRef = inject(DestroyRef);
+  protected readonly view = signal<'LIST' | 'KANBAN'>('LIST');
+  protected readonly isMoving = signal(false);
   protected readonly filters = signal<TaskFilter>({ ...EMPTY_TASK_FILTER });
   protected readonly filteredTasks = computed(() => filterTasks(this.taskService.tasks(), this.filters()));
   protected readonly totalTasks = computed(() => this.taskService.tasks().length);
@@ -55,6 +61,18 @@ export class TasksPage {
   protected readonly loadError =  this.taskService.loadError;
   protected readonly isCreating = signal(false);
   
+  protected moveTask(move: TaskMove): void {
+    if (this.isMoving()) return;
+    this.isMoving.set(true);
+    this.taskService.changeStatus(move.id, move.status).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.isMoving.set(false))
+    ).subscribe({
+      next: () => this.showMessage('Estado actualizado.'),
+      error: error => this.showMessage(getApiErrorMessage(error, 'No se pudo mover la tarea.'))
+    });
+  }
+
   protected addTask(description: string): void {
     this.isCreating.set(true);
 

@@ -113,10 +113,14 @@ public class Task {
                               List<String> tags) {
         this.description = description;
         this.priority = priority;
-        this.status = status;
-        this.completed = status == Status.COMPLETED;
+        changeStatus(status);
         this.dueDate = dueDate;
         this.tagsText = String.join("\n", tags);
+    }
+
+    public void changeStatus(Status status) {
+        this.status = status;
+        this.completed = status == Status.COMPLETED;
     }
 
     public Task() {

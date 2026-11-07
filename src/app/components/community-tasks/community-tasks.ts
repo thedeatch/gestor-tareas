@@ -12,6 +12,7 @@ import { getApiErrorMessage } from '../../models/api-error.model';
 import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS, TaskPriority, TaskStatus } from '../../models/task.model';
 
 import { TaskFilters } from '../task-filters/task-filters';
+import { TaskKanban, TaskMove } from '../task-kanban/task-kanban';
 import { EMPTY_TASK_FILTER, TaskFilter, filterTasks } from '../../models/task-filter.model';
 import { TaskSubtasks } from '../task-subtasks/task-subtasks';
 
@@ -28,7 +29,7 @@ interface GroupTask {
 
 @Component({
   selector: 'app-community-tasks',
-  imports: [DatePipe, FormsModule, MatButtonModule, MatCardModule, TaskSubtasks, TaskFilters],
+  imports: [DatePipe, FormsModule, MatButtonModule, MatCardModule, TaskSubtasks, TaskFilters, TaskKanban],
   templateUrl: './community-tasks.html',
   styles: [`
     :host { display: block; margin-bottom: 1rem; }
@@ -58,6 +59,7 @@ export class CommunityTasks implements OnInit {
     return [...options.values()];
   });
   protected readonly busy = signal(false);
+  protected readonly view = signal<'LIST' | 'KANBAN'>('LIST');
   protected readonly creating = signal(false);
   protected readonly error = signal('');
   protected readonly message = signal('');
@@ -102,10 +104,14 @@ export class CommunityTasks implements OnInit {
   }
 
   protected changeStatus(task: GroupTask, select: HTMLSelectElement): void {
-    const status = select.value;
+    const status = select.value as TaskStatus;
     select.value = task.status;
     if (status === task.status) return;
-    this.mutate(this.http.patch<void>(`${this.url()}/${task.id}/status`, { status }),
+    this.moveTask({ id: task.id, status });
+  }
+
+  protected moveTask(move: TaskMove): void {
+    this.mutate(this.http.patch<void>(`${this.url()}/${move.id}/status`, { status: move.status }),
       'Estado actualizado.');
   }
 

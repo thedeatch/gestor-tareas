@@ -1,0 +1,46 @@
+<p>Arrastra una tarjeta a otra columna o utiliza su selector de estado.</p>
+<div class="board" cdkDropListGroup aria-label="Tablero Kanban">
+  @for (column of columns(); track column.status) {
+    <section class="column" [attr.aria-label]="column.label" cdkDropList
+      [cdkDropListData]="column.status" [cdkDropListDisabled]="busy()"
+      [cdkDropListSortingDisabled]="true" (cdkDropListDropped)="drop($event)">
+      <h3>{{ column.label }} ({{ column.tasks.length }})</h3>
+      @for (task of column.tasks; track task.id) {
+        <article class="card" cdkDrag [cdkDragData]="task"
+          [cdkDragDisabled]="busy() || task.canChangeStatus === false">
+          <header>
+            @if (task.canChangeStatus !== false) {
+              <span class="drag-handle" cdkDragHandle aria-hidden="true">⠿</span>
+            }
+            <strong>{{ task.description }}</strong>
+          </header>
+          <p>
+            Prioridad {{ priorities[task.priority ?? 'NORMAL'] }}
+            @if (task.dueDate; as date) { · Vence {{ date | date:'dd/MM/yyyy' }} }
+          </p>
+          @if (task.assigneeName) { <p>{{ task.assigneeName }}</p> }
+          @if (task.tags?.length) {
+            <p class="tags">{{ task.tags?.join(' · ') }}</p>
+          }
+          @if (task.canChangeStatus !== false) {
+            <label>Estado
+              <select #status [value]="column.status" [disabled]="busy()"
+                (change)="changeStatus(task, status)">
+                @for (option of columns(); track option.status) {
+                  <option [value]="option.status" [selected]="option.status === column.status">{{ option.label }}</option>
+                }
+              </select>
+            </label>
+          }
+          @if (allowEdit()) {
+            <button mat-button type="button" [disabled]="busy()" (click)="edited.emit(task.id)">Editar tarea</button>
+          }
+          <app-task-subtasks [endpoint]="taskEndpoint() + '/' + task.id + '/subtasks'"
+            [editable]="task.canChangeStatus !== false" />
+        </article>
+      } @empty {
+        <p class="empty">Sin tareas en esta columna.</p>
+      }
+    </section>
+  }
+</div>

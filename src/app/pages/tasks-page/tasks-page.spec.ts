@@ -77,4 +77,34 @@ describe('TasksPage', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('saves a Kanban move as a status change and preserves the task details', async () => {
+    const task = {
+      id: 7, description: 'Preparar entrega', completed: false, status: 'PENDING' as const,
+      priority: 'HIGH' as const, dueDate: '2027-01-02', tags: ['Backend']
+    };
+    TestBed.inject(TaskService).tasks.set([task]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const buttons = [...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[];
+    buttons.find(button => button.textContent.trim() === 'Kanban')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const select = fixture.nativeElement.querySelector('app-task-kanban article select') as HTMLSelectElement;
+    select.value = 'IN_PROGRESS';
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    const request = httpTesting.expectOne('/api/tasks/7/status');
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ status: 'IN_PROGRESS' });
+    request.flush({ ...task, status: 'IN_PROGRESS' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-task-kanban section[aria-label="En progreso"] article')
+      .textContent).toContain('Preparar entrega');
+    expect(TestBed.inject(TaskService).tasks()[0]).toEqual({ ...task, status: 'IN_PROGRESS' });
+  });
 });

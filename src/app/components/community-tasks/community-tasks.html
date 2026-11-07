@@ -37,6 +37,16 @@
     @if (tasks(); as items) {
       <app-task-filters [assignees]="assignees()" (changed)="filters.set($event)" />
       <p role="status">{{ filteredTasks().length }} de {{ items.length }} tareas</p>
+      <div role="group" aria-label="Vista de tareas del grupo">
+        <button mat-button type="button" [disabled]="busy()" [attr.aria-pressed]="view() === 'LIST'"
+          (click)="view.set('LIST')">Lista</button>
+        <button mat-button type="button" [disabled]="busy()" [attr.aria-pressed]="view() === 'KANBAN'"
+          (click)="view.set('KANBAN')">Kanban</button>
+      </div>
+      @if (view() === 'KANBAN') {
+        <app-task-kanban [tasks]="filteredTasks()" [busy]="busy()"
+          [taskEndpoint]="'/api/communities/' + groupId() + '/tasks'" (moved)="moveTask($event)" />
+      } @else {
       @for (task of filteredTasks(); track task.id) {
         <article>
           <h3>{{ task.description }}</h3>
@@ -72,6 +82,7 @@
         </article>
       } @empty {
         <p>No hay tareas que coincidan con los filtros.</p>
+      }
       }
     } @else if (busy()) {
       <p role="status">Cargando tareas…</p>

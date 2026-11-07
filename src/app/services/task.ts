@@ -6,7 +6,7 @@ import {
 } from '@angular/core';
 
 import { HttpClient } from '@angular/common/http';
-import { Task, TaskDetails } from '../models/task.model';
+import { Task, TaskDetails, TaskStatus } from '../models/task.model';
 import { Observable, finalize, tap } from 'rxjs';
 @Service()
 export class TaskService {
@@ -137,6 +137,13 @@ export class TaskService {
       })
     );
   }
+  changeStatus(id: number, status: TaskStatus): Observable<Task> {
+    return this.http.patch<Task>(`${this.apiUrl}/${id}/status`, { status }).pipe(
+      tap(saved => this.tasks.update(tasks => tasks.map(task => task.id === id
+        ? { ...task, status: saved.status, completed: saved.completed } : task)))
+    );
+  }
+
   updateTaskDetails(id: number, details: TaskDetails): Observable<Task> {
     return this.http.put<Task>(`${this.apiUrl}/${id}/details`, details).pipe(
       tap(saved => this.tasks.update(tasks => tasks.map(task => task.id === id

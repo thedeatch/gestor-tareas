@@ -18,6 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 @SpringBootTest
@@ -52,6 +53,43 @@ class TaskControllerIntegrationTests {
             USER_EMAIL,
             "hash-de-prueba"
         ));
+    }
+
+    @Test
+    void shouldChangeOnlyTheStatusOfAnOwnedTask() throws Exception {
+        var owner = jwt().jwt(token -> token.subject(USER_EMAIL));
+        String otherEmail = "kanban-other@gestor.cl";
+        userRepository.save(new AppUser("Otra cuenta", otherEmail, "hash"));
+        var other = jwt().jwt(token -> token.subject(otherEmail));
+        mockMvc.perform(post("/api/tasks").with(owner).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"description":"Preparar entrega","completed":false}
+                    """))
+            .andExpect(status().isCreated());
+        var id = taskRepository.findAllByOwnerEmailOrderByIdAsc(USER_EMAIL).get(0).getId();
+        var url = "/api/tasks/" + id;
+        mockMvc.perform(put(url + "/details").with(owner).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"description":"Preparar entrega","priority":"HIGH","status":"PENDING",
+                     "dueDate":"2027-01-02","tags":["Backend"]}
+                    """))
+            .andExpect(status().isOk());
+        String completed = "{\"status\":\"COMPLETED\"}";
+        mockMvc.perform(patch(url + "/status").with(other).contentType(MediaType.APPLICATION_JSON)
+                .content(completed)).andExpect(status().isNotFound());
+        mockMvc.perform(patch(url + "/status").with(owner).contentType(MediaType.APPLICATION_JSON)
+                .content("{}")).andExpect(status().isBadRequest());
+        mockMvc.perform(patch(url + "/status").with(owner).contentType(MediaType.APPLICATION_JSON)
+                .content(completed)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("COMPLETED"))
+            .andExpect(jsonPath("$.completed").value(true))
+            .andExpect(jsonPath("$.description").value("Preparar entrega"))
+            .andExpect(jsonPath("$.priority").value("HIGH"))
+            .andExpect(jsonPath("$.dueDate").value("2027-01-02"))
+            .andExpect(jsonPath("$.tags[0]").value("Backend"));
+        mockMvc.perform(patch(url + "/status").with(owner).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"IN_PROGRESS\"}")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.completed").value(false));
     }
 
     @Test

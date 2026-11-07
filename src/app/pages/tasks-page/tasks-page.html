@@ -39,6 +39,16 @@
         (changed)="filters.set($event)" />
       <p role="status">{{ filteredTasks().length }} de {{ totalTasks() }} tareas</p>
 
+      <div role="group" aria-label="Vista de tareas">
+        <button mat-button type="button" [disabled]="isMoving()" [attr.aria-pressed]="view() === 'LIST'"
+          (click)="view.set('LIST')">Lista</button>
+        <button mat-button type="button" [disabled]="isMoving()" [attr.aria-pressed]="view() === 'KANBAN'"
+          (click)="view.set('KANBAN')">Kanban</button>
+      </div>
+      @if (view() === 'KANBAN') {
+        <app-task-kanban [tasks]="filteredTasks()" taskEndpoint="/api/tasks" [busy]="isMoving()"
+          [allowEdit]="true" (moved)="moveTask($event)" (edited)="editTask($event)" />
+      } @else {
       <div class="task-sections">
         <section>
           <h2>Pendientes ({{ pendingTasks().length }})</h2>
@@ -86,6 +96,7 @@
           </div>
           </section>
         </div>
+      }
       }
     </mat-card-content>
   </mat-card>

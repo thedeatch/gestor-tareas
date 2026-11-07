@@ -81,6 +81,13 @@ public class TaskService {
         return task;
     }
 
+    @Transactional
+    public Task changeStatus(Long id, Task.Status status, String email) {
+        Task task = lockTask(id, email);
+        task.changeStatus(status);
+        return task;
+    }
+
     private Task lockTask(Long id, String email) {
         return taskRepository.findForUpdateByIdAndOwnerEmail(id, email)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tarea no encontrada"));
