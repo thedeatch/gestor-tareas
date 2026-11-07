@@ -80,13 +80,14 @@ public class CommunityAlbumService {
     public ImageData read(Long groupId, Long albumId, Long imageId, String email) {
         communities.requireMembership(groupId, email);
         return jdbc.sql("""
-            SELECT f.content_type, f.data
+            SELECT f.content_type, f.data, f.object_key
             FROM community_album_images i
             JOIN community_albums a ON a.id = i.album_id
             JOIN stored_files f ON f.id = i.file_id
             WHERE a.community_id = :groupId AND a.id = :albumId AND f.id = :imageId
             """).param("groupId", groupId).param("albumId", albumId).param("imageId", imageId)
-            .query((rs, row) -> new ImageData(rs.getString("content_type"), rs.getBytes("data")))
+            .query((rs, row) -> new ImageData(rs.getString("content_type"),
+                storage.readBytes(rs.getString("object_key"), rs.getBytes("data"))))
             .optional().orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Imagen no encontrada"));
     }
 

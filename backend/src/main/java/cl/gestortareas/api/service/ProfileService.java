@@ -148,7 +148,7 @@ public class ProfileService {
         }
         if (user.getAvatarFile() != null) {
             StoredFile file = user.getAvatarFile();
-            return new AvatarData(file.getData(), file.getContentType());
+            return new AvatarData(fileStorageService.readBytes(file), file.getContentType());
         }
         return new AvatarData(user.getAvatarData(), user.getAvatarContentType());
     }
@@ -202,7 +202,7 @@ public class ProfileService {
         }
         if (user.getAvatarFile() != null) {
             StoredFile file = user.getAvatarFile();
-            return new AvatarData(file.getData(), file.getContentType());
+            return new AvatarData(fileStorageService.readBytes(file), file.getContentType());
         }
         return new AvatarData(
             user.getAvatarData(),

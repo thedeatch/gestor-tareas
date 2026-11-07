@@ -55,7 +55,7 @@ public class FileController {
             .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
                 .filename(file.getOriginalName(), StandardCharsets.UTF_8)
                 .build().toString())
-            .body(file.getData());
+            .body(fileStorageService.readBytes(file));
     }
 
     @DeleteMapping("/{id}")

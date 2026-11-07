@@ -128,3 +128,21 @@ gestor-tareas/
 - `Dev`: integración y despliegue del entorno actual.
 - `main`: versión estable.
 - Los cambios se integran mediante commits convencionales, por ejemplo `feat:`, `fix:`, `test:` y `docs:`.
+
+## Almacenamiento externo de archivos
+
+Por defecto, los archivos se guardan en PostgreSQL. Para guardar cargas nuevas
+en un bucket privado compatible con S3, activa `APP_STORAGE_S3_ENABLED=true` y
+configura `APP_STORAGE_S3_BUCKET` y `APP_STORAGE_S3_REGION`. Para proveedores
+compatibles puedes indicar `APP_STORAGE_S3_ENDPOINT` y, si el proveedor lo
+requiere, `APP_STORAGE_S3_PATH_STYLE=true`.
+
+El backend usa la cadena de credenciales del SDK de AWS. En Docker Compose o
+Render puedes inyectar `AWS_ACCESS_KEY_ID` y `AWS_SECRET_ACCESS_KEY` como
+secretos del servicio, y `AWS_SESSION_TOKEN` si las credenciales son
+temporales. La identidad debe poder leer, escribir y borrar objetos del prefijo
+`files/`. Mantén el bucket privado. La API sigue verificando los permisos
+antes de servir cada archivo.
+
+Los archivos existentes se siguen leyendo desde PostgreSQL. Conserva la
+configuración del bucket mientras existan archivos que lo referencien.

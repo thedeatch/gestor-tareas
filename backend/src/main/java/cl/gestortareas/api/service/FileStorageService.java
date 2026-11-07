@@ -3,10 +3,16 @@ package cl.gestortareas.api.service;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -19,6 +25,7 @@ import cl.gestortareas.api.repository.StoredFileRepository;
 
 @Service
 public class FileStorageService {
+    private static final Logger LOG = LoggerFactory.getLogger(FileStorageService.class);
     private static final long MAX_SIZE = 10L * 1024 * 1024;
     private static final Set<String> ALLOWED_TYPES = Set.of(
         "image/jpeg", "image/png", "image/webp", "application/pdf",
@@ -27,11 +34,13 @@ public class FileStorageService {
 
     private final StoredFileRepository repository;
     private final AppUserRepository userRepository;
+    private final S3FileStorage external;
 
     public FileStorageService(StoredFileRepository repository,
-                              AppUserRepository userRepository) {
+                              AppUserRepository userRepository, ObjectProvider<S3FileStorage> external) {
         this.repository = repository;
         this.userRepository = userRepository;
+        this.external = external.getIfAvailable();
     }
 
     @Transactional
@@ -40,10 +49,25 @@ public class FileStorageService {
                             Set<String> allowedTypes) {
         validate(file, maximumSize, allowedTypes);
         try {
-            return repository.save(new StoredFile(
-                findUser(email), safeName(file.getOriginalFilename()),
-                file.getContentType(), purpose, file.getBytes()
-            ));
+            byte[] data = file.getBytes();
+            var stored = new StoredFile(findUser(email), safeName(file.getOriginalFilename()),
+                file.getContentType(), purpose, data);
+            if (external != null) {
+                String key = "files/" + UUID.randomUUID();
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCompletion(int status) {
+                        if (status == STATUS_ROLLED_BACK) deleteObject(key);
+                    }
+                });
+                try {
+                    external.put(key, file.getContentType(), data);
+                } catch (RuntimeException error) {
+                    throw unavailable(error);
+                }
+                stored.storeExternally(key);
+            }
+            return repository.save(stored);
         } catch (IOException exception) {
             throw new ResponseStatusException(
                 HttpStatus.BAD_REQUEST, "No fue posible leer el archivo", exception
@@ -82,12 +106,54 @@ public class FileStorageService {
                 HttpStatus.CONFLICT, "Este archivo pertenece a otro módulo"
             );
         }
-        repository.delete(file);
+        delete(file);
     }
 
     @Transactional
     public void delete(StoredFile file) {
+        String key = file.getObjectKey();
+        if (key != null) {
+            requireExternal();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    deleteObject(key);
+                }
+            });
+        }
         repository.delete(file);
+    }
+
+    public byte[] readBytes(StoredFile file) {
+        return readBytes(file.getObjectKey(), file.getData());
+    }
+
+    public byte[] readBytes(String key, byte[] data) {
+        if (key == null) return data;
+        var storage = requireExternal();
+        try {
+            return storage.read(key);
+        } catch (RuntimeException error) {
+            throw unavailable(error);
+        }
+    }
+
+    private S3FileStorage requireExternal() {
+        if (external == null) throw unavailable(null);
+        return external;
+    }
+
+    private void deleteObject(String key) {
+        try {
+            external.delete(key);
+        } catch (RuntimeException error) {
+            LOG.warn("Could not remove external file {}", key, error);
+        }
+    }
+
+    private ResponseStatusException unavailable(Throwable cause) {
+        return new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+            "El almacenamiento de archivos no está disponible", cause);
     }
 
     private void validate(MultipartFile file, long maximumSize,

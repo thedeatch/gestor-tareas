@@ -38,8 +38,10 @@ public class StoredFile {
     @Column(nullable = false, length = 30)
     private FilePurpose purpose;
 
-    @Column(nullable = false)
     private byte[] data;
+
+    @Column(name = "object_key", length = 255)
+    private String objectKey;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
@@ -62,6 +64,13 @@ public class StoredFile {
     public String getContentType() { return contentType; }
     public long getSizeBytes() { return sizeBytes; }
     public FilePurpose getPurpose() { return purpose; }
+    public String getObjectKey() { return objectKey; }
+
+    public void storeExternally(String objectKey) {
+        this.objectKey = objectKey;
+        this.data = null;
+    }
+
     public byte[] getData() { return data; }
     public Instant getCreatedAt() { return createdAt; }
 }
