@@ -42,9 +42,14 @@
           (click)="view.set('LIST')">Lista</button>
         <button mat-button type="button" [disabled]="busy()" [attr.aria-pressed]="view() === 'KANBAN'"
           (click)="view.set('KANBAN')">Kanban</button>
+        <button mat-button type="button" [disabled]="busy()" [attr.aria-pressed]="view() === 'CALENDAR'"
+          (click)="view.set('CALENDAR')">Calendario</button>
       </div>
       @if (view() === 'KANBAN') {
         <app-task-kanban [tasks]="filteredTasks()" [busy]="busy()"
+          [taskEndpoint]="'/api/communities/' + groupId() + '/tasks'" (moved)="moveTask($event)" />
+      } @else if (view() === 'CALENDAR') {
+        <app-task-calendar [tasks]="filteredTasks()" [busy]="busy()"
           [taskEndpoint]="'/api/communities/' + groupId() + '/tasks'" (moved)="moveTask($event)" />
       } @else {
       @for (task of filteredTasks(); track task.id) {

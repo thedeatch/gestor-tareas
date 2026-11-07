@@ -1,0 +1,65 @@
+<nav class="calendar-nav" aria-label="Mes del calendario">
+  <button mat-button type="button" [disabled]="month() === '0001-01'" (click)="moveMonth(-1)">Mes anterior</button>
+  <strong aria-live="polite">{{ monthLabel() }}</strong>
+  <button mat-button type="button" [disabled]="month() === '9999-12'" (click)="moveMonth(1)">Mes siguiente</button>
+  <button mat-button type="button" (click)="select(today())">Hoy</button>
+</nav>
+<div class="calendar" role="group" aria-label="Calendario de fechas límite">
+  @for (weekday of weekdays; track weekday) {
+    <span class="weekday" aria-hidden="true">{{ weekday }}</span>
+  }
+  @for (day of days(); track day.key) {
+    <button class="day" type="button" [class.adjacent]="!day.currentMonth"
+      [class.selected]="day.key === selected()" [disabled]="!day.available"
+      [attr.aria-label]="dayLabel(day)" [attr.aria-pressed]="day.key === selected()"
+      [attr.aria-current]="day.key === today() ? 'date' : null" [attr.data-date]="day.key"
+      (click)="select(day.key)">
+      <span class="number">{{ day.day }}</span>
+      @if (day.tasks.length) {
+        <span class="count">{{ day.tasks.length }} {{ day.tasks.length === 1 ? 'tarea' : 'tareas' }}</span>
+        @for (task of day.tasks.slice(0, 2); track task.id) {
+          <span class="preview" aria-hidden="true">{{ task.description }}</span>
+        }
+      }
+    </button>
+  }
+</div>
+<p>El calendario utiliza las fechas límite de las tareas que coinciden con los filtros.</p>
+<section aria-label="Tareas del día seleccionado">
+  <h3>{{ selected() + 'T00:00:00Z' | date:'dd/MM/yyyy':'UTC' }} · {{ selectedTasks().length }} tareas</h3>
+  @for (task of selectedTasks(); track task.id) {
+    <ng-container *ngTemplateOutlet="taskCard; context: { $implicit: task }" />
+  } @empty {
+    <p>No hay tareas para este día.</p>
+  }
+</section>
+<details class="undated">
+  <summary>Sin fecha límite ({{ undated().length }})</summary>
+  @for (task of undated(); track task.id) {
+    <ng-container *ngTemplateOutlet="taskCard; context: { $implicit: task }" />
+  } @empty {
+    <p>Todas las tareas visibles tienen fecha límite.</p>
+  }
+</details>
+<ng-template #taskCard let-task>
+  <article class="task-card">
+    <strong>{{ task.description }}</strong>
+    <p>{{ statuses[statusOf(task)] }} · Prioridad {{ priorities[priorityOf(task)] }}</p>
+    @if (task.assigneeName) { <p>{{ task.assigneeName }}</p> }
+    @if (task.tags?.length) { <p>{{ task.tags.join(' · ') }}</p> }
+    @if (task.canChangeStatus !== false) {
+      <label>Estado
+        <select #status [value]="statusOf(task)" [disabled]="busy()" (change)="changeStatus(task, status)">
+          @for (option of statusOptions; track option[0]) {
+            <option [value]="option[0]" [selected]="option[0] === statusOf(task)">{{ option[1] }}</option>
+          }
+        </select>
+      </label>
+    }
+    @if (allowEdit()) {
+      <button mat-button type="button" [disabled]="busy()" (click)="edited.emit(task.id)">Editar tarea</button>
+    }
+    <app-task-subtasks [endpoint]="taskEndpoint() + '/' + task.id + '/subtasks'"
+      [editable]="task.canChangeStatus !== false" />
+  </article>
+</ng-template>

@@ -1,0 +1,36 @@
+:host { display: block; }
+.calendar-nav { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-block: 1rem; }
+.calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .25rem; }
+.weekday { text-align: center; font-weight: 600; padding-block: .4rem; }
+.day {
+  min-width: 0;
+  min-height: 6rem;
+  padding: .5rem;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: .5rem;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: start;
+  font: inherit;
+}
+.day.adjacent { background: var(--mat-sys-surface-container); color: var(--mat-sys-on-surface-variant); }
+.day.selected { outline: 2px solid var(--mat-sys-primary); outline-offset: -2px; }
+.day[aria-current=date] .number { font-weight: 700; text-decoration: underline; }
+.day:focus-visible { outline: 3px solid var(--mat-sys-primary); outline-offset: 1px; }
+.count { font-size: .75rem; margin-block: .25rem; }
+.preview { font-size: .75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-card { padding: .75rem; border-bottom: 1px solid var(--mat-sys-outline-variant); overflow-wrap: anywhere; }
+.task-card p { margin-block: .4rem; }
+label { display: inline-grid; gap: .25rem; }
+select { padding: .35rem; }
+.undated { margin-top: 1rem; }
+summary { cursor: pointer; padding-block: .5rem; }
+@media (max-width: 600px) {
+  .day { min-height: 4rem; padding: .25rem; }
+  .preview { display: none; }
+  .count { font-size: .65rem; }
+}

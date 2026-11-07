@@ -4,6 +4,7 @@ import { MatCardModule } from '@angular/material/card';
 
 import { TaskFilters } from '../../components/task-filters/task-filters';
 import { TaskKanban, TaskMove } from '../../components/task-kanban/task-kanban';
+import { TaskCalendar } from '../../components/task-calendar/task-calendar';
 import { EMPTY_TASK_FILTER, TaskFilter, filterTasks } from '../../models/task-filter.model';
 import { TaskForm } from '../../components/task-form/task-form';
 import { TaskSubtasks } from '../../components/task-subtasks/task-subtasks';
@@ -39,7 +40,8 @@ import { finalize } from 'rxjs';
     TaskOrganization,
     TaskSubtasks,
     TaskFilters,
-    TaskKanban
+    TaskKanban,
+    TaskCalendar
   ],
   templateUrl: './tasks-page.html',
   styleUrl: './tasks-page.css'
@@ -50,7 +52,7 @@ export class TasksPage {
   private readonly taskService = inject(TaskService);
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
-  protected readonly view = signal<'LIST' | 'KANBAN'>('LIST');
+  protected readonly view = signal<'LIST' | 'KANBAN' | 'CALENDAR'>('LIST');
   protected readonly isMoving = signal(false);
   protected readonly filters = signal<TaskFilter>({ ...EMPTY_TASK_FILTER });
   protected readonly filteredTasks = computed(() => filterTasks(this.taskService.tasks(), this.filters()));

@@ -13,6 +13,7 @@ import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS, TaskPriority, TaskStatus } fr
 
 import { TaskFilters } from '../task-filters/task-filters';
 import { TaskKanban, TaskMove } from '../task-kanban/task-kanban';
+import { TaskCalendar } from '../task-calendar/task-calendar';
 import { EMPTY_TASK_FILTER, TaskFilter, filterTasks } from '../../models/task-filter.model';
 import { TaskSubtasks } from '../task-subtasks/task-subtasks';
 
@@ -29,7 +30,7 @@ interface GroupTask {
 
 @Component({
   selector: 'app-community-tasks',
-  imports: [DatePipe, FormsModule, MatButtonModule, MatCardModule, TaskSubtasks, TaskFilters, TaskKanban],
+  imports: [DatePipe, FormsModule, MatButtonModule, MatCardModule, TaskSubtasks, TaskFilters, TaskKanban, TaskCalendar],
   templateUrl: './community-tasks.html',
   styles: [`
     :host { display: block; margin-bottom: 1rem; }
@@ -59,7 +60,7 @@ export class CommunityTasks implements OnInit {
     return [...options.values()];
   });
   protected readonly busy = signal(false);
-  protected readonly view = signal<'LIST' | 'KANBAN'>('LIST');
+  protected readonly view = signal<'LIST' | 'KANBAN' | 'CALENDAR'>('LIST');
   protected readonly creating = signal(false);
   protected readonly error = signal('');
   protected readonly message = signal('');

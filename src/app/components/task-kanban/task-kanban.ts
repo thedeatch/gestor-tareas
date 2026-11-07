@@ -3,25 +3,13 @@ import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { Component, computed, input, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 
-import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS, TaskPriority, TaskStatus } from '../../models/task.model';
+import {
+  TASK_PRIORITY_LABELS, TASK_STATUS_LABELS, TaskStatus,
+  TaskCardData as KanbanTask, TaskStatusChange as TaskMove
+} from '../../models/task.model';
 import { TaskSubtasks } from '../task-subtasks/task-subtasks';
 
-export interface KanbanTask {
-  id: number;
-  description: string;
-  completed?: boolean;
-  status?: TaskStatus;
-  priority?: TaskPriority;
-  dueDate?: string | null;
-  tags?: string[];
-  assigneeName?: string | null;
-  canChangeStatus?: boolean;
-}
-
-export interface TaskMove {
-  id: number;
-  status: TaskStatus;
-}
+export type { KanbanTask, TaskMove };
 
 @Component({
   selector: 'app-task-kanban',

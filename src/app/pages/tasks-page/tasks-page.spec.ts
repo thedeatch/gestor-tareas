@@ -107,4 +107,28 @@ describe('TasksPage', () => {
       .textContent).toContain('Preparar entrega');
     expect(TestBed.inject(TaskService).tasks()[0]).toEqual({ ...task, status: 'IN_PROGRESS' });
   });
+
+  it('keeps the search filter when switching to the calendar and shows undated results', async () => {
+    TestBed.inject(TaskService).tasks.set([
+      { id: 8, description: 'Entrega backend', completed: false },
+      { id: 9, description: 'Revisar diseño', completed: false }
+    ]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const search = fixture.nativeElement.querySelector('input[type="search"]') as HTMLInputElement;
+    search.value = 'backend';
+    search.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const buttons = [...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[];
+    buttons.find(button => button.textContent.trim() === 'Calendario')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const undated = fixture.nativeElement.querySelector('app-task-calendar .undated');
+    expect(undated.textContent).toContain('Entrega backend');
+    expect(undated.textContent).not.toContain('Revisar diseño');
+    expect(fixture.nativeElement.querySelector('input[type="search"]').value).toBe('backend');
+  });
 });
