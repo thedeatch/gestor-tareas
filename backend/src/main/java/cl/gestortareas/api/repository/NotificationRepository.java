@@ -32,6 +32,18 @@ public interface NotificationRepository
         AppUser recipient
     );
 
+    interface LiveState {
+        Long getLatestId();
+        long getCount();
+    }
+
+    @Query("""
+        select max(n.id) as latestId,
+            coalesce(sum(case when n.readAt is null then 1L else 0L end), 0L) as count
+        from Notification n where n.recipient = :recipient
+        """)
+    LiveState liveState(@Param("recipient") AppUser recipient);
+
     @Modifying
     @Query(value = """
         update notifications

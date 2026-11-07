@@ -63,6 +63,14 @@ public class NotificationService {
         );
     }
 
+    public record LiveState(long latestId, long count) {}
+
+    @Transactional(readOnly = true)
+    public LiveState liveState(String email) {
+        var state = notificationRepository.liveState(requireUser(email));
+        return new LiveState(state.getLatestId() == null ? 0 : state.getLatestId(), state.getCount());
+    }
+
     @Transactional
     public NotificationResponse markAsRead(String email, Long id) {
         AppUser user = requireUser(email);

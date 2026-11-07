@@ -27,9 +27,9 @@ public class PrivateChatController {
     public record Send(@NotBlank @Size(max = 1000) String content) {}
 
     private final PrivateChatService chat;
-    private final ChatLongPoll polling;
+    private final LongPoll polling;
 
-    public PrivateChatController(PrivateChatService chat, ChatLongPoll polling) {
+    public PrivateChatController(PrivateChatService chat, LongPoll polling) {
         this.chat = chat;
         this.polling = polling;
     }

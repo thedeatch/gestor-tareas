@@ -29,9 +29,9 @@ public class CommunityChatController {
     public record CreateChannel(@NotBlank @Size(max = 60) String name) {}
 
     private final CommunityChatService chat;
-    private final ChatLongPoll polling;
+    private final LongPoll polling;
 
-    public CommunityChatController(CommunityChatService chat, ChatLongPoll polling) {
+    public CommunityChatController(CommunityChatService chat, LongPoll polling) {
         this.chat = chat;
         this.polling = polling;
     }

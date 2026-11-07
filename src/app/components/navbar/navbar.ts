@@ -5,6 +5,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
   viewChild
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -24,7 +25,7 @@ import { APP_MODULES } from '../../models/app-module.model';
 import { ModuleConfigurationService } from '../../services/module-configuration';
 import { NotificationService } from '../../services/notification';
 import { NotificationType, UserNotification } from '../../models/notification.model';
-import { finalize } from 'rxjs';
+import { finalize, Subscription } from 'rxjs';
 @Component({
   selector: 'app-navbar',
   imports: [
@@ -46,6 +47,7 @@ export class Navbar {
   private readonly preferencesService = inject(UserPreferencesService);
   private readonly moduleConfiguration = inject(ModuleConfigurationService);
   private readonly notificationService = inject(NotificationService);
+  private previewRequest?: Subscription;
   private readonly notificationMenuTrigger =
     viewChild<MatMenuTrigger>('notificationTrigger');
 
@@ -81,11 +83,31 @@ export class Navbar {
       this.authService.avatarRevision();
       if (this.isAuthenticated()) {
         this.loadAvatar();
-        this.notificationService.refreshUnreadCount();
       } else {
         this.replaceAvatarUrl(null);
-        this.notificationService.clearCount();
       }
+    });
+    effect(onCleanup => {
+      const account = this.authService.userEmail();
+      const authenticated = this.isAuthenticated();
+      untracked(() => {
+        this.previewRequest?.unsubscribe();
+        this.notificationPreview.set([]);
+        this.notificationService.clearCount();
+        if (account && authenticated) {
+          const connection = this.notificationService.watch();
+          onCleanup(() => {
+            connection.unsubscribe();
+            this.previewRequest?.unsubscribe();
+          });
+        }
+      });
+    });
+    effect(() => {
+      this.notificationService.revision();
+      untracked(() => {
+        if (this.notificationMenuTrigger()?.menuOpen) this.loadNotificationPreview();
+      });
     });
   }
 
@@ -113,10 +135,10 @@ export class Navbar {
   }
 
   protected loadNotificationPreview(): void {
-    if (this.isLoadingNotifications()) return;
+    this.previewRequest?.unsubscribe();
     this.notificationError.set(null);
     this.isLoadingNotifications.set(true);
-    this.notificationService.findAll(0, false, 6).pipe(
+    this.previewRequest = this.notificationService.findAll(0, false, 6).pipe(
       finalize(() => this.isLoadingNotifications.set(false))
     ).subscribe({
       next: response => this.notificationPreview.set(response.content),

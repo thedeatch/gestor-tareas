@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Router } from '@angular/router';
-import { finalize } from 'rxjs';
+import { finalize, Subscription } from 'rxjs';
 
 import {
   NotificationType,
@@ -27,6 +28,9 @@ import { NotificationService } from '../../services/notification';
 })
 export class NotificationsPage {
   private readonly notificationService = inject(NotificationService);
+  private readonly destroyRef = inject(DestroyRef);
+  private request?: Subscription;
+  private requestedPage = 0;
   private readonly router = inject(Router);
 
   protected readonly notifications = signal<UserNotification[]>([]);
@@ -40,7 +44,10 @@ export class NotificationsPage {
   protected readonly unreadCount = this.notificationService.unreadCount;
 
   constructor() {
-    this.loadNotifications();
+    effect(() => {
+      this.notificationService.revision();
+      untracked(() => this.loadNotifications(this.requestedPage));
+    });
   }
 
   protected setUnreadOnly(value: boolean): void {
@@ -117,9 +124,12 @@ export class NotificationsPage {
   }
 
   private loadNotifications(page = 0): void {
+    this.requestedPage = page;
+    this.request?.unsubscribe();
     this.errorMessage.set(null);
     this.isLoading.set(true);
-    this.notificationService.findAll(page, this.unreadOnly()).pipe(
+    this.request = this.notificationService.findAll(page, this.unreadOnly()).pipe(
+      takeUntilDestroyed(this.destroyRef),
       finalize(() => this.isLoading.set(false))
     ).subscribe({
       next: response => {
@@ -127,7 +137,13 @@ export class NotificationsPage {
         this.page.set(response.number);
         this.totalPages.set(response.totalPages);
         this.totalElements.set(response.totalElements);
-        this.notificationService.refreshUnreadCount();
+        if (page > 0 && page >= response.totalPages) {
+          queueMicrotask(() => {
+            if (!this.destroyRef.destroyed && this.requestedPage === page) {
+              this.loadNotifications(Math.max(0, response.totalPages - 1));
+            }
+          });
+        }
       },
       error: () => this.errorMessage.set(
         'No fue posible cargar las notificaciones.'

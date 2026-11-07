@@ -2,6 +2,8 @@ package cl.gestortareas.api.controller;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -157,5 +159,37 @@ class NotificationControllerIntegrationTests {
         notificationService.create(user, other, NotificationType.COMMENT, "Comentario nuevo", "Texto", null);
         mockMvc.perform(get("/api/notifications/unread-count").with(viewer)).andExpect(status().isOk())
             .andExpect(jsonPath("$.count").value(3));
+    }
+
+    @Test
+    void shouldWakeLiveNotificationsOnlyForTheCurrentRecipient() throws Exception {
+        var viewer = jwt().jwt(token -> token.subject(USER_EMAIL));
+        var other = userRepository.save(new AppUser("Otra persona", "live@gestor.cl", "hash"));
+        var initial = mockMvc.perform(get("/api/notifications/live").with(viewer))
+            .andExpect(request().asyncStarted()).andReturn();
+        mockMvc.perform(asyncDispatch(initial)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.count").value(0))
+            .andExpect(jsonPath("$.latestId").value(0));
+
+        var waiting = mockMvc.perform(get("/api/notifications/live")
+                .param("latestId", "0").param("count", "0").with(viewer))
+            .andExpect(request().asyncStarted()).andReturn();
+        notificationService.createWelcome(other);
+        notificationService.createWelcome(user);
+        waiting.getAsyncResult(5000);
+        Long id = notificationRepository.findAllByRecipient(user,
+            org.springframework.data.domain.Pageable.unpaged()).getContent().get(0).getId();
+        mockMvc.perform(asyncDispatch(waiting)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.count").value(1))
+            .andExpect(jsonPath("$.latestId").value(id));
+
+        var reading = mockMvc.perform(get("/api/notifications/live")
+                .param("latestId", id.toString()).param("count", "1").with(viewer))
+            .andExpect(request().asyncStarted()).andReturn();
+        mockMvc.perform(patch("/api/notifications/" + id + "/read").with(viewer)).andExpect(status().isOk());
+        reading.getAsyncResult(5000);
+        mockMvc.perform(asyncDispatch(reading)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.count").value(0))
+            .andExpect(jsonPath("$.latestId").value(id));
     }
 }

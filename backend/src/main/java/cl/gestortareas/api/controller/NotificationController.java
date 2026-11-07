@@ -10,10 +10,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.web.context.request.async.DeferredResult;
+
 import cl.gestortareas.api.dto.NotificationPageResponse;
 import cl.gestortareas.api.dto.NotificationResponse;
 import cl.gestortareas.api.dto.UnreadNotificationCountResponse;
 import cl.gestortareas.api.service.NotificationService;
+import cl.gestortareas.api.service.NotificationService.LiveState;
 
 @RestController
 @RequestMapping("/api/notifications")
@@ -21,8 +24,11 @@ public class NotificationController {
 
     private final NotificationService notificationService;
 
-    public NotificationController(NotificationService notificationService) {
+    private final LongPoll polling;
+
+    public NotificationController(NotificationService notificationService, LongPoll polling) {
         this.notificationService = notificationService;
+        this.polling = polling;
     }
 
     @GetMapping
@@ -46,6 +52,15 @@ public class NotificationController {
         return new UnreadNotificationCountResponse(
             notificationService.unreadCount(jwt.getSubject())
         );
+    }
+
+    @GetMapping("/live")
+    public DeferredResult<LiveState> live(@AuthenticationPrincipal Jwt jwt,
+        @RequestParam(required = false) Long latestId, @RequestParam(required = false) Long count) {
+        String email = jwt.getSubject();
+        return polling.await(() -> notificationService.liveState(email),
+            state -> latestId == null || count == null || state.latestId() != latestId || state.count() != count,
+            null);
     }
 
     @PatchMapping("/{id}/read")
