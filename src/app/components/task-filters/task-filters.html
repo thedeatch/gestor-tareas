@@ -1,0 +1,52 @@
+<div class="filters" role="search" aria-label="Buscar y filtrar tareas">
+  <label class="search">Buscar tareas
+    <input type="search" [ngModel]="filter().query" (ngModelChange)="update('query', $event)"
+      placeholder="Descripción, etiquetas o responsable">
+  </label>
+  <label>Estado
+    <select [ngModel]="filter().status" (ngModelChange)="update('status', $event)">
+      <option value="">Todos</option>
+      @for (option of statuses; track option[0]) { <option [value]="option[0]">{{ option[1] }}</option> }
+    </select>
+  </label>
+  <label>Prioridad
+    <select [ngModel]="filter().priority" (ngModelChange)="update('priority', $event)">
+      <option value="">Todas</option>
+      @for (option of priorities; track option[0]) { <option [value]="option[0]">{{ option[1] }}</option> }
+    </select>
+  </label>
+  <label>Fecha límite
+    <select [ngModel]="filter().due" (ngModelChange)="update('due', $event)">
+      <option value="">Cualquier fecha</option>
+      <option value="NONE">Sin fecha</option>
+      <option value="OVERDUE">Vencidas sin completar</option>
+      <option value="TODAY">Hoy</option>
+      <option value="WEEK">Próximos 7 días</option>
+    </select>
+  </label>
+  @if (personal()) {
+    <label>Proyecto
+      <select [ngModel]="filter().project" (ngModelChange)="update('project', $event)">
+        <option [ngValue]="''">Todos</option>
+        <option [ngValue]="'NONE'">Sin proyecto</option>
+        @for (item of projects(); track item.id) { <option [ngValue]="item.id">{{ item.name }}</option> }
+      </select>
+    </label>
+    <label>Categoría
+      <select [ngModel]="filter().category" (ngModelChange)="update('category', $event)">
+        <option [ngValue]="''">Todas</option>
+        <option [ngValue]="'NONE'">Sin categoría</option>
+        @for (item of categories(); track item.id) { <option [ngValue]="item.id">{{ item.name }}</option> }
+      </select>
+    </label>
+  } @else {
+    <label>Responsable
+      <select [ngModel]="filter().assignee" (ngModelChange)="update('assignee', $event)">
+        <option [ngValue]="''">Todos</option>
+        <option [ngValue]="'NONE'">Sin asignar</option>
+        @for (item of assignees(); track item.id) { <option [ngValue]="item.id">{{ item.name }}</option> }
+      </select>
+    </label>
+  }
+  <button mat-button type="button" (click)="clear()">Limpiar filtros</button>
+</div>

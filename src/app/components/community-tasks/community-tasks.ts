@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, DestroyRef, inject, input, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, input, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,6 +11,8 @@ import { CommunityMember } from '../../models/community.model';
 import { getApiErrorMessage } from '../../models/api-error.model';
 import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS, TaskPriority, TaskStatus } from '../../models/task.model';
 
+import { TaskFilters } from '../task-filters/task-filters';
+import { EMPTY_TASK_FILTER, TaskFilter, filterTasks } from '../../models/task-filter.model';
 import { TaskSubtasks } from '../task-subtasks/task-subtasks';
 
 interface GroupTask {
@@ -26,7 +28,7 @@ interface GroupTask {
 
 @Component({
   selector: 'app-community-tasks',
-  imports: [DatePipe, FormsModule, MatButtonModule, MatCardModule, TaskSubtasks],
+  imports: [DatePipe, FormsModule, MatButtonModule, MatCardModule, TaskSubtasks, TaskFilters],
   templateUrl: './community-tasks.html',
   styles: [`
     :host { display: block; margin-bottom: 1rem; }
@@ -44,6 +46,17 @@ export class CommunityTasks implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly tasks = signal<GroupTask[] | null>(null);
+  protected readonly filters = signal<TaskFilter>({ ...EMPTY_TASK_FILTER });
+  protected readonly filteredTasks = computed(() => filterTasks(this.tasks() ?? [], this.filters()));
+  protected readonly assignees = computed(() => {
+    const options = new Map(this.members().map(member => [member.userId, { id: member.userId, name: member.name }]));
+    for (const task of this.tasks() ?? []) {
+      if (task.assigneeId !== null && !options.has(task.assigneeId)) {
+        options.set(task.assigneeId, { id: task.assigneeId, name: task.assigneeName ?? 'Miembro anterior' });
+      }
+    }
+    return [...options.values()];
+  });
   protected readonly busy = signal(false);
   protected readonly creating = signal(false);
   protected readonly error = signal('');

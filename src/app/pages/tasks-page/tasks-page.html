@@ -35,6 +35,10 @@
 
       <app-task-organization #organization />
 
+      <app-task-filters [personal]="true" [projects]="organization.projects()" [categories]="organization.categories()"
+        (changed)="filters.set($event)" />
+      <p role="status">{{ filteredTasks().length }} de {{ totalTasks() }} tareas</p>
+
       <div class="task-sections">
         <section>
           <h2>Pendientes ({{ pendingTasks().length }})</h2>
@@ -53,7 +57,7 @@
               }
             } @empty {
               <p class="empty-message">
-                No hay tareas pendientes.
+                No hay tareas pendientes que coincidan.
               </p>
             }
           </div>
@@ -76,7 +80,7 @@
               }
             } @empty {
               <p class="empty-message">
-                No hay tareas completadas.
+                No hay tareas completadas que coincidan.
               </p>
             }
           </div>

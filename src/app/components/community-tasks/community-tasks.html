@@ -35,7 +35,9 @@
     @if (message()) { <p role="status">{{ message() }}</p> }
     @if (error()) { <p role="alert">{{ error() }}</p> }
     @if (tasks(); as items) {
-      @for (task of items; track task.id) {
+      <app-task-filters [assignees]="assignees()" (changed)="filters.set($event)" />
+      <p role="status">{{ filteredTasks().length }} de {{ items.length }} tareas</p>
+      @for (task of filteredTasks(); track task.id) {
         <article>
           <h3>{{ task.description }}</h3>
           <p>
@@ -69,7 +71,7 @@
             [editable]="task.canChangeStatus" />
         </article>
       } @empty {
-        <p>Aún no hay tareas en este grupo.</p>
+        <p>No hay tareas que coincidan con los filtros.</p>
       }
     } @else if (busy()) {
       <p role="status">Cargando tareas…</p>

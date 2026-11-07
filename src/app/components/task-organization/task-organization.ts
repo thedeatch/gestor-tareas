@@ -38,8 +38,8 @@ export class TaskOrganization {
   private readonly url = '/api/tasks/organization';
   protected readonly tasks = this.taskService.tasks;
   protected readonly items = signal<Item[] | null>(null);
-  protected readonly projects = computed(() => this.items()?.filter(item => item.kind === 'PROJECT') ?? []);
-  protected readonly categories = computed(() => this.items()?.filter(item => item.kind === 'CATEGORY') ?? []);
+  readonly projects = computed(() => this.items()?.filter(item => item.kind === 'PROJECT') ?? []);
+  readonly categories = computed(() => this.items()?.filter(item => item.kind === 'CATEGORY') ?? []);
   protected readonly busy = signal(false);
   protected readonly error = signal('');
   protected readonly message = signal('');

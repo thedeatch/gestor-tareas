@@ -1,6 +1,8 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 
+import { TaskFilters } from '../../components/task-filters/task-filters';
+import { EMPTY_TASK_FILTER, TaskFilter, filterTasks } from '../../models/task-filter.model';
 import { TaskForm } from '../../components/task-form/task-form';
 import { TaskSubtasks } from '../../components/task-subtasks/task-subtasks';
 import { TaskOrganization } from '../../components/task-organization/task-organization';
@@ -33,7 +35,8 @@ import { finalize } from 'rxjs';
     TaskForm,
     TaskItem,
     TaskOrganization,
-    TaskSubtasks
+    TaskSubtasks,
+    TaskFilters
   ],
   templateUrl: './tasks-page.html',
   styleUrl: './tasks-page.css'
@@ -43,8 +46,11 @@ export class TasksPage {
   private readonly snackBar = inject(MatSnackBar);
   private readonly taskService = inject(TaskService);
   private readonly dialog = inject(MatDialog);
-  protected readonly pendingTasks = this.taskService.pendingTasks;
-  protected readonly completedTasks = this.taskService.completedTasks;
+  protected readonly filters = signal<TaskFilter>({ ...EMPTY_TASK_FILTER });
+  protected readonly filteredTasks = computed(() => filterTasks(this.taskService.tasks(), this.filters()));
+  protected readonly totalTasks = computed(() => this.taskService.tasks().length);
+  protected readonly pendingTasks = computed(() => this.filteredTasks().filter(task => !task.completed));
+  protected readonly completedTasks = computed(() => this.filteredTasks().filter(task => task.completed));
   protected readonly isLoading =  this.taskService.isLoading;
   protected readonly loadError =  this.taskService.loadError;
   protected readonly isCreating = signal(false);
