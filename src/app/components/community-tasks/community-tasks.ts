@@ -11,6 +11,8 @@ import { CommunityMember } from '../../models/community.model';
 import { getApiErrorMessage } from '../../models/api-error.model';
 import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS, TaskPriority, TaskStatus } from '../../models/task.model';
 
+import { TaskSubtasks } from '../task-subtasks/task-subtasks';
+
 interface GroupTask {
   id: number;
   description: string;
@@ -24,7 +26,7 @@ interface GroupTask {
 
 @Component({
   selector: 'app-community-tasks',
-  imports: [DatePipe, FormsModule, MatButtonModule, MatCardModule],
+  imports: [DatePipe, FormsModule, MatButtonModule, MatCardModule, TaskSubtasks],
   templateUrl: './community-tasks.html',
   styles: [`
     :host { display: block; margin-bottom: 1rem; }

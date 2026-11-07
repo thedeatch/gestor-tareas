@@ -47,6 +47,7 @@
                 (taskEdited)="editTask($event)"
                 (taskDeleted)="deleteTask($event)"
               ></app-task-item>
+              <app-task-subtasks [endpoint]="'/api/tasks/' + task.id + '/subtasks'" />
               @if (organization.label(task); as classification) {
                 <small>{{ classification }}</small>
               }
@@ -69,6 +70,7 @@
                 (taskEdited)="editTask($event)"
                 (taskDeleted)="deleteTask($event)"
               ></app-task-item>
+              <app-task-subtasks [endpoint]="'/api/tasks/' + task.id + '/subtasks'" />
               @if (organization.label(task); as classification) {
                 <small>{{ classification }}</small>
               }

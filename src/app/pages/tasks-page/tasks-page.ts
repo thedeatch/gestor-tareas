@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 
 import { TaskForm } from '../../components/task-form/task-form';
+import { TaskSubtasks } from '../../components/task-subtasks/task-subtasks';
 import { TaskOrganization } from '../../components/task-organization/task-organization';
 import { TaskItem } from '../../components/task-item/task-item';
 import { TaskDetails } from '../../models/task.model';
@@ -31,7 +32,8 @@ import { finalize } from 'rxjs';
     MatButtonModule,
     TaskForm,
     TaskItem,
-    TaskOrganization
+    TaskOrganization,
+    TaskSubtasks
   ],
   templateUrl: './tasks-page.html',
   styleUrl: './tasks-page.css'

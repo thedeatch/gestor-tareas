@@ -65,6 +65,8 @@
               </label>
             }
           </div>
+          <app-task-subtasks [endpoint]="'/api/communities/' + groupId() + '/tasks/' + task.id + '/subtasks'"
+            [editable]="task.canChangeStatus" />
         </article>
       } @empty {
         <p>Aún no hay tareas en este grupo.</p>

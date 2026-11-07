@@ -1,0 +1,46 @@
+<button mat-button type="button" [attr.aria-expanded]="open()" (click)="toggle()">
+  {{ open() ? 'Ocultar subtareas' : 'Ver subtareas' }}
+  @if (items(); as subtasks) { ({{ completed() }}/{{ subtasks.length }}) }
+</button>
+@if (open()) {
+  @if (error()) {
+    <p role="alert">{{ error() }}</p>
+    <button mat-button type="button" (click)="load()" [disabled]="busy()">Actualizar subtareas</button>
+  }
+  @if (items(); as subtasks) {
+    @if (subtasks.length) {
+      <ul aria-label="Subtareas">
+        @for (item of subtasks; track item.id) {
+          <li>
+            <label>
+              <input #checkInput type="checkbox" [checked]="item.completed" [disabled]="busy() || !editable()"
+                (change)="check(item, checkInput)">
+              {{ item.description }}
+            </label>
+            @if (editable()) {
+              <button mat-button type="button" [disabled]="busy()" (click)="edit(item)">Editar</button>
+              <button mat-button type="button" [disabled]="busy()" (click)="remove(item)">Eliminar</button>
+            }
+          </li>
+        }
+      </ul>
+    } @else {
+      <p>Aún no hay subtareas.</p>
+    }
+  } @else if (busy()) {
+    <p role="status">Cargando subtareas…</p>
+  }
+  @if (editable() && items()) {
+    <form (ngSubmit)="save()">
+      <input type="text" name="description" maxlength="150" [(ngModel)]="description"
+        [attr.aria-label]="editing() ? 'Editar subtarea' : 'Nueva subtarea'"
+        [placeholder]="editing() ? 'Editar subtarea' : 'Nueva subtarea'" [readonly]="busy()">
+      <button mat-stroked-button type="submit" [disabled]="busy() || !description.trim()">
+        {{ editing() ? 'Guardar' : 'Añadir subtarea' }}
+      </button>
+      @if (editing()) {
+        <button mat-button type="button" [disabled]="busy()" (click)="reset()">Cancelar</button>
+      }
+    </form>
+  }
+}

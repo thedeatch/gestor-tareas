@@ -1248,6 +1248,66 @@ class CommunityControllerIntegrationTests {
             .andExpect(jsonPath("$[0].status").value("COMPLETED"))
             .andExpect(jsonPath("$[0].assigneeId").isEmpty());
     }
+    @Test
+    void shouldProtectSubtasksAndKeepParentCompletionIndependent() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        var ownerJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
+        var memberJwt = jwt().jwt(token -> token.subject(OTHER_EMAIL));
+        membershipRepository.save(new CommunityMembership(group, member, CommunityRole.MEMBER));
+        var groupTasks = "/api/communities/" + group.getId() + "/tasks";
+        mockMvc.perform(post(groupTasks).with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"description":"Tarea de grupo","priority":"NORMAL","assigneeId":%d}
+                    """.formatted(member.getId())))
+            .andExpect(status().isCreated());
+        var groupTaskId = jdbc.sql("SELECT id FROM community_tasks WHERE community_id = :id")
+            .param("id", group.getId()).query(Long.class).single();
+        var groupSubtasks = groupTasks + "/" + groupTaskId + "/subtasks";
+        String step = """
+            {"description":"Primer paso"}
+            """;
+        mockMvc.perform(post(groupSubtasks).with(memberJwt).contentType(MediaType.APPLICATION_JSON).content(step))
+            .andExpect(status().isCreated());
+        mockMvc.perform(get(groupSubtasks).with(ownerJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].completed").value(false));
+        var stepId = jdbc.sql("SELECT id FROM task_subtasks WHERE community_task_id = :id")
+            .param("id", groupTaskId).query(Long.class).single();
+        String done = """
+            {"description":"Paso editado","completed":true}
+            """;
+        mockMvc.perform(put(groupSubtasks + "/" + stepId).with(memberJwt)
+                .contentType(MediaType.APPLICATION_JSON).content(done))
+            .andExpect(status().isNoContent());
+        mockMvc.perform(get(groupSubtasks).with(ownerJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].description").value("Paso editado"))
+            .andExpect(jsonPath("$[0].completed").value(true));
+        mockMvc.perform(get(groupTasks).with(ownerJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].status").value("PENDING"));
+        mockMvc.perform(patch(groupTasks + "/" + groupTaskId + "/assignment").with(ownerJwt)
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                    {"assigneeId":null}
+                    """))
+            .andExpect(status().isNoContent());
+        mockMvc.perform(delete(groupSubtasks + "/" + stepId).with(memberJwt)).andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/tasks").with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"description":"Tarea personal","completed":false}
+                    """))
+            .andExpect(status().isCreated());
+        var personalId = jdbc.sql("SELECT id FROM tasks WHERE description = 'Tarea personal'")
+            .query(Long.class).single();
+        var personal = "/api/tasks/" + personalId;
+        mockMvc.perform(post(personal + "/subtasks").with(ownerJwt)
+                .contentType(MediaType.APPLICATION_JSON).content(step)).andExpect(status().isCreated());
+        mockMvc.perform(get(personal + "/subtasks").with(memberJwt)).andExpect(status().isNotFound());
+        mockMvc.perform(delete(personal + "/subtasks/" + stepId).with(ownerJwt)).andExpect(status().isNotFound());
+        mockMvc.perform(delete(personal).with(ownerJwt)).andExpect(status().isNoContent());
+        assertEquals(0L, jdbc.sql("SELECT COUNT(*) FROM task_subtasks WHERE task_id = :id")
+            .param("id", personalId).query(Long.class).single());
+    }
     private void createCommunity() throws Exception {
         mockMvc.perform(post("/api/communities")
                 .with(jwt().jwt(token -> token.subject(OWNER_EMAIL)))

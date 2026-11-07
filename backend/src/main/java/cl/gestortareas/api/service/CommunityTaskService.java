@@ -81,16 +81,26 @@ public class CommunityTaskService {
     }
 
     public void changeStatus(Long groupId, Long taskId, String email, Status status) {
-        var member = communities.requireMembership(groupId, email);
-        var task = lockTask(groupId, taskId);
-        if (!member.getUser().getId().equals(task.assigneeId())
-            && !CommunityPostService.MODERATION_ROLES.contains(member.getRole())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No puedes cambiar el estado de esta tarea");
-        }
+        requireSubtaskAccess(groupId, taskId, email, true);
+
         jdbc.sql("UPDATE community_tasks SET status = :status WHERE id = :id")
             .param("id", taskId).param("status", status.name()).update();
     }
 
+    void requireSubtaskAccess(Long groupId, Long taskId, String email, boolean write) {
+        var member = communities.requireMembership(groupId, email);
+        if (!write) {
+            jdbc.sql("SELECT id FROM community_tasks WHERE community_id = :groupId AND id = :id")
+                .param("groupId", groupId).param("id", taskId).query(Long.class).optional()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tarea del grupo no encontrada"));
+            return;
+        }
+        var task = lockTask(groupId, taskId);
+        if (!member.getUser().getId().equals(task.assigneeId())
+            && !CommunityPostService.MODERATION_ROLES.contains(member.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No puedes modificar esta tarea");
+        }
+    }
     private Existing lockTask(Long groupId, Long taskId) {
         return jdbc.sql("""
             SELECT assignee_id, description FROM community_tasks WHERE community_id = :groupId AND id = :id FOR UPDATE
