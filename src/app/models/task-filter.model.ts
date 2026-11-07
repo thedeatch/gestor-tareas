@@ -35,7 +35,7 @@ interface FilterableTask {
 const normalize = (text: string): string =>
   text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase();
 
-const localDate = (date: Date): string => {
+export const localDate = (date: Date): string => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');

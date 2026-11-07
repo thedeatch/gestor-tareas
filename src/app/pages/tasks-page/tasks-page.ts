@@ -5,6 +5,7 @@ import { MatCardModule } from '@angular/material/card';
 import { TaskFilters } from '../../components/task-filters/task-filters';
 import { TaskKanban, TaskMove } from '../../components/task-kanban/task-kanban';
 import { TaskCalendar } from '../../components/task-calendar/task-calendar';
+import { TaskProductivity } from '../../components/task-productivity/task-productivity';
 import { EMPTY_TASK_FILTER, TaskFilter, filterTasks } from '../../models/task-filter.model';
 import { TaskForm } from '../../components/task-form/task-form';
 import { TaskSubtasks } from '../../components/task-subtasks/task-subtasks';
@@ -13,6 +14,7 @@ import { TaskItem } from '../../components/task-item/task-item';
 import { TaskDetails } from '../../models/task.model';
 import { getApiErrorMessage } from '../../models/api-error.model';
 import { TaskService } from '../../services/task';
+import { TaskDateService } from '../../services/task-date';
 import { MatDialog } from '@angular/material/dialog';
 import {
   ConfirmDialog,
@@ -41,7 +43,8 @@ import { finalize } from 'rxjs';
     TaskSubtasks,
     TaskFilters,
     TaskKanban,
-    TaskCalendar
+    TaskCalendar,
+    TaskProductivity
   ],
   templateUrl: './tasks-page.html',
   styleUrl: './tasks-page.css'
@@ -50,12 +53,13 @@ export class TasksPage {
   protected readonly title = signal('Gestor de tareas');
   private readonly snackBar = inject(MatSnackBar);
   private readonly taskService = inject(TaskService);
+  private readonly taskDate = inject(TaskDateService);
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
-  protected readonly view = signal<'LIST' | 'KANBAN' | 'CALENDAR'>('LIST');
+  protected readonly view = signal<'LIST' | 'KANBAN' | 'CALENDAR' | 'STATS'>('LIST');
   protected readonly isMoving = signal(false);
   protected readonly filters = signal<TaskFilter>({ ...EMPTY_TASK_FILTER });
-  protected readonly filteredTasks = computed(() => filterTasks(this.taskService.tasks(), this.filters()));
+  protected readonly filteredTasks = computed(() => filterTasks(this.taskService.tasks(), this.filters(), this.taskDate.now()));
   protected readonly totalTasks = computed(() => this.taskService.tasks().length);
   protected readonly pendingTasks = computed(() => this.filteredTasks().filter(task => !task.completed));
   protected readonly completedTasks = computed(() => this.filteredTasks().filter(task => task.completed));

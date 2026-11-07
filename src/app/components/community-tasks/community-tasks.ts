@@ -14,8 +14,10 @@ import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS, TaskPriority, TaskStatus } fr
 import { TaskFilters } from '../task-filters/task-filters';
 import { TaskKanban, TaskMove } from '../task-kanban/task-kanban';
 import { TaskCalendar } from '../task-calendar/task-calendar';
+import { TaskProductivity } from '../task-productivity/task-productivity';
 import { EMPTY_TASK_FILTER, TaskFilter, filterTasks } from '../../models/task-filter.model';
 import { TaskSubtasks } from '../task-subtasks/task-subtasks';
+import { TaskDateService } from '../../services/task-date';
 
 interface GroupTask {
   id: number;
@@ -30,7 +32,7 @@ interface GroupTask {
 
 @Component({
   selector: 'app-community-tasks',
-  imports: [DatePipe, FormsModule, MatButtonModule, MatCardModule, TaskSubtasks, TaskFilters, TaskKanban, TaskCalendar],
+  imports: [DatePipe, FormsModule, MatButtonModule, MatCardModule, TaskSubtasks, TaskFilters, TaskKanban, TaskCalendar, TaskProductivity],
   templateUrl: './community-tasks.html',
   styles: [`
     :host { display: block; margin-bottom: 1rem; }
@@ -47,9 +49,10 @@ export class CommunityTasks implements OnInit {
   readonly canManage = input(false);
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly taskDate = inject(TaskDateService);
   protected readonly tasks = signal<GroupTask[] | null>(null);
   protected readonly filters = signal<TaskFilter>({ ...EMPTY_TASK_FILTER });
-  protected readonly filteredTasks = computed(() => filterTasks(this.tasks() ?? [], this.filters()));
+  protected readonly filteredTasks = computed(() => filterTasks(this.tasks() ?? [], this.filters(), this.taskDate.now()));
   protected readonly assignees = computed(() => {
     const options = new Map(this.members().map(member => [member.userId, { id: member.userId, name: member.name }]));
     for (const task of this.tasks() ?? []) {
@@ -60,7 +63,7 @@ export class CommunityTasks implements OnInit {
     return [...options.values()];
   });
   protected readonly busy = signal(false);
-  protected readonly view = signal<'LIST' | 'KANBAN' | 'CALENDAR'>('LIST');
+  protected readonly view = signal<'LIST' | 'KANBAN' | 'CALENDAR' | 'STATS'>('LIST');
   protected readonly creating = signal(false);
   protected readonly error = signal('');
   protected readonly message = signal('');

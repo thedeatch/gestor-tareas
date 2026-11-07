@@ -44,6 +44,8 @@
           (click)="view.set('KANBAN')">Kanban</button>
         <button mat-button type="button" [disabled]="busy()" [attr.aria-pressed]="view() === 'CALENDAR'"
           (click)="view.set('CALENDAR')">Calendario</button>
+        <button mat-button type="button" [disabled]="busy()" [attr.aria-pressed]="view() === 'STATS'"
+          (click)="view.set('STATS')">Estadísticas</button>
       </div>
       @if (view() === 'KANBAN') {
         <app-task-kanban [tasks]="filteredTasks()" [busy]="busy()"
@@ -51,6 +53,8 @@
       } @else if (view() === 'CALENDAR') {
         <app-task-calendar [tasks]="filteredTasks()" [busy]="busy()"
           [taskEndpoint]="'/api/communities/' + groupId() + '/tasks'" (moved)="moveTask($event)" />
+      } @else if (view() === 'STATS') {
+        <app-task-productivity [tasks]="filteredTasks()" [group]="true" />
       } @else {
       @for (task of filteredTasks(); track task.id) {
         <article>

@@ -9,6 +9,7 @@ export interface TaskCardData {
   priority?: TaskPriority;
   dueDate?: string | null;
   tags?: string[];
+  assigneeId?: number | null;
   assigneeName?: string | null;
   canChangeStatus?: boolean;
 }

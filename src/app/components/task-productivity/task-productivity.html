@@ -1,0 +1,61 @@
+@let data = summary();
+<section aria-label="Estadísticas de productividad">
+  <h2>Estadísticas de productividad</h2>
+  <p>Resumen de las tareas que coinciden con los filtros. Vencimientos al {{ today() | date:'dd/MM/yyyy' }}.</p>
+  <dl class="metrics">
+    <div><dt>Total de tareas</dt><dd>{{ data.total | number }}</dd></div>
+    <div><dt>Completadas</dt><dd>{{ data.completed | number }}</dd></div>
+    <div><dt>Por terminar</dt><dd>{{ data.remaining | number }}</dd></div>
+    <div><dt>Vencidas sin completar</dt><dd>{{ data.overdue | number }}</dd></div>
+    <div><dt>Vencen hoy sin completar</dt><dd>{{ data.dueToday | number }}</dd></div>
+    <div><dt>Vencen en los próximos 7 días</dt><dd>{{ data.dueThisWeek | number }}</dd></div>
+    <div><dt>Por terminar sin fecha</dt><dd>{{ data.undatedRemaining | number }}</dd></div>
+  </dl>
+  @if (data.total) {
+    <div class="completion">
+      <strong>Avance · {{ data.completionRate }} % completado</strong>
+      <progress [value]="data.completed" [max]="data.total" aria-label="Tareas completadas"></progress>
+      <span>{{ data.completed }} de {{ data.total }} tareas</span>
+    </div>
+    <div class="distributions">
+      <section aria-label="Distribución por estado">
+        <h3>Por estado</h3>
+        @for (row of statusRows(); track row.label) {
+          <div class="bar-row">
+            <span>{{ row.label }}</span>
+            <progress [value]="row.count" [max]="data.total" [attr.aria-label]="'Estado ' + row.label"></progress>
+            <span>{{ row.count | number }}</span>
+          </div>
+        }
+      </section>
+      <section aria-label="Distribución por prioridad">
+        <h3>Por prioridad</h3>
+        @for (row of priorityRows(); track row.label) {
+          <div class="bar-row">
+            <span>{{ row.label }}</span>
+            <progress [value]="row.count" [max]="data.total" [attr.aria-label]="'Prioridad ' + row.label"></progress>
+            <span>{{ row.count | number }}</span>
+          </div>
+        }
+      </section>
+    </div>
+    @if (group()) {
+      <section aria-label="Carga de tareas por responsable">
+        <h3>Por responsable</h3>
+        <ul class="workloads">
+          @for (person of data.workloads; track person.assigneeId) {
+            <li>
+              <strong>{{ person.name }}</strong>
+              <p>{{ person.total }} tareas · {{ person.completed }} completadas · {{ person.remaining }} por terminar
+                · {{ person.overdue }} vencidas</p>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  } @else {
+    <p>No hay tareas que coincidan con los filtros para calcular el avance.</p>
+  }
+  <p>«Por terminar» incluye Pendiente y En progreso. Los próximos 7 días incluyen hoy y los seis días siguientes,
+    y cuentan las tareas por terminar. El avance representa el estado actual de las tareas visibles.</p>
+</section>

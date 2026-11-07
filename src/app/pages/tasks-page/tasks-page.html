@@ -46,6 +46,8 @@
           (click)="view.set('KANBAN')">Kanban</button>
         <button mat-button type="button" [disabled]="isMoving()" [attr.aria-pressed]="view() === 'CALENDAR'"
           (click)="view.set('CALENDAR')">Calendario</button>
+        <button mat-button type="button" [disabled]="isMoving()" [attr.aria-pressed]="view() === 'STATS'"
+          (click)="view.set('STATS')">Estadísticas</button>
       </div>
       @if (view() === 'KANBAN') {
         <app-task-kanban [tasks]="filteredTasks()" taskEndpoint="/api/tasks" [busy]="isMoving()"
@@ -53,6 +55,8 @@
       } @else if (view() === 'CALENDAR') {
         <app-task-calendar [tasks]="filteredTasks()" taskEndpoint="/api/tasks" [busy]="isMoving()"
           [allowEdit]="true" (moved)="moveTask($event)" (edited)="editTask($event)" />
+      } @else if (view() === 'STATS') {
+        <app-task-productivity [tasks]="filteredTasks()" />
       } @else {
       <div class="task-sections">
         <section>

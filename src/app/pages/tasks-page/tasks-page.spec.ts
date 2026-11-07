@@ -131,4 +131,36 @@ describe('TasksPage', () => {
     expect(undated.textContent).not.toContain('Revisar diseño');
     expect(fixture.nativeElement.querySelector('input[type="search"]').value).toBe('backend');
   });
+
+  it('calculates productivity from filtered tasks and updates it when task data changes', async () => {
+    const tasks = TestBed.inject(TaskService);
+    tasks.tasks.set([
+      { id: 10, description: 'Backend pendiente', completed: false, status: 'PENDING' },
+      { id: 11, description: 'Backend terminado', completed: true, status: 'COMPLETED' },
+      { id: 12, description: 'Diseño', completed: false, status: 'PENDING' }
+    ]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const search = fixture.nativeElement.querySelector('input[type="search"]') as HTMLInputElement;
+    search.value = 'backend';
+    search.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const buttons = [...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[];
+    buttons.find(button => button.textContent.trim() === 'Estadísticas')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const metric = (label: string) => {
+      const rows = [...fixture.nativeElement.querySelectorAll('app-task-productivity dl div')] as HTMLElement[];
+      return rows.find(row => row.querySelector('dt')?.textContent === label)?.querySelector('dd')?.textContent.trim();
+    };
+    expect(metric('Total de tareas')).toBe('2');
+    expect(metric('Completadas')).toBe('1');
+    tasks.tasks.update(items => items.map(task => task.id === 10
+      ? { ...task, completed: true, status: 'COMPLETED' } : task));
+    fixture.detectChanges();
+    expect(metric('Completadas')).toBe('2');
+    expect(fixture.nativeElement.querySelector('app-task-productivity').textContent).toContain('100 %');
+  });
 });
