@@ -29,7 +29,7 @@ import {
 
 import { getApiErrorMessage } from '../../models/api-error.model';
 import { confirmCommunityRemoval } from '../../components/admin-reason-dialog/community-removal';
-import { CommunityChat } from '../../components/community-chat/community-chat';
+import { CommunityChannels } from '../../components/community-channels/community-channels';
 import { CommunityMetrics } from '../../components/community-metrics/community-metrics';
 import { CommunityRanking } from '../../components/community-ranking/community-ranking';
 import { CommunityActivity } from '../../components/community-activity/community-activity';
@@ -43,7 +43,7 @@ import { PostComments } from '../../components/post-comments/post-comments';
   selector: 'app-community-detail-page',
   imports: [RouterLink, ReactiveFormsModule, DatePipe, MatButtonModule, MatCardModule,
     MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatSnackBarModule, MatDialogModule, PostComments, CommunityReports, ReportButton, CommunityEvents, CommunityGallery, CommunityChat, CommunityActivity, CommunityRanking, CommunityMetrics],
+    MatSnackBarModule, MatDialogModule, PostComments, CommunityReports, ReportButton, CommunityEvents, CommunityGallery, CommunityChannels, CommunityActivity, CommunityRanking, CommunityMetrics],
   templateUrl: './community-detail-page.html',
   styleUrl: './community-detail-page.css'
 })

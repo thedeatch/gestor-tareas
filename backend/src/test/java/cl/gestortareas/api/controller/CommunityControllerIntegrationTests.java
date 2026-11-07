@@ -983,6 +983,62 @@ class CommunityControllerIntegrationTests {
         mockMvc.perform(asyncDispatch(restored)).andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(1));
     }
+    @Test
+    void shouldKeepGeneralAndCustomChatChannelsIsolated() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        var ownerJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
+        var memberJwt = jwt().jwt(token -> token.subject(OTHER_EMAIL));
+        var general = "/api/communities/" + group.getId() + "/chat";
+        var channels = general + "/channels";
+        String name = """
+            {"name":"Eventos"}
+            """;
+        mockMvc.perform(get(channels).with(memberJwt)).andExpect(status().isNotFound());
+        membershipRepository.save(new CommunityMembership(group, member, CommunityRole.MEMBER));
+        mockMvc.perform(post(channels).with(memberJwt).contentType(MediaType.APPLICATION_JSON).content(name))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(post(channels).with(ownerJwt).contentType(MediaType.APPLICATION_JSON).content(name))
+            .andExpect(status().isCreated());
+        mockMvc.perform(post(channels).with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"name":" eventos "}
+                    """))
+            .andExpect(status().isConflict());
+        mockMvc.perform(get(channels).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].name").value("Eventos"));
+        var id = jdbc.sql("SELECT id FROM community_chat_channels WHERE community_id = :id")
+            .param("id", group.getId()).query(Long.class).single();
+        var channel = channels + "/" + id;
+        mockMvc.perform(post(general).with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"content":"Solo en General"}
+                    """))
+            .andExpect(status().isCreated());
+        var waiting = mockMvc.perform(get(channel).param("after", "0").with(ownerJwt))
+            .andExpect(request().asyncStarted()).andReturn();
+        mockMvc.perform(post(channel).with(memberJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"content":"Solo en Eventos"}
+                    """))
+            .andExpect(status().isCreated());
+        waiting.getAsyncResult(5000);
+        mockMvc.perform(asyncDispatch(waiting)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].content").value("Solo en Eventos"));
+        var history = mockMvc.perform(get(general).with(memberJwt))
+            .andExpect(request().asyncStarted()).andReturn();
+        mockMvc.perform(asyncDispatch(history)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].content").value("Solo en General"));
+
+        createPublicCommunity();
+        var otherGroup = communityRepository.findAll().stream()
+            .filter(item -> !item.getId().equals(group.getId())).findFirst().orElseThrow();
+        mockMvc.perform(get("/api/communities/" + otherGroup.getId() + "/chat/channels/" + id).with(ownerJwt))
+            .andExpect(status().isNotFound());
+    }
     private void createCommunity() throws Exception {
         mockMvc.perform(post("/api/communities")
                 .with(jwt().jwt(token -> token.subject(OWNER_EMAIL)))

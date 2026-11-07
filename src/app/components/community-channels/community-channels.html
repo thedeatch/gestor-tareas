@@ -1,0 +1,24 @@
+<nav aria-label="Canales de chat del grupo">
+  @for (channel of channels(); track channel.id) {
+    <button mat-stroked-button type="button" [attr.aria-pressed]="selected() === channel.id"
+      (click)="select(channel)">{{ channel.name }}</button>
+  }
+  <button mat-button type="button" [disabled]="busy()" (click)="load()">Actualizar canales</button>
+  @if (canManage() && !creating()) {
+    <button mat-button type="button" [disabled]="busy()" (click)="creating.set(true)">Crear canal</button>
+  }
+</nav>
+@if (canManage() && creating()) {
+  <form (submit)="create($event)">
+    <mat-form-field appearance="outline">
+      <mat-label>Nombre del canal</mat-label>
+      <input matInput [formControl]="name" maxlength="60" [readonly]="busy()">
+    </mat-form-field>
+    <button mat-flat-button type="submit" [disabled]="busy() || name.invalid || !name.value.trim()">Guardar canal</button>
+    <button mat-button type="button" [disabled]="busy()" (click)="creating.set(false)">Cancelar</button>
+  </form>
+}
+@if (error()) { <p role="alert">{{ error() }}</p> }
+@for (channel of selection(); track channel.id) {
+  <app-community-chat [endpoint]="endpoint(channel)" [title]="'Chat · ' + channel.name" [autoOpen]="openOnSelect()" />
+}

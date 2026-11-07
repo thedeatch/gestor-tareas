@@ -16,6 +16,7 @@ import org.springframework.web.context.request.async.DeferredResult;
 
 import cl.gestortareas.api.service.CommunityChatService;
 import cl.gestortareas.api.service.CommunityChatService.Message;
+import cl.gestortareas.api.service.CommunityChatService.Channel;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -25,6 +26,8 @@ import jakarta.validation.constraints.Size;
 public class CommunityChatController {
     public record Send(@NotBlank @Size(max = 1000) String content) {}
 
+    public record CreateChannel(@NotBlank @Size(max = 60) String name) {}
+
     private final CommunityChatService chat;
     private final ChatLongPoll polling;
 
@@ -33,17 +36,31 @@ public class CommunityChatController {
         this.polling = polling;
     }
 
-    @GetMapping
-    public DeferredResult<List<Message>> read(@PathVariable Long groupId, @RequestParam(required = false) Long after,
-                                              Authentication auth) {
-        String email = auth.getName();
-        return polling.read(after, () -> chat.messages(groupId, email, after));
+    @GetMapping("/channels")
+    public List<Channel> channels(@PathVariable Long groupId, Authentication auth) {
+        return chat.channels(groupId, auth.getName());
     }
 
-    @PostMapping
+    @PostMapping("/channels")
     @ResponseStatus(HttpStatus.CREATED)
-    public void send(@PathVariable Long groupId, @Valid @RequestBody Send request, Authentication auth) {
-        chat.send(groupId, auth.getName(), request.content());
+    public void createChannel(@PathVariable Long groupId, @Valid @RequestBody CreateChannel request,
+                              Authentication auth) {
+        chat.createChannel(groupId, auth.getName(), request.name());
+    }
+
+    @GetMapping({"", "/channels/{channelId}"})
+    public DeferredResult<List<Message>> read(@PathVariable Long groupId,
+        @PathVariable(required = false) Long channelId, @RequestParam(required = false) Long after,
+        Authentication auth) {
+        String email = auth.getName();
+        return polling.read(after, () -> chat.messages(groupId, channelId, email, after));
+    }
+
+    @PostMapping({"", "/channels/{channelId}"})
+    @ResponseStatus(HttpStatus.CREATED)
+    public void send(@PathVariable Long groupId, @PathVariable(required = false) Long channelId,
+                     @Valid @RequestBody Send request, Authentication auth) {
+        chat.send(groupId, channelId, auth.getName(), request.content());
     }
 
 }

@@ -67,7 +67,7 @@
 
     <app-community-gallery [groupId]="item.id" [canManage]="canManage(item.currentUserRole)" (albumCreated)="activityFeed.load()" />
 
-    <app-community-chat [endpoint]="'/api/communities/' + item.id + '/chat'" />
+    <app-community-channels [groupId]="item.id" [canManage]="canManage(item.currentUserRole)" />
 
     <mat-card class="posts-card">
       <mat-card-header>
