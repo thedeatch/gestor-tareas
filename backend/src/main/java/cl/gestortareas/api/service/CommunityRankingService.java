@@ -15,8 +15,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class CommunityRankingService {
-    private static final int POST_POINTS = 5;
-    private static final int COMMENT_POINTS = 2;
+    static final int POST_POINTS = 5;
+    static final int COMMENT_POINTS = 2;
     private static final int CONVERSATION_THRESHOLD = 5;
     private static final int CONTRIBUTOR_THRESHOLD = 25;
 

@@ -31,6 +31,7 @@ import { getApiErrorMessage } from '../../models/api-error.model';
 import { confirmCommunityRemoval } from '../../components/admin-reason-dialog/community-removal';
 import { CommunityChannels } from '../../components/community-channels/community-channels';
 import { CommunityMetrics } from '../../components/community-metrics/community-metrics';
+import { CommunityAchievements } from '../../components/community-achievements/community-achievements';
 import { CommunityRanking } from '../../components/community-ranking/community-ranking';
 import { CommunityActivity } from '../../components/community-activity/community-activity';
 import { CommunityGallery } from '../../components/community-gallery/community-gallery';
@@ -43,7 +44,7 @@ import { PostComments } from '../../components/post-comments/post-comments';
   selector: 'app-community-detail-page',
   imports: [RouterLink, ReactiveFormsModule, DatePipe, MatButtonModule, MatCardModule,
     MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatSnackBarModule, MatDialogModule, PostComments, CommunityReports, ReportButton, CommunityEvents, CommunityGallery, CommunityChannels, CommunityActivity, CommunityRanking, CommunityMetrics],
+    MatSnackBarModule, MatDialogModule, PostComments, CommunityReports, ReportButton, CommunityEvents, CommunityGallery, CommunityChannels, CommunityActivity, CommunityRanking, CommunityMetrics, CommunityAchievements],
   templateUrl: './community-detail-page.html',
   styleUrl: './community-detail-page.css'
 })

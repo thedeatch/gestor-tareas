@@ -26,14 +26,17 @@ public class CommunityPostCommentService {
     private final CommunityPostCommentRepository comments;
     private final NotificationService notifications;
     private final CommunityModerationService moderation;
+    private final CommunityAchievementService achievements;
 
     public CommunityPostCommentService(CommunityPostService posts,
         CommunityPostCommentRepository comments, NotificationService notifications,
-        CommunityModerationService moderation) {
+        CommunityModerationService moderation,
+        CommunityAchievementService achievements) {
         this.posts = posts;
         this.comments = comments;
         this.notifications = notifications;
         this.moderation = moderation;
+        this.achievements = achievements;
     }
 
     @Transactional(readOnly = true)
@@ -58,6 +61,7 @@ public class CommunityPostCommentService {
         }
 
         var comment = comments.save(new CommunityPostComment(post, actor, parentId, content.strip()));
+        achievements.recordComment(member);
         for (var recipient : recipients) {
             if (!recipient.getId().equals(actor.getId())) {
                 boolean postAuthor = recipient.getId().equals(post.getAuthor().getId());

@@ -1,0 +1,27 @@
+<mat-card>
+  <mat-card-header><mat-card-title>Tus logros en el grupo</mat-card-title></mat-card-header>
+  <mat-card-content>
+    <p>El progreso se acumula entre temporadas. Cada publicación suma 5 puntos y cada comentario suma 2.</p>
+    <button mat-button type="button" [disabled]="loading()" (click)="load()">
+      {{ items() ? 'Actualizar logros' : 'Ver mis logros' }}
+    </button>
+    @if (loading()) { <p role="status">Cargando logros…</p> }
+    @if (error()) { <p role="alert">{{ error() }}</p> }
+    @if (items(); as achievements) {
+      <ul>
+        @for (item of achievements; track item.code) {
+          <li>
+            <strong>{{ item.title }}</strong>
+            <p>{{ item.description }}</p>
+            @if (item.earnedAt; as date) {
+              <p>Conseguido el {{ date | date:'dd/MM/yyyy' }}</p>
+            } @else {
+              <progress [value]="item.current" [max]="item.target" [attr.aria-label]="item.title"></progress>
+              <span>{{ item.current }} de {{ item.target }}</span>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </mat-card-content>
+</mat-card>

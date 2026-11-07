@@ -1089,6 +1089,47 @@ class CommunityControllerIntegrationTests {
         assertEquals(0, notificationRepository.countByRecipientAndReadAtIsNull(member));
         assertEquals(0, eventReminders.due(now.plusHours(1)).size());
     }
+    @Test
+    void shouldAccumulateAchievementsAcrossRemovedContentAndKeepAwards() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        var ownerJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
+        var memberJwt = jwt().jwt(token -> token.subject(OTHER_EMAIL));
+        var posts = "/api/communities/" + group.getId() + "/posts";
+        var achievements = "/api/communities/" + group.getId() + "/achievements/mine";
+        String post = """
+            {"title":"Aviso","content":"Publicación para comentar"}
+            """;
+        mockMvc.perform(get(achievements).with(memberJwt)).andExpect(status().isNotFound());
+        membershipRepository.save(new CommunityMembership(group, member, CommunityRole.MEMBER));
+
+        for (int round = 0; round < 2; round++) {
+            mockMvc.perform(post(posts).with(ownerJwt).contentType(MediaType.APPLICATION_JSON).content(post))
+                .andExpect(status().isCreated());
+            var postId = postRepository.findAll().get(0).getId();
+            for (int i = 0; i < 5; i++) {
+                mockMvc.perform(post(posts + "/" + postId + "/comments").with(memberJwt)
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                            {"content":"Comentario acumulativo"}
+                            """))
+                    .andExpect(status().isCreated());
+            }
+            mockMvc.perform(delete(posts + "/" + postId).with(ownerJwt)).andExpect(status().isNoContent());
+        }
+
+        mockMvc.perform(get(achievements).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[1].current").value(10))
+            .andExpect(jsonPath("$[1].earnedAt").isNotEmpty())
+            .andExpect(jsonPath("$[2].current").value(20));
+        mockMvc.perform(get(achievements).with(ownerJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].earnedAt").isNotEmpty())
+            .andExpect(jsonPath("$[1].current").value(0))
+            .andExpect(jsonPath("$[2].current").value(10));
+        assertEquals(1L, jdbc.sql("""
+            SELECT COUNT(*) FROM community_achievements WHERE community_id = :id AND code = 'FIRST_POST'
+            """).param("id", group.getId()).query(Long.class).single());
+    }
     private void createCommunity() throws Exception {
         mockMvc.perform(post("/api/communities")
                 .with(jwt().jwt(token -> token.subject(OWNER_EMAIL)))

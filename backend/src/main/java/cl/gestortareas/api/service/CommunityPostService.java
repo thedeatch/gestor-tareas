@@ -34,17 +34,20 @@ public class CommunityPostService {
     private final CommunityPostReactionRepository reactions;
     private final NotificationService notifications;
     private final CommunityModerationService moderation;
+    private final CommunityAchievementService achievements;
 
     public CommunityPostService(CommunityPostRepository postRepository,
                                 CommunityMembershipRepository membershipRepository,
                                 CommunityPostReactionRepository reactions,
                                 NotificationService notifications,
-                                CommunityModerationService moderation) {
+                                CommunityModerationService moderation,
+        CommunityAchievementService achievements) {
         this.postRepository = postRepository;
         this.membershipRepository = membershipRepository;
         this.reactions = reactions;
         this.notifications = notifications;
         this.moderation = moderation;
+        this.achievements = achievements;
     }
 
     @Transactional(readOnly = true)
@@ -68,6 +71,7 @@ public class CommunityPostService {
             membership.getCommunity(), membership.getUser(),
             title,
             request.content().trim()));
+        achievements.recordPost(membership);
         return toResponse(post, membership, reactionSummary(post.getId(), membership.getUser().getId()));
     }
 
