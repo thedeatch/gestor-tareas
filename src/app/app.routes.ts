@@ -62,6 +62,13 @@ export const routes: Routes = [
         .then(module => module.PublicProfilePage)
   },
   {
+    path: 'mensajes',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/private-chat-page/private-chat-page')
+        .then(module => module.PrivateChatPage)
+  },
+  {
     path: 'notificaciones',
     canActivate: [authGuard],
     loadComponent: () =>

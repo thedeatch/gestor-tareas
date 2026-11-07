@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { afterNextRender, Component, DestroyRef, ElementRef, inject, Injector, input, signal, viewChild } from '@angular/core';
+import { afterNextRender, Component, DestroyRef, ElementRef, inject, Injector, input, OnInit, output, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -30,8 +30,11 @@ interface ChatMessage {
     time { margin-inline-start: .5rem; }
   `]
 })
-export class CommunityChat {
-  readonly groupId = input.required<number>();
+export class CommunityChat implements OnInit {
+  readonly endpoint = input.required<string>();
+  readonly title = input('Chat del grupo');
+  readonly autoOpen = input(false);
+  readonly messageSent = output<void>();
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
@@ -46,6 +49,10 @@ export class CommunityChat {
   protected readonly error = signal('');
   protected readonly sendError = signal('');
   protected readonly content = new FormControl('', { nonNullable: true });
+
+  ngOnInit(): void {
+    if (this.autoOpen()) this.toggle();
+  }
 
   protected toggle(): void {
     if (this.open()) {
@@ -66,7 +73,7 @@ export class CommunityChat {
     this.error.set('');
     this.connection = defer(() => {
       const params = this.cursor === null ? new HttpParams() : new HttpParams().set('after', this.cursor);
-      return this.http.get<ChatMessage[]>(this.url(), { params });
+      return this.http.get<ChatMessage[]>(this.endpoint(), { params });
     }).pipe(
       retry({ resetOnSuccess: true, delay: error => {
         if (error instanceof HttpErrorResponse && [401, 403, 404].includes(error.status)) {
@@ -109,15 +116,15 @@ export class CommunityChat {
     if (!content || content.length > 1000 || this.sending() || !this.connected()) return;
     this.sending.set(true);
     this.sendError.set('');
-    this.http.post<void>(this.url(), { content }).pipe(
+    this.http.post<void>(this.endpoint(), { content }).pipe(
       takeUntilDestroyed(this.destroyRef), finalize(() => this.sending.set(false))
     ).subscribe({
-      next: () => this.content.reset(),
+      next: () => {
+        this.content.reset();
+        this.messageSent.emit();
+      },
       error: error => this.sendError.set(getApiErrorMessage(error, 'No se pudo enviar el mensaje.'))
     });
   }
 
-  private url(): string {
-    return `/api/communities/${this.groupId()}/chat`;
-  }
 }

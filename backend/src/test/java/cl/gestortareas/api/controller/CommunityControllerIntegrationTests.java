@@ -935,6 +935,54 @@ class CommunityControllerIntegrationTests {
             .andExpect(jsonPath("$.counts.registrations").value(3))
             .andExpect(jsonPath("$.counts.participants").value(1));
     }
+    @Test
+    void shouldDeliverPrivateMessagesOnlyToParticipantsAndRespectBlocks() throws Exception {
+        var sender = userRepository.findByEmailIgnoreCase(OWNER_EMAIL).orElseThrow();
+        var recipient = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        String outsiderEmail = "outsider@community.cl";
+        userRepository.save(new AppUser("Otra cuenta", outsiderEmail, "hash"));
+        var senderJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
+        var recipientJwt = jwt().jwt(token -> token.subject(OTHER_EMAIL));
+        var outsiderJwt = jwt().jwt(token -> token.subject(outsiderEmail));
+        var inbox = "/api/private-chat";
+        var recipientChat = inbox + "/" + sender.getId();
+        var senderChat = inbox + "/" + recipient.getId();
+
+        var waiting = mockMvc.perform(get(recipientChat).param("after", "0").with(recipientJwt))
+            .andExpect(request().asyncStarted()).andReturn();
+        mockMvc.perform(post(senderChat).with(senderJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"content":"Hola en privado"}
+                    """))
+            .andExpect(status().isCreated());
+        waiting.getAsyncResult(5000);
+        mockMvc.perform(asyncDispatch(waiting)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].content").value("Hola en privado"));
+        mockMvc.perform(get(inbox).with(recipientJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].userId").value(sender.getId()));
+        mockMvc.perform(get(inbox).with(outsiderJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+        var outsider = mockMvc.perform(get(recipientChat).with(outsiderJwt))
+            .andExpect(request().asyncStarted()).andReturn();
+        mockMvc.perform(asyncDispatch(outsider)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+
+        var blockUrl = "/api/users/me/blocks/" + sender.getId();
+        mockMvc.perform(put(blockUrl).with(recipientJwt)).andExpect(status().isNoContent());
+        mockMvc.perform(get(inbox).with(senderJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+        mockMvc.perform(get(recipientChat).with(recipientJwt)).andExpect(status().isForbidden());
+        mockMvc.perform(post(senderChat).with(senderJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"content":"No disponible"}
+                    """))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(delete(blockUrl).with(recipientJwt)).andExpect(status().isNoContent());
+        var restored = mockMvc.perform(get(recipientChat).with(recipientJwt))
+            .andExpect(request().asyncStarted()).andReturn();
+        mockMvc.perform(asyncDispatch(restored)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1));
+    }
     private void createCommunity() throws Exception {
         mockMvc.perform(post("/api/communities")
                 .with(jwt().jwt(token -> token.subject(OWNER_EMAIL)))

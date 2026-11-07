@@ -69,6 +69,10 @@
         <mat-icon>notifications</mat-icon>
       </button>
 
+      <a mat-icon-button routerLink="/mensajes" aria-label="Mensajes privados">
+        <mat-icon>chat</mat-icon>
+      </a>
+
       <a
         class="user-profile-link"
         routerLink="/perfil"
@@ -200,6 +204,10 @@
         <span>Acerca de</span>
       </a>
 
+      <a mat-menu-item routerLink="/mensajes">
+        <mat-icon>chat</mat-icon>
+        <span>Mensajes privados</span>
+      </a>
       <a mat-menu-item routerLink="/perfil">
         <mat-icon>manage_accounts</mat-icon>
         <span>Mi perfil</span>

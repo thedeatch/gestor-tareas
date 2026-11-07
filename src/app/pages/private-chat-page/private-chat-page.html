@@ -1,0 +1,33 @@
+<main>
+  <h1>Mensajes privados</h1>
+  <mat-card>
+    <mat-card-header><mat-card-title>Conversaciones</mat-card-title></mat-card-header>
+    <mat-card-content>
+      <button mat-button type="button" [disabled]="loading()" (click)="load()">Actualizar</button>
+      @if (error()) { <p role="alert">{{ error() }}</p> }
+      @if (loading() && !conversations().length) {
+        <p role="status">Cargando conversaciones…</p>
+      } @else if (conversations().length) {
+        <ul>
+          @for (conversation of conversations(); track conversation.userId) {
+            <li>
+              <a mat-button routerLink="/mensajes" [queryParams]="{ usuario: conversation.userId }"
+                [attr.aria-current]="selection()[0] === conversation.userId ? 'true' : null">
+                {{ conversation.name }}
+              </a>
+              <time [attr.datetime]="conversation.lastMessageAt">
+                {{ conversation.lastMessageAt | date:'dd/MM HH:mm' }}
+              </time>
+            </li>
+          }
+        </ul>
+      } @else if (!error()) {
+        <p>Abre el perfil público de una persona y elige «Enviar mensaje» para iniciar una conversación.</p>
+      }
+    </mat-card-content>
+  </mat-card>
+  @for (id of selection(); track id) {
+    <app-community-chat [endpoint]="'/api/private-chat/' + id" [title]="title(id)" [autoOpen]="true"
+      (messageSent)="load()" />
+  }
+</main>

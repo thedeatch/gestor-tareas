@@ -1,5 +1,5 @@
 <mat-card>
-  <mat-card-header><mat-card-title>Chat del grupo</mat-card-title></mat-card-header>
+  <mat-card-header><mat-card-title>{{ title() }}</mat-card-title></mat-card-header>
   <mat-card-content>
     <button mat-button type="button" [attr.aria-expanded]="open()" (click)="toggle()">
       {{ open() ? 'Cerrar chat' : 'Abrir chat' }}
@@ -14,7 +14,7 @@
         <p role="status">Conectando al chat…</p>
       }
       @if (messages().length) {
-        <ol #log role="log" aria-label="Mensajes del grupo" tabindex="0">
+        <ol #log role="log" [attr.aria-label]="title()" tabindex="0">
           @for (message of messages(); track message.id) {
             <li>
               <strong>{{ message.authorName || 'Usuario eliminado' }}</strong>
@@ -24,7 +24,7 @@
           }
         </ol>
       } @else if (connected()) {
-        <p>Aún no hay mensajes en el grupo.</p>
+        <p>Aún no hay mensajes.</p>
       }
       <form (submit)="send($event)">
         <mat-form-field appearance="outline">
