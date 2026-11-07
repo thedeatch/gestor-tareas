@@ -16,6 +16,21 @@
   overflow-wrap: anywhere;
 }
 
+.task-details {
+  grid-column: 2 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem .65rem;
+  overflow-wrap: anywhere;
+}
+
+.tag {
+  padding-inline: .35rem;
+  border-radius: .35rem;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+}
+
 .completed {
   color: var(--mat-sys-on-surface-variant);
   text-decoration: line-through;

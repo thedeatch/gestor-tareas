@@ -6,7 +6,7 @@ import {
 } from '@angular/core';
 
 import { HttpClient } from '@angular/common/http';
-import { Task } from '../models/task.model';
+import { Task, TaskDetails } from '../models/task.model';
 import { Observable, finalize, tap } from 'rxjs';
 @Service()
 export class TaskService {
@@ -137,6 +137,13 @@ export class TaskService {
       })
     );
   }
+  updateTaskDetails(id: number, details: TaskDetails): Observable<Task> {
+    return this.http.put<Task>(`${this.apiUrl}/${id}/details`, details).pipe(
+      tap(saved => this.tasks.update(tasks => tasks.map(task => task.id === id
+        ? { ...saved, projectId: task.projectId, categoryId: task.categoryId } : task)))
+    );
+  }
+
   classifyTask(id: number, projectId: number | null, categoryId: number | null): Observable<Task> {
     return this.http.put<Task>(`${this.apiUrl}/${id}/classification`, { projectId, categoryId }).pipe(
       tap(saved => this.tasks.update(tasks => tasks.map(task => task.id === id

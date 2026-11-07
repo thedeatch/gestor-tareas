@@ -32,3 +32,12 @@
     <mat-icon>delete</mat-icon>
   </button>
 </div>
+
+@if (task().status || task().priority || task().dueDate || task().tags?.length) {
+  <div class="task-details">
+    @if (task().status; as status) { <small>{{ statuses[status] }}</small> }
+    @if (task().priority; as priority) { <small>Prioridad {{ priorities[priority] }}</small> }
+    @if (task().dueDate; as date) { <small>Vence {{ date | date:'dd/MM/yyyy' }}</small> }
+    @for (tag of task().tags ?? []; track tag) { <small class="tag">{{ tag }}</small> }
+  </div>
+}

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import cl.gestortareas.api.model.Task;
+import cl.gestortareas.api.dto.TaskDetailsRequest;
 import cl.gestortareas.api.service.TaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -107,6 +108,12 @@ public class TaskController {
         Authentication authentication
     ) {
         return taskService.update(id, task, authentication.getName());
+    }
+
+    @PutMapping("/{id}/details")
+    public Task updateDetails(@PathVariable Long id, @Valid @RequestBody TaskDetailsRequest request,
+                              Authentication authentication) {
+        return taskService.updateDetails(id, request, authentication.getName());
     }
 
     @Operation(summary = "Eliminar una tarea")

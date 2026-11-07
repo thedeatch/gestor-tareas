@@ -4,6 +4,8 @@ import { MatCardModule } from '@angular/material/card';
 import { TaskForm } from '../../components/task-form/task-form';
 import { TaskOrganization } from '../../components/task-organization/task-organization';
 import { TaskItem } from '../../components/task-item/task-item';
+import { TaskDetails } from '../../models/task.model';
+import { getApiErrorMessage } from '../../models/api-error.model';
 import { TaskService } from '../../services/task';
 import { MatDialog } from '@angular/material/dialog';
 import {
@@ -110,10 +112,11 @@ export class TasksPage {
     }
 
     const data: EditTaskDialogData = {
-      description: task.description
+      ...task,
+      status: task.status ?? (task.completed ? 'COMPLETED' : 'PENDING')
     };
 
-    const dialogReference = this.dialog.open(
+    const dialogReference = this.dialog.open<EditTaskDialog, EditTaskDialogData, TaskDetails>(
       EditTaskDialog,
       {
         data,
@@ -121,35 +124,12 @@ export class TasksPage {
       }
     );
 
-    dialogReference.afterClosed().subscribe(description => {
-      if (
-        typeof description !== 'string' ||
-        !description.trim() ||
-        description === task.description
-      ) {
-        return;
-      }
-
-    this.taskService.updateTaskDescription(
-      id,
-      description.trim()
-    ).subscribe({
-      next: () => {
-        this.showMessage(
-          'Tarea actualizada correctamente.'
-        );
-      },
-      error: error => {
-        console.error(
-          'Error al editar la tarea.',
-          error
-        );
-
-        this.showMessage(
-          'No fue posible editar la tarea.'
-        );
-      }
-    });
+    dialogReference.afterClosed().subscribe(details => {
+      if (!details) return;
+      this.taskService.updateTaskDetails(id, details).subscribe({
+        next: () => this.showMessage('Tarea actualizada correctamente.'),
+        error: error => this.showMessage(getApiErrorMessage(error, 'No fue posible editar la tarea.'))
+      });
     });
   }
   protected deleteTask(id: number): void {

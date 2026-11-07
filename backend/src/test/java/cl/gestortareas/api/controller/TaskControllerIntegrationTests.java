@@ -249,4 +249,57 @@ class TaskControllerIntegrationTests {
             .andExpect(jsonPath("$.projectId").isEmpty())
             .andExpect(jsonPath("$.categoryId").value(categoryId));
     }
+
+    @Test
+    void shouldKeepAdvancedTaskDetailsCompatibleWithCompletionAndOwnership() throws Exception {
+        var owner = jwt().jwt(token -> token.subject(USER_EMAIL));
+        String otherEmail = "otra-tarea-avanzada@gestor.cl";
+        userRepository.save(new AppUser("Otra cuenta", otherEmail, "hash"));
+        var other = jwt().jwt(token -> token.subject(otherEmail));
+        mockMvc.perform(post("/api/tasks").with(owner).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"description":"Tarea original","completed":false}
+                    """))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.priority").value("NORMAL"))
+            .andExpect(jsonPath("$.status").value("PENDING"));
+        var id = taskRepository.findAllByOwnerEmailOrderByIdAsc(USER_EMAIL).get(0).getId();
+        var url = "/api/tasks/" + id;
+        String details = """
+            {"description":"Preparar entrega","priority":"HIGH","status":"IN_PROGRESS",
+             "dueDate":"2027-01-02","tags":[" Backend ","backend","Entrega"]}
+            """;
+        mockMvc.perform(put(url + "/details").with(other).contentType(MediaType.APPLICATION_JSON)
+                .content(details)).andExpect(status().isNotFound());
+        mockMvc.perform(put(url + "/details").with(owner).contentType(MediaType.APPLICATION_JSON)
+                .content(details)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.priority").value("HIGH"))
+            .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+            .andExpect(jsonPath("$.completed").value(false))
+            .andExpect(jsonPath("$.dueDate").value("2027-01-02"))
+            .andExpect(jsonPath("$.tags.length()").value(2))
+            .andExpect(jsonPath("$.tags[0]").value("Backend"));
+        mockMvc.perform(put(url + "/details").with(owner).contentType(MediaType.APPLICATION_JSON)
+                .content(details.replace("Entrega", "Entrega, inválida"))).andExpect(status().isBadRequest());
+
+        mockMvc.perform(put(url).with(owner).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"description":"Editar sin completar","completed":false}
+                    """)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
+        mockMvc.perform(put(url).with(owner).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"description":"Completar","completed":true}
+                    """)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("COMPLETED"))
+            .andExpect(jsonPath("$.priority").value("HIGH"))
+            .andExpect(jsonPath("$.tags.length()").value(2));
+        mockMvc.perform(put(url + "/details").with(owner).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"description":"Reabrir","priority":"LOW","status":"PENDING","dueDate":null,"tags":[]}
+                    """)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.completed").value(false))
+            .andExpect(jsonPath("$.dueDate").isEmpty())
+            .andExpect(jsonPath("$.tags.length()").value(0));
+    }
 }

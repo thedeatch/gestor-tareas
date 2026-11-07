@@ -1,8 +1,13 @@
 package cl.gestortareas.api.model;
 
+import java.time.LocalDate;
+import java.util.List;
+
 import org.hibernate.annotations.DynamicUpdate;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -25,6 +30,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @DynamicUpdate
 @Table(name = "tasks")
 public class Task {
+    public enum Priority { LOW, NORMAL, HIGH }
+    public enum Status { PENDING, IN_PROGRESS, COMPLETED }
 
 	@Schema(
 		description = "Identificador único generado por el servidor",
@@ -74,12 +81,50 @@ public class Task {
         this.categoryId = categoryId;
     }
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private Priority priority = Priority.NORMAL;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 15)
+    private Status status = Status.PENDING;
+
+    @Column(name = "due_date")
+    private LocalDate dueDate;
+
+    @Column(name = "tags_text", nullable = false, length = 310)
+    private String tagsText = "";
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public Priority getPriority() { return priority; }
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public Status getStatus() { return status; }
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public LocalDate getDueDate() { return dueDate; }
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public List<String> getTags() {
+        return tagsText.isEmpty() ? List.of() : List.of(tagsText.split("\\n"));
+    }
+
+    public void updateDetails(String description, Priority priority, Status status, LocalDate dueDate,
+                              List<String> tags) {
+        this.description = description;
+        this.priority = priority;
+        this.status = status;
+        this.completed = status == Status.COMPLETED;
+        this.dueDate = dueDate;
+        this.tagsText = String.join("\n", tags);
+    }
+
     public Task() {
     }
 
     public Task(String description, boolean completed) {
         this.description = description;
-        this.completed = completed;
+        setCompleted(completed);
     }
 
     public Long getId() {
@@ -100,6 +145,11 @@ public class Task {
 
     public void setCompleted(boolean completed) {
         this.completed = completed;
+        if (completed) {
+            status = Status.COMPLETED;
+        } else if (status == Status.COMPLETED) {
+            status = Status.PENDING;
+        }
     }
 
     public AppUser getOwner() {
