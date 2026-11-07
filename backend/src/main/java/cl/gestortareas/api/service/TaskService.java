@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import cl.gestortareas.api.model.Task;
@@ -45,6 +46,7 @@ public class TaskService {
         return taskRepository.save(task);
     }
 
+    @Transactional
     public Task update(Long id, Task updatedTask, String email) {
         Task existingTask = findById(id, email);
 

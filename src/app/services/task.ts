@@ -97,7 +97,7 @@ export class TaskService {
         this.tasks.update(tasks =>
           tasks.map(task =>
             task.id === id
-              ? savedTask
+              ? { ...savedTask, projectId: task.projectId, categoryId: task.categoryId }
               : task
           )
         );
@@ -130,13 +130,28 @@ export class TaskService {
         this.tasks.update(tasks =>
           tasks.map(task =>
             task.id === id
-              ? savedTask
+              ? { ...savedTask, projectId: task.projectId, categoryId: task.categoryId }
               : task
           )
         );
       })
     );
   }
+  classifyTask(id: number, projectId: number | null, categoryId: number | null): Observable<Task> {
+    return this.http.put<Task>(`${this.apiUrl}/${id}/classification`, { projectId, categoryId }).pipe(
+      tap(saved => this.tasks.update(tasks => tasks.map(task => task.id === id
+        ? { ...task, projectId: saved.projectId, categoryId: saved.categoryId } : task)))
+    );
+  }
+
+  removeClassification(id: number): void {
+    this.tasks.update(tasks => tasks.map(task => ({
+      ...task,
+      projectId: task.projectId === id ? null : task.projectId,
+      categoryId: task.categoryId === id ? null : task.categoryId
+    })));
+  }
+
   deleteTask(id: number): Observable<void> {
     return this.http.delete<void>(
       `${this.apiUrl}/${id}`

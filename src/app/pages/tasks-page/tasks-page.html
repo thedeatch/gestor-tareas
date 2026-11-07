@@ -33,6 +33,8 @@
         (taskAdded)="addTask($event)"
       ></app-task-form>
 
+      <app-task-organization #organization />
+
       <div class="task-sections">
         <section>
           <h2>Pendientes ({{ pendingTasks().length }})</h2>
@@ -45,6 +47,9 @@
                 (taskEdited)="editTask($event)"
                 (taskDeleted)="deleteTask($event)"
               ></app-task-item>
+              @if (organization.label(task); as classification) {
+                <small>{{ classification }}</small>
+              }
             } @empty {
               <p class="empty-message">
                 No hay tareas pendientes.
@@ -64,6 +69,9 @@
                 (taskEdited)="editTask($event)"
                 (taskDeleted)="deleteTask($event)"
               ></app-task-item>
+              @if (organization.label(task); as classification) {
+                <small>{{ classification }}</small>
+              }
             } @empty {
               <p class="empty-message">
                 No hay tareas completadas.

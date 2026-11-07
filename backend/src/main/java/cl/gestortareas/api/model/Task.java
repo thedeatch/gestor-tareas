@@ -1,6 +1,9 @@
 package cl.gestortareas.api.model;
 
+import org.hibernate.annotations.DynamicUpdate;
+
 import jakarta.persistence.Entity;
+import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -12,12 +15,14 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import io.swagger.v3.oas.annotations.media.Schema;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Schema(
     name = "Task",
     description = "Tarea administrada por la aplicación"
 )
 @Entity
+@DynamicUpdate
 @Table(name = "tasks")
 public class Task {
 
@@ -51,6 +56,23 @@ public class Task {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "user_id")
 	private AppUser owner;
+
+    @Column(name = "project_id")
+    private Long projectId;
+
+    @Column(name = "category_id")
+    private Long categoryId;
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public Long getProjectId() { return projectId; }
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public Long getCategoryId() { return categoryId; }
+
+    public void classify(Long projectId, Long categoryId) {
+        this.projectId = projectId;
+        this.categoryId = categoryId;
+    }
 
     public Task() {
     }

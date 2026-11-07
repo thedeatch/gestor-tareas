@@ -26,6 +26,8 @@ class TaskControllerIntegrationTests {
 
     private static final String USER_EMAIL = "test@gestor.cl";
 
+    @Autowired org.springframework.jdbc.core.simple.JdbcClient jdbc;
+
     private final MockMvc mockMvc;
     private final TaskRepository taskRepository;
     private final AppUserRepository userRepository;
@@ -179,5 +181,72 @@ class TaskControllerIntegrationTests {
                 .andExpect(status().isNoContent());
 
         assertEquals(0, taskRepository.count());
+    }
+
+    @Test
+    void shouldKeepPersonalTaskClassificationPrivateAndPreserveTasksOnDeletion() throws Exception {
+        var owner = jwt().jwt(token -> token.subject(USER_EMAIL));
+        String otherEmail = "otras-tareas@gestor.cl";
+        userRepository.save(new AppUser("Otra cuenta", otherEmail, "hash"));
+        var other = jwt().jwt(token -> token.subject(otherEmail));
+        String org = "/api/tasks/organization";
+        mockMvc.perform(post(org).with(owner).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"kind":"PROJECT","name":" Trabajo "}
+                    """))
+            .andExpect(status().isCreated());
+        mockMvc.perform(post(org).with(owner).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"kind":"PROJECT","name":"trabajo"}
+                    """))
+            .andExpect(status().isConflict());
+        mockMvc.perform(post(org).with(owner).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"kind":"CATEGORY","name":"Trabajo"}
+                    """))
+            .andExpect(status().isCreated());
+        mockMvc.perform(get(org).with(owner)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$[0].name").value("Trabajo"));
+        mockMvc.perform(get(org).with(other)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+        var projectId = jdbc.sql("SELECT id FROM task_organization WHERE kind = 'PROJECT'")
+            .query(Long.class).single();
+        var categoryId = jdbc.sql("SELECT id FROM task_organization WHERE kind = 'CATEGORY'")
+            .query(Long.class).single();
+
+        String body = """
+            {"description":"Tarea privada","completed":false}
+            """;
+        mockMvc.perform(post("/api/tasks").with(owner).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated());
+        var taskId = taskRepository.findAllByOwnerEmailOrderByIdAsc(USER_EMAIL).get(0).getId();
+        var task = "/api/tasks/" + taskId;
+        String classification = """
+            {"projectId":%d,"categoryId":%d}
+            """.formatted(projectId, categoryId);
+        mockMvc.perform(put(task + "/classification").with(other).contentType(MediaType.APPLICATION_JSON)
+                .content(classification)).andExpect(status().isNotFound());
+        mockMvc.perform(put(task + "/classification").with(owner).contentType(MediaType.APPLICATION_JSON)
+                .content(classification)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.projectId").value(projectId))
+            .andExpect(jsonPath("$.categoryId").value(categoryId));
+        mockMvc.perform(put(task + "/classification").with(owner).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"projectId":%d}
+                    """.formatted(categoryId))).andExpect(status().isBadRequest());
+        mockMvc.perform(put(task).with(owner).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"description":"Tarea editada","completed":true}
+                    """)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.projectId").value(projectId))
+            .andExpect(jsonPath("$.categoryId").value(categoryId));
+
+        mockMvc.perform(delete(org + "/" + projectId).with(other)).andExpect(status().isNotFound());
+        mockMvc.perform(delete(org + "/" + projectId).with(owner)).andExpect(status().isNoContent());
+        mockMvc.perform(get(task).with(owner)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.description").value("Tarea editada"))
+            .andExpect(jsonPath("$.projectId").isEmpty())
+            .andExpect(jsonPath("$.categoryId").value(categoryId));
     }
 }

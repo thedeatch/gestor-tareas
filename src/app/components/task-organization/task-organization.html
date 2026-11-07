@@ -1,0 +1,72 @@
+<section aria-label="Proyectos y categorías">
+  <h2>Proyectos y categorías</h2>
+  <button mat-button type="button" [disabled]="busy()" (click)="load()">
+    {{ items() ? 'Actualizar organización' : 'Organizar mis tareas' }}
+  </button>
+  @if (error()) { <p role="alert">{{ error() }}</p> }
+  @if (message()) { <p role="status">{{ message() }}</p> }
+  @if (items(); as available) {
+    <form (ngSubmit)="save()">
+      <label>Tipo
+        <select name="kind" [ngModel]="kind()" (ngModelChange)="kind.set($event)" [disabled]="busy() || !!editing()">
+          <option value="PROJECT">Proyecto</option>
+          <option value="CATEGORY">Categoría</option>
+        </select>
+      </label>
+      <label>Nombre
+        <input name="name" maxlength="80" [ngModel]="name()" (ngModelChange)="name.set($event)" [readonly]="busy()">
+      </label>
+      <button mat-stroked-button type="submit" [disabled]="busy() || !name().trim()">
+        {{ editing() ? 'Guardar nombre' : 'Crear' }}
+      </button>
+      @if (editing()) {
+        <button mat-button type="button" (click)="reset()" [disabled]="busy()">Cancelar edición</button>
+      }
+    </form>
+    @if (available.length) {
+      <ul>
+        @for (item of available; track item.id) {
+          <li>
+            {{ item.kind === 'PROJECT' ? 'Proyecto' : 'Categoría' }} · {{ item.name }}
+            <button mat-button type="button" (click)="edit(item)" [disabled]="busy()">Renombrar</button>
+            <button mat-button type="button" (click)="remove(item)" [disabled]="busy()">Eliminar</button>
+          </li>
+        }
+      </ul>
+      @if (tasks().length) {
+        <h3>Clasificar una tarea</h3>
+        <form (ngSubmit)="classify()">
+          <label>Tarea
+            <select name="task" [ngModel]="selected()" (ngModelChange)="selectTask($event)" [disabled]="busy()">
+              <option [ngValue]="null">Selecciona una tarea</option>
+              @for (task of tasks(); track task.id) {
+                <option [ngValue]="task.id">{{ task.description }}</option>
+              }
+            </select>
+          </label>
+          <label>Proyecto
+            <select name="project" [ngModel]="project()" (ngModelChange)="project.set($event)"
+              [disabled]="busy() || selected() === null">
+              <option [ngValue]="null">Sin proyecto</option>
+              @for (item of projects(); track item.id) {
+                <option [ngValue]="item.id">{{ item.name }}</option>
+              }
+            </select>
+          </label>
+          <label>Categoría
+            <select name="category" [ngModel]="category()" (ngModelChange)="category.set($event)"
+              [disabled]="busy() || selected() === null">
+              <option [ngValue]="null">Sin categoría</option>
+              @for (item of categories(); track item.id) {
+                <option [ngValue]="item.id">{{ item.name }}</option>
+              }
+            </select>
+          </label>
+          <button mat-flat-button type="submit" [disabled]="busy() || selected() === null">Guardar clasificación</button>
+        </form>
+      }
+    } @else {
+      <p>Aún no tienes proyectos ni categorías.</p>
+    }
+  }
+</section>

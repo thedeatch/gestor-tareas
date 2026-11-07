@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 
 import { TaskForm } from '../../components/task-form/task-form';
+import { TaskOrganization } from '../../components/task-organization/task-organization';
 import { TaskItem } from '../../components/task-item/task-item';
 import { TaskService } from '../../services/task';
 import { MatDialog } from '@angular/material/dialog';
@@ -27,7 +28,8 @@ import { finalize } from 'rxjs';
     MatSnackBarModule,
     MatButtonModule,
     TaskForm,
-    TaskItem
+    TaskItem,
+    TaskOrganization
   ],
   templateUrl: './tasks-page.html',
   styleUrl: './tasks-page.css'
