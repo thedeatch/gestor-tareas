@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import cl.gestortareas.api.service.CommunityMetricsService;
 import cl.gestortareas.api.service.CommunityMetricsService.Metrics;
+import cl.gestortareas.api.service.CommunityMetricsService.PersonalStats;
 
 @RestController
 @RequestMapping("/api/communities/{groupId}/metrics")
@@ -17,6 +18,11 @@ public class CommunityMetricsController {
 
     public CommunityMetricsController(CommunityMetricsService metrics) {
         this.metrics = metrics;
+    }
+
+    @GetMapping("/mine")
+    public PersonalStats mine(@PathVariable Long groupId, Authentication auth) {
+        return metrics.mine(groupId, auth.getName());
     }
 
     @GetMapping

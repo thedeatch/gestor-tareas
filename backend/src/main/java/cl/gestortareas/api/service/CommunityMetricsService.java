@@ -17,6 +17,9 @@ public class CommunityMetricsService {
     public record Counts(long members, long newMembers, long posts, long comments,
                          long events, long registrations, long participants) {}
 
+    public record PersonalStats(long posts, long comments, long points, long reactionsReceived,
+                                long eventRegistrations, long achievements) {}
+
     public record Metrics(int days, OffsetDateTime from, OffsetDateTime until, Counts counts) {}
 
     private final JdbcClient jdbc;
@@ -25,6 +28,30 @@ public class CommunityMetricsService {
     public CommunityMetricsService(JdbcClient jdbc, CommunityService communities) {
         this.jdbc = jdbc;
         this.communities = communities;
+    }
+
+    @Transactional(readOnly = true)
+    public PersonalStats mine(Long groupId, String email) {
+        Long userId = communities.requireMembership(groupId, email).getUser().getId();
+        return jdbc.sql("""
+            SELECT COALESCE(a.posts, 0) AS posts, COALESCE(a.comments, 0) AS comments,
+                (SELECT COUNT(*) FROM community_post_reactions r JOIN community_posts p ON p.id = r.post_id
+                    WHERE p.community_id = :groupId AND p.author_user_id = :userId
+                        AND r.user_id <> :userId) AS reactions_received,
+                (SELECT COUNT(*) FROM community_event_registrations r JOIN community_events e ON e.id = r.event_id
+                    WHERE e.community_id = :groupId AND r.user_id = :userId) AS event_registrations,
+                (SELECT COUNT(*) FROM community_achievements
+                    WHERE community_id = :groupId AND user_id = :userId) AS achievements
+            FROM community_memberships m
+            LEFT JOIN community_achievement_progress a ON a.community_id = m.community_id AND a.user_id = m.user_id
+            WHERE m.community_id = :groupId AND m.user_id = :userId
+            """).param("groupId", groupId).param("userId", userId).query((rs, row) -> {
+                long posts = rs.getLong("posts");
+                long comments = rs.getLong("comments");
+                long points = posts * CommunityRankingService.POST_POINTS + comments * CommunityRankingService.COMMENT_POINTS;
+                return new PersonalStats(posts, comments, points, rs.getLong("reactions_received"),
+                    rs.getLong("event_registrations"), rs.getLong("achievements"));
+            }).optional().orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Grupo no encontrado"));
     }
 
     @Transactional(readOnly = true)

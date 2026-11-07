@@ -1130,6 +1130,69 @@ class CommunityControllerIntegrationTests {
             SELECT COUNT(*) FROM community_achievements WHERE community_id = :id AND code = 'FIRST_POST'
             """).param("id", group.getId()).query(Long.class).single());
     }
+    @Test
+    void shouldShowOnlyTheViewersPersonalStatsForTheRequestedGroup() throws Exception {
+        createCommunity();
+        var group = communityRepository.findAll().get(0);
+        var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
+        var ownerJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
+        var memberJwt = jwt().jwt(token -> token.subject(OTHER_EMAIL));
+        var url = "/api/communities/" + group.getId();
+        var stats = url + "/metrics/mine";
+
+        mockMvc.perform(get(stats).with(memberJwt)).andExpect(status().isNotFound());
+        membershipRepository.save(new CommunityMembership(group, member, CommunityRole.MEMBER));
+        mockMvc.perform(get(stats).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.points").value(0))
+            .andExpect(jsonPath("$.achievements").value(0));
+        mockMvc.perform(post(url + "/posts").with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Aviso","content":"Publicación inicial"}
+                    """))
+            .andExpect(status().isCreated());
+        var postId = postRepository.findAll().get(0).getId();
+        var postUrl = url + "/posts/" + postId;
+        mockMvc.perform(post(postUrl + "/comments").with(memberJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"content":"Comentario del miembro"}
+                    """))
+            .andExpect(status().isCreated());
+        mockMvc.perform(put(postUrl + "/reactions/LIKE").with(ownerJwt)).andExpect(status().isOk());
+        mockMvc.perform(put(postUrl + "/reactions/LIKE").with(memberJwt)).andExpect(status().isOk());
+
+        String startsAt = java.time.OffsetDateTime.now().plusDays(1).toString();
+        mockMvc.perform(post(url + "/events").with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Encuentro","description":"Actividad","startsAt":"%s"}
+                    """.formatted(startsAt)))
+            .andExpect(status().isCreated());
+        var eventId = jdbc.sql("SELECT id FROM community_events WHERE community_id = :id")
+            .param("id", group.getId()).query(Long.class).single();
+        mockMvc.perform(put(url + "/events/" + eventId + "/registration").with(memberJwt))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get(stats).with(ownerJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.posts").value(1))
+            .andExpect(jsonPath("$.comments").value(0))
+            .andExpect(jsonPath("$.points").value(5))
+            .andExpect(jsonPath("$.reactionsReceived").value(1))
+            .andExpect(jsonPath("$.eventRegistrations").value(0))
+            .andExpect(jsonPath("$.achievements").value(1));
+        mockMvc.perform(get(stats).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.posts").value(0))
+            .andExpect(jsonPath("$.comments").value(1))
+            .andExpect(jsonPath("$.points").value(2))
+            .andExpect(jsonPath("$.reactionsReceived").value(0))
+            .andExpect(jsonPath("$.eventRegistrations").value(1));
+
+        createPublicCommunity();
+        var otherGroup = communityRepository.findAll().stream()
+            .filter(item -> !item.getId().equals(group.getId())).findFirst().orElseThrow();
+        mockMvc.perform(get("/api/communities/" + otherGroup.getId() + "/metrics/mine").with(ownerJwt))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.points").value(0))
+            .andExpect(jsonPath("$.reactionsReceived").value(0));
+    }
     private void createCommunity() throws Exception {
         mockMvc.perform(post("/api/communities")
                 .with(jwt().jwt(token -> token.subject(OWNER_EMAIL)))

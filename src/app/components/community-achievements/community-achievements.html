@@ -1,13 +1,24 @@
 <mat-card>
-  <mat-card-header><mat-card-title>Tus logros en el grupo</mat-card-title></mat-card-header>
+  <mat-card-header><mat-card-title>Tu actividad en el grupo</mat-card-title></mat-card-header>
   <mat-card-content>
     <p>El progreso se acumula entre temporadas. Cada publicación suma 5 puntos y cada comentario suma 2.</p>
     <button mat-button type="button" [disabled]="loading()" (click)="load()">
-      {{ items() ? 'Actualizar logros' : 'Ver mis logros' }}
+      {{ items() ? 'Actualizar mi actividad' : 'Ver mis estadísticas y logros' }}
     </button>
-    @if (loading()) { <p role="status">Cargando logros…</p> }
+    @if (loading()) { <p role="status">Cargando tu actividad…</p> }
     @if (error()) { <p role="alert">{{ error() }}</p> }
+    @if (stats(); as values) {
+      <h3>Mis estadísticas</h3>
+      <dl>
+        @for (card of cards; track card.key) {
+          <div><dt>{{ card.label }}</dt><dd>{{ values[card.key] | number }}</dd></div>
+        }
+      </dl>
+      <p>Las reacciones cuentan las que otras personas dejaron en tus publicaciones disponibles.
+        Las inscripciones incluyen las que aún están registradas.</p>
+    }
     @if (items(); as achievements) {
+      <h3>Mis logros</h3>
       <ul>
         @for (item of achievements; track item.code) {
           <li>
