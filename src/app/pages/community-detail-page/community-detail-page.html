@@ -1,7 +1,11 @@
 <main class="detail-page">
   <a mat-button routerLink="/grupos"><mat-icon>arrow_back</mat-icon>Grupos</a>
   @if (isLoading()) {
-    <p class="status">Cargando grupo...</p>
+    <div class="community-skeleton" role="status" aria-label="Cargando grupo">
+      <span class="skeleton-avatar"></span>
+      <div><span></span><span></span></div>
+      <span class="skeleton-panel"></span>
+    </div>
   } @else if (error()) {
     <div class="status error"><p>{{ error() }}</p>
       <button mat-stroked-button type="button" (click)="load()">Reintentar</button>
@@ -78,13 +82,25 @@
       }
     </nav>
 
-    <app-community-overview
-      [memberCount]="item.members.length"
-      [postCount]="posts().length"
-      [postsLoading]="postsLoading()"
-      [canManage]="canManage(item.currentUserRole)"
-      (sectionSelected)="openSection($event)"
-      [class.section-hidden]="activeSection() !== 'overview'" />
+    @if (activeSection() !== 'overview') {
+      <header class="section-heading" aria-live="polite">
+        <span class="section-heading-icon"><mat-icon>{{ sectionInfo().icon }}</mat-icon></span>
+        <div>
+          <span class="section-eyebrow">{{ item.name }}</span>
+          <h2>{{ sectionInfo().title }}</h2>
+          <p>{{ sectionInfo().description }}</p>
+        </div>
+      </header>
+    }
+
+    @if (activeSection() === 'overview') {
+      <app-community-overview
+        [memberCount]="item.members.length"
+        [postCount]="posts().length"
+        [postsLoading]="postsLoading()"
+        [canManage]="canManage(item.currentUserRole)"
+        (sectionSelected)="openSection($event)" />
+    }
 
     <mat-card class="guidelines-card" [class.section-hidden]="activeSection() !== 'overview'">
       <mat-card-header><mat-card-title>Información y reglas del grupo</mat-card-title></mat-card-header>
@@ -126,34 +142,31 @@
       </mat-card-content>
     </mat-card>
 
-    <app-community-activity #activityFeed [groupId]="item.id"
-      [class.section-hidden]="activeSection() !== 'overview'" />
+    @if (activeSection() === 'overview') {
+      <app-community-activity [groupId]="item.id" />
+      <app-community-metrics [groupId]="item.id" />
+    }
 
-    <app-community-metrics [groupId]="item.id"
-      [class.section-hidden]="activeSection() !== 'overview'" />
+    @if (activeSection() === 'productivity') {
+      <app-community-ranking [groupId]="item.id" />
+      <app-community-achievements [groupId]="item.id" />
+      <app-community-tasks [groupId]="item.id" [members]="item.members"
+        [canManage]="canManage(item.currentUserRole)" />
+    }
 
-    <app-community-ranking [groupId]="item.id"
-      [class.section-hidden]="activeSection() !== 'productivity'" />
+    @if (activeSection() === 'events') {
+      <app-community-events [groupId]="item.id" [canCreate]="canManage(item.currentUserRole)"
+        (eventCreated)="activity()?.load()" />
+      <app-community-gallery [groupId]="item.id" [canManage]="canManage(item.currentUserRole)"
+        (albumCreated)="activity()?.load()" />
+    }
 
-    <app-community-achievements [groupId]="item.id"
-      [class.section-hidden]="activeSection() !== 'productivity'" />
+    @if (activeSection() === 'channels') {
+      <app-community-channels [groupId]="item.id" [canManage]="canManage(item.currentUserRole)" />
+    }
 
-    <app-community-tasks [groupId]="item.id" [members]="item.members"
-      [canManage]="canManage(item.currentUserRole)"
-      [class.section-hidden]="activeSection() !== 'productivity'" />
-
-    <app-community-events [groupId]="item.id" [canCreate]="canManage(item.currentUserRole)"
-      (eventCreated)="activityFeed.load()"
-      [class.section-hidden]="activeSection() !== 'events'" />
-
-    <app-community-gallery [groupId]="item.id" [canManage]="canManage(item.currentUserRole)"
-      (albumCreated)="activityFeed.load()"
-      [class.section-hidden]="activeSection() !== 'events'" />
-
-    <app-community-channels [groupId]="item.id" [canManage]="canManage(item.currentUserRole)"
-      [class.section-hidden]="activeSection() !== 'channels'" />
-
-    <mat-card class="posts-card" [class.section-hidden]="activeSection() !== 'posts'">
+    @if (activeSection() === 'posts') {
+    <mat-card class="posts-card">
       <mat-card-header>
         <mat-card-title>Publicaciones</mat-card-title>
         <mat-card-subtitle>Comparte novedades con los miembros del grupo</mat-card-subtitle>
@@ -276,8 +289,10 @@
         }
       </mat-card-content>
     </mat-card>
+    }
 
-    <mat-card [class.section-hidden]="activeSection() !== 'members'">
+    @if (activeSection() === 'members') {
+    <mat-card>
       <mat-card-header><mat-card-title>Miembros</mat-card-title>
         <mat-card-subtitle>Personas que forman parte de este grupo</mat-card-subtitle>
       </mat-card-header>
@@ -322,12 +337,15 @@
         }
       </mat-card-content>
     </mat-card>
+    }
 
     @if (canManage(item.currentUserRole)) {
-      <app-community-reports [groupId]="item.id"
-        [class.section-hidden]="activeSection() !== 'moderation'"
-        (contentRemoved)="loadPosts(item.id); activityFeed.load()" />
-      <mat-card class="management-card" [class.section-hidden]="activeSection() !== 'members'">
+      @if (activeSection() === 'moderation') {
+        <app-community-reports [groupId]="item.id"
+          (contentRemoved)="loadPosts(item.id); activity()?.load()" />
+      }
+      @if (activeSection() === 'members') {
+      <mat-card class="management-card">
         <mat-card-header>
           <mat-card-title>Invitar a una persona</mat-card-title>
           <mat-card-subtitle>Debe tener una cuenta registrada en la plataforma</mat-card-subtitle>
@@ -348,9 +366,10 @@
           </form>
         </mat-card-content>
       </mat-card>
+      }
 
-      @if (joinRequests().length) {
-        <mat-card class="management-card" [class.section-hidden]="activeSection() !== 'members'">
+      @if (activeSection() === 'members' && joinRequests().length) {
+        <mat-card class="management-card">
           <mat-card-header>
             <mat-card-title>Solicitudes de ingreso</mat-card-title>
             <mat-card-subtitle>Personas que desean entrar al grupo</mat-card-subtitle>

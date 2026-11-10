@@ -17,6 +17,22 @@
 .group-tool.active small { color: inherit; opacity: .8; }
 .tool-icon { display: grid; place-items: center; flex: 0 0 42px; width: 42px; height: 42px; border-radius: 12px; background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
 .section-hidden { display: none !important; }
+.section-heading { display: flex; align-items: center; gap: .9rem; padding: 1rem 1.15rem; margin-bottom: 1rem; border: 1px solid var(--mat-sys-outline-variant); border-radius: 1rem; background: linear-gradient(135deg, color-mix(in srgb, var(--mat-sys-primary-container) 58%, var(--mat-sys-surface)), var(--mat-sys-surface-container)); animation: section-enter .2s ease-out; }
+.section-heading-icon { display: grid; place-items: center; width: 3rem; height: 3rem; flex: 0 0 3rem; border-radius: .85rem; background: var(--mat-sys-primary); color: var(--mat-sys-on-primary); }
+.section-heading h2, .section-heading p { margin: 0; }
+.section-heading h2 { font-size: 1.25rem; }
+.section-heading p { margin-top: .15rem; color: var(--mat-sys-on-surface-variant); }
+.section-eyebrow { color: var(--mat-sys-primary); font-size: .72rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.community-skeleton { display: grid; grid-template-columns: 64px 1fr; gap: 1rem; padding: 1.5rem 0; }
+.community-skeleton span { display: block; border-radius: .6rem; background: linear-gradient(90deg, var(--mat-sys-surface-container) 25%, var(--mat-sys-surface-container-high) 50%, var(--mat-sys-surface-container) 75%); background-size: 200% 100%; animation: skeleton 1.3s infinite linear; }
+.skeleton-avatar { width: 64px; height: 64px; border-radius: 50% !important; }
+.community-skeleton div { display: grid; align-content: center; gap: .55rem; }
+.community-skeleton div span:first-child { width: min(15rem, 70%); height: 1.4rem; }
+.community-skeleton div span:last-child { width: min(24rem, 90%); height: .9rem; }
+.skeleton-panel { grid-column: 1 / -1; height: 12rem; margin-top: .75rem; }
+@keyframes skeleton { to { background-position: -200% 0; } }
+@keyframes section-enter { from { opacity: 0; transform: translateY(5px); } }
+@media (prefers-reduced-motion: reduce) { .section-heading, .community-skeleton span { animation: none; } }
 .posts-card { margin-bottom: 1rem; }
 .post-form { display: flex; align-items: flex-end; gap: .75rem; padding-top: 1rem; }
 .post-fields { display: flex; flex: 1; flex-direction: column; gap: .75rem; }
@@ -62,4 +78,9 @@
   .group-tool { flex: 0 0 auto; gap: .45rem; min-height: 48px; padding: .4rem .65rem; border-radius: 999px; }
   .group-tool small { display: none; }
   .tool-icon { flex-basis: 34px; width: 34px; height: 34px; border-radius: 50%; }
+}
+@media (max-width: 520px) {
+  .section-heading { align-items: flex-start; padding: .85rem; }
+  .section-heading-icon { width: 2.5rem; height: 2.5rem; flex-basis: 2.5rem; }
+  .section-heading p { font-size: .86rem; }
 }

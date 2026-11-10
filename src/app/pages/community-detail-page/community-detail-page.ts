@@ -1,6 +1,6 @@
 import { Observable } from 'rxjs';
 import { DatePipe } from '@angular/common';
-import { Component, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -50,6 +50,12 @@ type CommunitySection =
   | 'overview'
   | CommunityOverviewSection;
 
+interface CommunitySectionInfo {
+  icon: string;
+  title: string;
+  description: string;
+}
+
 const COMMUNITY_SECTIONS: readonly CommunitySection[] = [
   'overview', 'posts', 'members', 'productivity', 'events', 'channels', 'moderation'
 ];
@@ -71,6 +77,36 @@ export class CommunityDetailPage {
   private readonly dialog = inject(MatDialog);
   protected readonly community = signal<CommunityDetail | null>(null);
   protected readonly activeSection = signal<CommunitySection>('overview');
+  protected readonly sectionInfo = computed<CommunitySectionInfo>(() => ({
+    overview: {
+      icon: 'dashboard', title: 'Resumen del grupo',
+      description: 'Información, actividad reciente y estadísticas generales.'
+    },
+    posts: {
+      icon: 'dynamic_feed', title: 'Publicaciones',
+      description: 'Novedades, conversaciones y reacciones de la comunidad.'
+    },
+    members: {
+      icon: 'group', title: 'Miembros',
+      description: 'Personas, roles, invitaciones y solicitudes de ingreso.'
+    },
+    productivity: {
+      icon: 'insights', title: 'Progreso de la comunidad',
+      description: 'Ranking, logros, estadísticas y tareas compartidas.'
+    },
+    events: {
+      icon: 'event', title: 'Eventos y galería',
+      description: 'Actividades, álbumes e imágenes para recordar.'
+    },
+    channels: {
+      icon: 'forum', title: 'Canales',
+      description: 'Espacios disponibles para conversar con el grupo.'
+    },
+    moderation: {
+      icon: 'shield', title: 'Moderación',
+      description: 'Reportes, contenido denunciado y convivencia del grupo.'
+    }
+  })[this.activeSection()]);
   protected readonly joinRequests = signal<CommunityAccess[]>([]);
   protected readonly posts = signal<CommunityPost[]>([]);
   protected readonly reactionTypes: { type: CommunityPostReactionType; icon: string; label: string }[] = [
