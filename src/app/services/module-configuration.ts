@@ -14,6 +14,7 @@ export class ModuleConfigurationService {
   private readonly availabilityState = signal<ModuleAvailability>({
     tasks: true,
     communities: true,
+    messaging: true,
     profile: true,
     users: true,
     audit: true

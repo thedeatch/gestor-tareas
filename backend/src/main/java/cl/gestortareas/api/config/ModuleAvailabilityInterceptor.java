@@ -32,6 +32,10 @@ public class ModuleAvailabilityInterceptor implements HandlerInterceptor {
             && !modules.communitiesEnabled()) {
             disabled();
         }
+        if (path.startsWith("/api/private-chat")
+            && !modules.messagingEnabled()) {
+            disabled();
+        }
         if (path.startsWith("/api/admin/users") && !modules.usersEnabled()) {
             disabled();
         }

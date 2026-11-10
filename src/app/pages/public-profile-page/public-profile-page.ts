@@ -11,6 +11,7 @@ import { finalize } from 'rxjs';
 import { BlockStatus, UserBlocksService } from '../../services/user-blocks';
 import { getApiErrorMessage } from '../../models/api-error.model';
 import { AuthService } from '../../services/auth';
+import { ModuleConfigurationService } from '../../services/module-configuration';
 
 @Component({
   selector: 'app-public-profile-page',
@@ -22,6 +23,8 @@ export class PublicProfilePage implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(AuthService);
   private readonly blocks = inject(UserBlocksService);
+  private readonly moduleConfiguration = inject(ModuleConfigurationService);
+  protected readonly messagingEnabled = signal(false);
   protected readonly block = signal<BlockStatus | null>(null);
   protected readonly blockBusy = signal(false);
   protected readonly blockError = signal('');
@@ -31,6 +34,10 @@ export class PublicProfilePage implements OnDestroy {
   protected readonly error = signal<string | null>(null);
 
   constructor() {
+    this.moduleConfiguration.load().subscribe({
+      next: availability => this.messagingEnabled.set(availability.messaging),
+      error: () => this.messagingEnabled.set(false)
+    });
     const id = Number(this.route.snapshot.paramMap.get('id'));
     if (!Number.isInteger(id) || id < 1) {
       this.error.set('El perfil solicitado no es válido.');

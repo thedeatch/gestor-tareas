@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest(properties = {
     "app.modules.tasks-enabled=false",
+    "app.modules.messaging-enabled=false",
     "app.modules.users-enabled=true",
     "app.modules.audit-enabled=false"
 })
@@ -31,6 +32,7 @@ class ModuleControllerIntegrationTests {
         mockMvc.perform(get("/api/modules"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.tasks").value(false))
+            .andExpect(jsonPath("$.messaging").value(false))
             .andExpect(jsonPath("$.profile").value(true))
             .andExpect(jsonPath("$.users").value(true))
             .andExpect(jsonPath("$.audit").value(false));

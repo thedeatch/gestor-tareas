@@ -72,10 +72,15 @@ export class Navbar {
     const role = this.userRole();
     return APP_MODULES.filter(module =>
       module.id !== 'profile' &&
+      module.id !== 'messaging' &&
       this.moduleConfiguration.isEnabled(module.id) &&
       (!module.roles || (role !== null && module.roles.includes(role)))
     );
   });
+
+  protected readonly messagingEnabled = computed(() =>
+    this.moduleConfiguration.isEnabled('messaging')
+  );
 
   constructor() {
     this.moduleConfiguration.load().subscribe({ error: () => undefined });

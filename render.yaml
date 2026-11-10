@@ -60,6 +60,10 @@ services:
         value: https://gestor-tareas-web-thedeatch.onrender.com
       - key: MODULE_TASKS_ENABLED
         value: "true"
+      - key: MODULE_COMMUNITIES_ENABLED
+        value: "true"
+      - key: MODULE_MESSAGING_ENABLED
+        value: "true"
       - key: MODULE_USERS_ENABLED
         value: "true"
       - key: MODULE_AUDIT_ENABLED

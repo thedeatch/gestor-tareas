@@ -21,6 +21,8 @@ Angular ─────► Spring Boot API ─────► PostgreSQL
 - Aplicación Angular standalone.
 - Componentes por funcionalidad y servicios para acceder a la API.
 - Guards y permisos para proteger navegación.
+- Los módulos de tareas, comunidades, mensajería, usuarios y auditoría pueden
+  habilitarse de manera independiente.
 - Tema claro/oscuro y reducción de movimiento por usuario.
 - Nginx sirve la compilación de producción dentro de Docker.
 
@@ -30,6 +32,7 @@ Angular ─────► Spring Boot API ─────► PostgreSQL
 - Servicios contienen las reglas de negocio.
 - Repositorios Spring Data acceden a PostgreSQL.
 - Un manejador global entrega errores con un formato uniforme.
+- Un interceptor impide acceder a las API de módulos deshabilitados.
 - Swagger/OpenAPI documenta los contratos HTTP.
 
 ### Datos

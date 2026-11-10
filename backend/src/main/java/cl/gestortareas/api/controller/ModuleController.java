@@ -23,6 +23,7 @@ public class ModuleController {
         return Map.of(
             "tasks", modules.tasksEnabled(),
             "communities", modules.communitiesEnabled(),
+            "messaging", modules.messagingEnabled(),
             "profile", true,
             "users", modules.usersEnabled(),
             "audit", modules.auditEnabled()

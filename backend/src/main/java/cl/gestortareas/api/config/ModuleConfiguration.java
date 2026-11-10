@@ -18,6 +18,11 @@ public class ModuleConfiguration implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(interceptor)
-            .addPathPatterns("/api/tasks/**", "/api/admin/**");
+            .addPathPatterns(
+                "/api/tasks/**",
+                "/api/communities/**",
+                "/api/private-chat/**",
+                "/api/admin/**"
+            );
     }
 }

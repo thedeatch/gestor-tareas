@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record ModuleProperties(
     boolean tasksEnabled,
     boolean communitiesEnabled,
+    boolean messagingEnabled,
     boolean usersEnabled,
     boolean auditEnabled
 ) {

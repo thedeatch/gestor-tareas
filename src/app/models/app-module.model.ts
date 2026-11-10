@@ -10,7 +10,13 @@ export interface AppModule {
   roles?: UserRole[];
 }
 
-export type ModuleId = 'tasks' | 'communities' | 'profile' | 'users' | 'audit';
+export type ModuleId =
+  | 'tasks'
+  | 'communities'
+  | 'messaging'
+  | 'profile'
+  | 'users'
+  | 'audit';
 
 export type ModuleAvailability = Record<ModuleId, boolean>;
 
@@ -30,6 +36,14 @@ export const APP_MODULES: readonly AppModule[] = [
     description: 'Crea grupos, reúne miembros y colabora dentro de la comunidad.',
     icon: 'groups',
     route: '/grupos'
+  },
+  {
+    id: 'messaging',
+    label: 'Mensajes',
+    title: 'Mensajería privada',
+    description: 'Conversa directamente con otras personas de la plataforma.',
+    icon: 'chat',
+    route: '/mensajes'
   },
   {
     id: 'profile',

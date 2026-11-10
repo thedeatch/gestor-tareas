@@ -16,7 +16,9 @@
       </div>
     </header>
     @if (block()?.canBlock && !block()?.blocked) {
-      <a mat-button routerLink="/mensajes" [queryParams]="{ usuario: user.id }">Enviar mensaje</a>
+      @if (messagingEnabled()) {
+        <a mat-button routerLink="/mensajes" [queryParams]="{ usuario: user.id }">Enviar mensaje</a>
+      }
     }
     @if (block()?.canBlock) {
       <button mat-stroked-button type="button" [disabled]="blockBusy()" (click)="toggleBlock(user.id)">
