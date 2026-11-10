@@ -39,15 +39,15 @@
         (changed)="filters.set($event)" />
       <p role="status">{{ filteredTasks().length }} de {{ totalTasks() }} tareas</p>
 
-      <div role="group" aria-label="Vista de tareas">
-        <button mat-button type="button" [disabled]="isMoving()" [attr.aria-pressed]="view() === 'LIST'"
-          (click)="view.set('LIST')">Lista</button>
-        <button mat-button type="button" [disabled]="isMoving()" [attr.aria-pressed]="view() === 'KANBAN'"
-          (click)="view.set('KANBAN')">Kanban</button>
-        <button mat-button type="button" [disabled]="isMoving()" [attr.aria-pressed]="view() === 'CALENDAR'"
-          (click)="view.set('CALENDAR')">Calendario</button>
-        <button mat-button type="button" [disabled]="isMoving()" [attr.aria-pressed]="view() === 'STATS'"
-          (click)="view.set('STATS')">Estadísticas</button>
+      <div class="view-switcher" role="group" aria-label="Vista de tareas">
+        <button mat-button type="button" aria-label="Vista Lista" [disabled]="isMoving()" [attr.aria-pressed]="view() === 'LIST'"
+          (click)="view.set('LIST')"><mat-icon>view_list</mat-icon>Lista</button>
+        <button mat-button type="button" aria-label="Vista Kanban" [disabled]="isMoving()" [attr.aria-pressed]="view() === 'KANBAN'"
+          (click)="view.set('KANBAN')"><mat-icon>view_kanban</mat-icon>Kanban</button>
+        <button mat-button type="button" aria-label="Vista Calendario" [disabled]="isMoving()" [attr.aria-pressed]="view() === 'CALENDAR'"
+          (click)="view.set('CALENDAR')"><mat-icon>calendar_month</mat-icon>Calendario</button>
+        <button mat-button type="button" aria-label="Vista Estadísticas" [disabled]="isMoving()" [attr.aria-pressed]="view() === 'STATS'"
+          (click)="view.set('STATS')"><mat-icon>monitoring</mat-icon>Estadísticas</button>
       </div>
       @if (view() === 'KANBAN') {
         <app-task-kanban [tasks]="filteredTasks()" taskEndpoint="/api/tasks" [busy]="isMoving()"
@@ -72,7 +72,7 @@
               ></app-task-item>
               <app-task-subtasks [endpoint]="'/api/tasks/' + task.id + '/subtasks'" />
               @if (organization.label(task); as classification) {
-                <small>{{ classification }}</small>
+                <small class="classification"><mat-icon>folder</mat-icon>{{ classification }}</small>
               }
             } @empty {
               <p class="empty-message">
@@ -95,7 +95,7 @@
               ></app-task-item>
               <app-task-subtasks [endpoint]="'/api/tasks/' + task.id + '/subtasks'" />
               @if (organization.label(task); as classification) {
-                <small>{{ classification }}</small>
+                <small class="classification"><mat-icon>folder</mat-icon>{{ classification }}</small>
               }
             } @empty {
               <p class="empty-message">

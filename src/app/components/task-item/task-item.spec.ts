@@ -26,4 +26,24 @@ describe('TaskItem', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('muestra prioridad, estado y alerta visual de vencimiento', () => {
+    fixture.componentRef.setInput('task', {
+      id: 2,
+      description: 'Resolver incidencia',
+      completed: false,
+      status: 'IN_PROGRESS',
+      priority: 'HIGH',
+      dueDate: '2000-01-01',
+      tags: ['Urgente']
+    });
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.textContent).toContain('En progreso');
+    expect(host.textContent).toContain('Alta');
+    expect(host.textContent).toContain('Atrasada');
+    expect(host.querySelector('.overdue')).not.toBeNull();
+    expect(host.classList.contains('priority-high')).toBe(true);
+  });
 });

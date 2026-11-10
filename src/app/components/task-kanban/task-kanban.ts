@@ -49,6 +49,11 @@ export class TaskKanban {
     return TASK_STATUS_LABELS[status];
   }
 
+  protected isOverdue(task: KanbanTask): boolean {
+    return !!task.dueDate && this.statusOf(task) !== 'COMPLETED'
+      && new Date(`${task.dueDate}T23:59:59`).getTime() < Date.now();
+  }
+
   protected adjacentStatus(task: KanbanTask, direction: -1 | 1): TaskStatus | null {
     const index = this.statusOrder.indexOf(this.statusOf(task));
     return this.statusOrder[index + direction] ?? null;

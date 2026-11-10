@@ -47,8 +47,12 @@ section h2 {
 .task-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 10px;
 }
+.view-switcher { display: flex; flex-wrap: wrap; gap: .25rem; margin: 1rem 0; padding: .35rem; border-radius: 12px; background: var(--mat-sys-surface-container); }
+.view-switcher button[aria-pressed=true] { color: var(--mat-sys-on-primary-container); background: var(--mat-sys-primary-container); }
+.classification { display: flex; align-items: center; gap: .3rem; margin: -.35rem .75rem .25rem; color: var(--mat-sys-on-surface-variant); }
+.classification mat-icon { width: 16px; height: 16px; font-size: 16px; }
 
 .empty-message {
   color: var(--mat-sys-on-surface-variant);

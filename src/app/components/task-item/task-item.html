@@ -33,11 +33,22 @@
   </button>
 </div>
 
-@if (task().status || task().priority || task().dueDate || task().tags?.length) {
-  <div class="task-details">
-    @if (task().status; as status) { <small>{{ statuses[status] }}</small> }
-    @if (task().priority; as priority) { <small>Prioridad {{ priorities[priority] }}</small> }
-    @if (task().dueDate; as date) { <small>Vence {{ date | date:'dd/MM/yyyy' }}</small> }
-    @for (tag of task().tags ?? []; track tag) { <small class="tag">{{ tag }}</small> }
-  </div>
-}
+<div class="task-details">
+  @let currentStatus = status(task());
+  @let currentPriority = task().priority ?? 'NORMAL';
+  <small class="detail-chip status-chip">
+    <mat-icon>{{ statusIcon(currentStatus) }}</mat-icon>{{ statuses[currentStatus] }}
+  </small>
+  <small class="detail-chip" [class]="'detail-chip priority-' + currentPriority.toLowerCase()">
+    <mat-icon>{{ priorityIcon(currentPriority) }}</mat-icon>{{ priorities[currentPriority] }}
+  </small>
+  @if (task().dueDate; as date) {
+    <small class="detail-chip due-chip" [class.overdue]="isOverdue(task())">
+      <mat-icon>{{ isOverdue(task()) ? 'warning' : 'event' }}</mat-icon>
+      {{ isOverdue(task()) ? 'Atrasada' : 'Vence' }} {{ date | date:'dd/MM/yyyy' }}
+    </small>
+  }
+  @for (tag of task().tags ?? []; track tag) {
+    <small class="detail-chip tag"><mat-icon>label</mat-icon>{{ tag }}</small>
+  }
+</div>

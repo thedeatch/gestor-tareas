@@ -89,7 +89,7 @@ describe('TasksPage', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     const buttons = [...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[];
-    buttons.find(button => button.textContent.trim() === 'Kanban')!.click();
+    buttons.find(button => button.getAttribute('aria-label') === 'Vista Kanban')!.click();
     fixture.detectChanges();
     await fixture.whenStable();
     const kanban = fixture.debugElement.query(By.directive(TaskKanban))
@@ -123,7 +123,7 @@ describe('TasksPage', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     const buttons = [...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[];
-    buttons.find(button => button.textContent.trim() === 'Calendario')!.click();
+    buttons.find(button => button.getAttribute('aria-label') === 'Vista Calendario')!.click();
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -149,7 +149,7 @@ describe('TasksPage', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     const buttons = [...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[];
-    buttons.find(button => button.textContent.trim() === 'Estadísticas')!.click();
+    buttons.find(button => button.getAttribute('aria-label') === 'Vista Estadísticas')!.click();
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();

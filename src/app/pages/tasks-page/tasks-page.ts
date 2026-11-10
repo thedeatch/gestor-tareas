@@ -29,6 +29,7 @@ import {
   EditTaskDialogData
 } from '../../components/edit-task-dialog/edit-task-dialog';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { finalize } from 'rxjs';
 
 @Component({
@@ -37,6 +38,7 @@ import { finalize } from 'rxjs';
     MatCardModule,
     MatSnackBarModule,
     MatButtonModule,
+    MatIconModule,
     TaskForm,
     TaskItem,
     TaskOrganization,

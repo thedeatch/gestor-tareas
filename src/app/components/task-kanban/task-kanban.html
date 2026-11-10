@@ -24,13 +24,24 @@
             }
             <strong>{{ task.description }}</strong>
           </header>
-          <p>
-            Prioridad {{ priorities[task.priority ?? 'NORMAL'] }}
-            @if (task.dueDate; as date) { · Vence {{ date | date:'dd/MM/yyyy' }} }
-          </p>
-          @if (task.assigneeName) { <p>{{ task.assigneeName }}</p> }
+          <div class="card-metadata">
+            <span [class]="'priority priority-' + (task.priority ?? 'NORMAL').toLowerCase()">
+              <mat-icon>flag</mat-icon>{{ priorities[task.priority ?? 'NORMAL'] }}
+            </span>
+            @if (task.dueDate; as date) {
+              <span class="due" [class.overdue]="isOverdue(task)">
+                <mat-icon>{{ isOverdue(task) ? 'warning' : 'event' }}</mat-icon>
+                {{ isOverdue(task) ? 'Atrasada' : 'Vence' }} {{ date | date:'dd/MM/yyyy' }}
+              </span>
+            }
+          </div>
+          @if (task.assigneeName) {
+            <p class="assignee"><mat-icon>person</mat-icon>{{ task.assigneeName }}</p>
+          }
           @if (task.tags?.length) {
-            <p class="tags">{{ task.tags?.join(' · ') }}</p>
+            <div class="tags">
+              @for (tag of task.tags; track tag) { <span>{{ tag }}</span> }
+            </div>
           }
           @if (task.canChangeStatus !== false) {
             <div class="move-actions" aria-label="Mover tarea con el teclado">
