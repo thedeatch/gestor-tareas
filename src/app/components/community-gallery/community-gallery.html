@@ -1,71 +1,122 @@
-<mat-card>
-  <mat-card-header><mat-card-title>Galería del grupo</mat-card-title></mat-card-header>
-  <mat-card-content>
-    @if (canManage() && !creating()) {
-      <button mat-button type="button" [disabled]="busy()" (click)="creating.set(true)">Crear álbum</button>
+<mat-card class="gallery-card">
+  <mat-card-header>
+    <div mat-card-avatar class="gallery-heading-icon"><mat-icon>photo_library</mat-icon></div>
+    <mat-card-title>Galería del grupo</mat-card-title>
+    <mat-card-subtitle>Explora los recuerdos compartidos por la comunidad</mat-card-subtitle>
+    @if (canManage() && !creating() && !album()) {
+      <button mat-flat-button type="button" [disabled]="busy()" (click)="creating.set(true)">
+        <mat-icon>add_photo_alternate</mat-icon>Crear álbum
+      </button>
     }
+  </mat-card-header>
+
+  <mat-card-content>
     @if (canManage() && creating()) {
-      <form [formGroup]="form" (ngSubmit)="create()">
+      <form class="album-form" [formGroup]="form" (ngSubmit)="create()">
         <mat-form-field appearance="outline">
           <mat-label>Título del álbum</mat-label>
+          <mat-icon matPrefix>collections_bookmark</mat-icon>
           <input matInput formControlName="title" maxlength="120" [readonly]="busy()">
+          <mat-hint align="end">{{ form.controls.title.value.length }}/120</mat-hint>
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Descripción opcional</mat-label>
           <textarea matInput formControlName="description" rows="2" maxlength="500" [readonly]="busy()"></textarea>
+          <mat-hint align="end">{{ form.controls.description.value.length }}/500</mat-hint>
         </mat-form-field>
-        <div>
-          <button mat-flat-button type="submit" [disabled]="busy() || form.invalid">Guardar álbum</button>
+        <div class="form-actions">
+          <button mat-flat-button type="submit" [disabled]="busy() || form.invalid">
+            <mat-icon>save</mat-icon>Guardar álbum
+          </button>
           <button mat-button type="button" [disabled]="busy()" (click)="creating.set(false)">Cancelar</button>
         </div>
       </form>
     }
-    @if (message()) { <p role="status">{{ message() }}</p> }
+
+    @if (message()) { <p class="feedback success" role="status">{{ message() }}</p> }
     @if (error()) {
-      <p role="alert">{{ error() }}</p>
-      <button mat-button type="button" [disabled]="busy()" (click)="load()">Actualizar álbumes</button>
+      <div class="feedback error" role="alert">
+        <span>{{ error() }}</span>
+        <button mat-button type="button" [disabled]="busy()" (click)="load()">Reintentar</button>
+      </div>
     }
-    @if (albums(); as items) {
-      @if (items.length) {
-        <ul aria-label="Álbumes">
-          @for (item of items; track item.id) {
-            <li>
-              <button mat-button type="button" [id]="'album-' + item.id" [disabled]="busy()" [attr.aria-pressed]="album()?.id === item.id"
-                (click)="open(item)">{{ item.title }}</button>
-            </li>
-          }
-        </ul>
-      } @else {
-        <p>Aún no hay álbumes en este grupo.</p>
-      }
-    } @else if (busy()) {
-      <p role="status">Cargando álbumes...</p>
-    }
+
     @if (album(); as selected) {
-      <h3>{{ selected.title }}</h3>
-      @if (selected.description) { <p>{{ selected.description }}</p> }
-      @if (canManage()) {
-        <label for="community-gallery-upload">Añadir imagen (JPEG o PNG, hasta 2 MB)</label>
-        <input #imageInput id="community-gallery-upload" type="file" accept="image/jpeg,image/png"
-          [disabled]="busy()" (change)="upload(imageInput, selected)">
-      }
-      @if (images().length) {
-        <ul aria-label="Imágenes del álbum">
-          @for (image of images(); track image.id) {
-            <li><button mat-button type="button" [disabled]="busy()"
-              (click)="view(selected, image)">{{ image.name }}</button></li>
+      <section class="album-detail" aria-labelledby="selected-album-title">
+        <div class="album-toolbar">
+          <button mat-button type="button" (click)="closeAlbum()">
+            <mat-icon>arrow_back</mat-icon>Todos los álbumes
+          </button>
+          @if (canManage()) {
+            <input #imageInput class="visually-hidden" id="community-gallery-upload" type="file"
+              accept="image/jpeg,image/png" [disabled]="busy()" (change)="upload(imageInput, selected)">
+            <button mat-flat-button type="button" [disabled]="busy()" (click)="imageInput.click()">
+              <mat-icon>add_photo_alternate</mat-icon>Añadir imagen
+            </button>
           }
-        </ul>
+        </div>
+        <div class="album-title-row">
+          <div>
+            <h3 id="selected-album-title">{{ selected.title }}</h3>
+            @if (selected.description) { <p>{{ selected.description }}</p> }
+          </div>
+          <span class="image-count"><mat-icon>photo</mat-icon>{{ images().length }}</span>
+        </div>
+
+        @if (imagesLoading()) {
+          <div class="loading-state" role="status">
+            <mat-spinner diameter="40"></mat-spinner><span>Cargando imágenes...</span>
+          </div>
+        } @else if (images().length) {
+          <div class="image-grid" aria-label="Imágenes del álbum">
+            @for (image of images(); track image.id) {
+              @if (imageUrls()[image.id]; as imageUrl) {
+                <button class="image-tile" type="button" (click)="view(image)" [attr.aria-label]="'Ver ' + image.name">
+                  <img [src]="imageUrl" [alt]="image.name">
+                  <span>{{ image.name }}</span>
+                </button>
+              }
+            }
+          </div>
+        } @else {
+          <div class="empty-state">
+            <mat-icon>add_photo_alternate</mat-icon>
+            <h3>Este álbum espera su primera imagen</h3>
+            <p>Agrega una fotografía para comenzar a guardar recuerdos.</p>
+          </div>
+        }
+      </section>
+    } @else if (albums(); as items) {
+      @if (items.length) {
+        <div class="album-grid" aria-label="Álbumes">
+          @for (item of items; track item.id) {
+            <button class="album-tile" type="button" [id]="'album-' + item.id" [disabled]="busy()" (click)="open(item)">
+              <div class="album-cover">
+                @if (coverUrls()[item.id]; as coverUrl) {
+                  <img [src]="coverUrl" alt="">
+                } @else {
+                  <mat-icon>photo_library</mat-icon>
+                }
+                <span><mat-icon>photo</mat-icon>{{ item.imageCount }}</span>
+              </div>
+              <div class="album-copy">
+                <strong>{{ item.title }}</strong>
+                <p>{{ item.description || 'Álbum de la comunidad' }}</p>
+              </div>
+            </button>
+          }
+        </div>
       } @else {
-        <p>Este álbum aún no tiene imágenes.</p>
+        <div class="empty-state">
+          <mat-icon>collections</mat-icon>
+          <h3>Aún no hay álbumes</h3>
+          <p>Los recuerdos y momentos del grupo aparecerán aquí.</p>
+        </div>
       }
-      @if (preview(); as image) {
-        <figure>
-          <img [src]="image.url" [alt]="image.name">
-          <figcaption>{{ image.name }}</figcaption>
-        </figure>
-        <button mat-button type="button" (click)="clearPreview()">Cerrar imagen</button>
-      }
+    } @else {
+      <div class="loading-state" role="status">
+        <mat-spinner diameter="40"></mat-spinner><span>Cargando álbumes...</span>
+      </div>
     }
   </mat-card-content>
 </mat-card>

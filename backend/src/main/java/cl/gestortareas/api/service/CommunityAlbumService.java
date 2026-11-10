@@ -22,7 +22,7 @@ public class CommunityAlbumService {
     private static final byte[] PNG_HEADER = {(byte) 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a};
     private static final byte[] JPEG_HEADER = {(byte) 0xff, (byte) 0xd8, (byte) 0xff};
 
-    public record Album(Long id, String title, String description) {}
+    public record Album(Long id, String title, String description, long imageCount, Long coverImageId) {}
     public record Image(Long id, String name) {}
     public record ImageData(String contentType, byte[] data) {}
 
@@ -40,8 +40,13 @@ public class CommunityAlbumService {
     public List<Album> findAll(Long groupId, String email) {
         communities.requireMembership(groupId, email);
         return jdbc.sql("""
-            SELECT id, title, description FROM community_albums
-            WHERE community_id = :groupId ORDER BY id DESC
+            SELECT a.id, a.title, a.description, COUNT(i.file_id) AS image_count,
+                   MAX(i.file_id) AS cover_image_id
+            FROM community_albums a
+            LEFT JOIN community_album_images i ON i.album_id = a.id
+            WHERE a.community_id = :groupId
+            GROUP BY a.id, a.title, a.description
+            ORDER BY a.id DESC
             """).param("groupId", groupId).query(Album.class).list();
     }
 

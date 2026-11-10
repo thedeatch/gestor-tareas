@@ -6,14 +6,20 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { finalize, Observable, switchMap } from 'rxjs';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDialog } from '@angular/material/dialog';
+import { catchError, finalize, forkJoin, Observable, of, switchMap } from 'rxjs';
 
 import { getApiErrorMessage } from '../../models/api-error.model';
+import { GalleryImageDialog, GalleryDialogImage } from './gallery-image-dialog';
 
 interface Album {
   id: number;
   title: string;
   description: string;
+  imageCount: number;
+  coverImageId: number | null;
 }
 
 interface AlbumImage {
@@ -23,15 +29,10 @@ interface AlbumImage {
 
 @Component({
   selector: 'app-community-gallery',
-  imports: [ReactiveFormsModule, MatButtonModule, MatCardModule, MatFormFieldModule, MatInputModule],
+  imports: [ReactiveFormsModule, MatButtonModule, MatCardModule, MatFormFieldModule,
+    MatInputModule, MatIconModule, MatProgressSpinnerModule],
   templateUrl: './community-gallery.html',
-  styles: [`
-    :host { display: block; margin-bottom: 1rem; }
-    form { display: grid; gap: .5rem; }
-    li { margin-block: .35rem; }
-    img { display: block; max-width: 100%; max-height: 32rem; object-fit: contain; }
-    p, figcaption, li { overflow-wrap: anywhere; white-space: pre-wrap; }
-  `]
+  styleUrl: './community-gallery.css'
 })
 export class CommunityGallery implements OnInit {
   readonly groupId = input.required<number>();
@@ -39,10 +40,13 @@ export class CommunityGallery implements OnInit {
   readonly albumCreated = output<void>();
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly dialog = inject(MatDialog);
   protected readonly albums = signal<Album[] | null>(null);
   protected readonly album = signal<Album | null>(null);
   protected readonly images = signal<AlbumImage[]>([]);
-  protected readonly preview = signal<{ url: string; name: string } | null>(null);
+  protected readonly coverUrls = signal<Record<number, string>>({});
+  protected readonly imageUrls = signal<Record<number, string>>({});
+  protected readonly imagesLoading = signal(false);
   protected readonly busy = signal(false);
   protected readonly creating = signal(false);
   protected readonly error = signal('');
@@ -57,7 +61,10 @@ export class CommunityGallery implements OnInit {
   });
 
   constructor() {
-    this.destroyRef.onDestroy(() => this.clearPreview());
+    this.destroyRef.onDestroy(() => {
+      this.revokeUrls(this.coverUrls());
+      this.revokeUrls(this.imageUrls());
+    });
   }
 
   ngOnInit(): void {
@@ -66,7 +73,7 @@ export class CommunityGallery implements OnInit {
 
   protected load(): void {
     this.run(this.http.get<Album[]>(this.url()), 'No se pudieron cargar los álbumes.',
-      albums => this.albums.set(albums));
+      albums => this.setAlbums(albums));
   }
 
   protected create(): void {
@@ -77,14 +84,14 @@ export class CommunityGallery implements OnInit {
       this.message.set('Álbum creado.');
       this.albumCreated.emit();
       return this.http.get<Album[]>(this.url());
-    })), 'No se pudo completar la actualización de los álbumes.', albums => this.albums.set(albums));
+    })), 'No se pudo completar la actualización de los álbumes.', albums => this.setAlbums(albums));
   }
 
   protected open(album: Album): void {
     this.run(this.http.get<AlbumImage[]>(this.imagesUrl(album.id)), 'No se pudo abrir el álbum.', images => {
-      this.clearPreview();
       this.album.set(album);
       this.images.set(images);
+      this.loadImageUrls(album, images);
     });
   }
 
@@ -98,24 +105,71 @@ export class CommunityGallery implements OnInit {
     }
     const body = new FormData();
     body.append('file', file);
-    this.run(this.http.post<AlbumImage>(this.imagesUrl(album.id), body), 'No se pudo subir la imagen.', image => {
-      this.images.update(images => [image, ...images]);
+    this.run(this.http.post<AlbumImage>(this.imagesUrl(album.id), body).pipe(
+      switchMap(() => this.http.get<AlbumImage[]>(this.imagesUrl(album.id)))),
+    'No se pudo subir la imagen.', images => {
+      this.images.set(images);
+      this.loadImageUrls(album, images);
+      this.albums.update(items => items?.map(item => item.id === album.id
+        ? { ...item, imageCount: images.length, coverImageId: images[0]?.id ?? null } : item) ?? null);
+      if (this.albums()) this.loadCovers(this.albums()!);
       this.message.set('Imagen añadida al álbum.');
     });
   }
 
-  protected view(album: Album, image: AlbumImage): void {
-    this.run(this.http.get(`${this.imagesUrl(album.id)}/${image.id}`, { responseType: 'blob' }),
-      'No se pudo cargar la imagen.', blob => {
-        this.clearPreview();
-        this.preview.set({ url: URL.createObjectURL(blob), name: image.name });
-      });
+  protected closeAlbum(): void {
+    this.album.set(null);
+    this.images.set([]);
+    this.revokeUrls(this.imageUrls());
+    this.imageUrls.set({});
   }
 
-  protected clearPreview(): void {
-    const preview = this.preview();
-    if (preview) URL.revokeObjectURL(preview.url);
-    this.preview.set(null);
+  protected view(image: AlbumImage): void {
+    const selected = this.album();
+    const available: GalleryDialogImage[] = this.images().filter(item => this.imageUrls()[item.id])
+      .map(item => ({ ...item, url: this.imageUrls()[item.id] }));
+    const index = available.findIndex(item => item.id === image.id);
+    if (!selected || index < 0) return;
+    this.dialog.open(GalleryImageDialog, {
+      data: { albumTitle: selected.title, images: available, initialIndex: index },
+      width: 'min(1000px, 96vw)', maxWidth: '96vw'
+    });
+  }
+
+  private setAlbums(albums: Album[]): void { this.albums.set(albums); this.loadCovers(albums); }
+
+  private loadCovers(albums: Album[]): void {
+    const requests = albums.filter(item => item.coverImageId).map(item =>
+      this.http.get(`${this.imagesUrl(item.id)}/${item.coverImageId}`, { responseType: 'blob' })
+        .pipe(catchError(() => of(null)), switchMap(blob => of({ id: item.id, blob }))));
+    this.revokeUrls(this.coverUrls());
+    this.coverUrls.set({});
+    if (!requests.length) return;
+    forkJoin(requests).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(items => {
+      const urls: Record<number, string> = {};
+      for (const item of items) if (item.blob) urls[item.id] = URL.createObjectURL(item.blob);
+      this.coverUrls.set(urls);
+    });
+  }
+
+  private loadImageUrls(album: Album, images: AlbumImage[]): void {
+    this.revokeUrls(this.imageUrls());
+    this.imageUrls.set({});
+    if (!images.length) return;
+    this.imagesLoading.set(true);
+    forkJoin(images.map(image => this.http.get(`${this.imagesUrl(album.id)}/${image.id}`,
+      { responseType: 'blob' }).pipe(catchError(() => of(null)),
+      switchMap(blob => of({ id: image.id, blob }))))).pipe(
+      takeUntilDestroyed(this.destroyRef), finalize(() => this.imagesLoading.set(false))
+    ).subscribe(items => {
+      const urls: Record<number, string> = {};
+      for (const item of items) if (item.blob) urls[item.id] = URL.createObjectURL(item.blob);
+      this.imageUrls.set(urls);
+    });
+  }
+
+  private revokeUrls(urls: Record<number, string>): void {
+    Object.values(urls).forEach(url => URL.revokeObjectURL(url));
   }
 
   private url(): string {
