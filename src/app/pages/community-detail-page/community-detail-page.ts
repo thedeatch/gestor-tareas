@@ -1,7 +1,8 @@
 import { Observable } from 'rxjs';
 import { DatePipe } from '@angular/common';
 import { Component, inject, signal, viewChild } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -49,6 +50,10 @@ type CommunitySection =
   | 'overview'
   | CommunityOverviewSection;
 
+const COMMUNITY_SECTIONS: readonly CommunitySection[] = [
+  'overview', 'posts', 'members', 'productivity', 'events', 'channels', 'moderation'
+];
+
 @Component({
   selector: 'app-community-detail-page',
   imports: [RouterLink, ReactiveFormsModule, DatePipe, MatButtonModule, MatCardModule,
@@ -60,6 +65,7 @@ type CommunitySection =
 export class CommunityDetailPage {
   protected readonly activity = viewChild(CommunityActivity);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly service = inject(CommunityService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
@@ -111,10 +117,25 @@ export class CommunityDetailPage {
     validators: [Validators.maxLength(150)]
   });
 
-  constructor() { this.load(); }
+  constructor() {
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe(params => {
+      const requested = params.get('seccion');
+      this.activeSection.set(this.isCommunitySection(requested) ? requested : 'overview');
+    });
+    this.load();
+  }
 
   protected openSection(section: CommunitySection): void {
     this.activeSection.set(section);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { seccion: section === 'overview' ? null : section },
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  private isCommunitySection(value: string | null): value is CommunitySection {
+    return value !== null && COMMUNITY_SECTIONS.includes(value as CommunitySection);
   }
 
   protected load(): void {
@@ -128,6 +149,9 @@ export class CommunityDetailPage {
     this.service.findById(id).subscribe({
       next: community => {
         this.community.set(community);
+        if (this.activeSection() === 'moderation' && !this.canManage(community.currentUserRole)) {
+          this.openSection('overview');
+        }
         this.selectedRoles.set(Object.fromEntries(
           community.members.map(member => [member.userId, member.role])
         ));

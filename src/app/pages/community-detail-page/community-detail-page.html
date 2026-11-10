@@ -21,6 +21,7 @@
       <button type="button" class="group-tool"
         [class.active]="activeSection() === 'overview'"
         [attr.aria-pressed]="activeSection() === 'overview'"
+        [attr.aria-current]="activeSection() === 'overview' ? 'page' : null"
         (click)="openSection('overview')">
         <span class="tool-icon"><mat-icon>dashboard</mat-icon></span>
         <span><strong>Resumen</strong><small>Información, actividad y estadísticas</small></span>
@@ -28,6 +29,7 @@
       <button type="button" class="group-tool"
         [class.active]="activeSection() === 'posts'"
         [attr.aria-pressed]="activeSection() === 'posts'"
+        [attr.aria-current]="activeSection() === 'posts' ? 'page' : null"
         (click)="openSection('posts')">
         <span class="tool-icon"><mat-icon>dynamic_feed</mat-icon></span>
         <span><strong>Publicaciones</strong><small>Novedades y conversación del grupo</small></span>
@@ -35,6 +37,7 @@
       <button type="button" class="group-tool"
         [class.active]="activeSection() === 'members'"
         [attr.aria-pressed]="activeSection() === 'members'"
+        [attr.aria-current]="activeSection() === 'members' ? 'page' : null"
         (click)="openSection('members')">
         <span class="tool-icon"><mat-icon>group</mat-icon></span>
         <span><strong>Miembros</strong><small>Personas, roles e invitaciones</small></span>
@@ -42,6 +45,7 @@
       <button type="button" class="group-tool"
         [class.active]="activeSection() === 'productivity'"
         [attr.aria-pressed]="activeSection() === 'productivity'"
+        [attr.aria-current]="activeSection() === 'productivity' ? 'page' : null"
         (click)="openSection('productivity')">
         <span class="tool-icon"><mat-icon>insights</mat-icon></span>
         <span><strong>Progreso</strong><small>Ranking, logros y tareas</small></span>
@@ -49,6 +53,7 @@
       <button type="button" class="group-tool"
         [class.active]="activeSection() === 'events'"
         [attr.aria-pressed]="activeSection() === 'events'"
+        [attr.aria-current]="activeSection() === 'events' ? 'page' : null"
         (click)="openSection('events')">
         <span class="tool-icon"><mat-icon>event</mat-icon></span>
         <span><strong>Eventos y galería</strong><small>Actividades, álbumes e imágenes</small></span>
@@ -56,6 +61,7 @@
       <button type="button" class="group-tool"
         [class.active]="activeSection() === 'channels'"
         [attr.aria-pressed]="activeSection() === 'channels'"
+        [attr.aria-current]="activeSection() === 'channels' ? 'page' : null"
         (click)="openSection('channels')">
         <span class="tool-icon"><mat-icon>forum</mat-icon></span>
         <span><strong>Canales</strong><small>Espacios de comunicación</small></span>
@@ -64,6 +70,7 @@
         <button type="button" class="group-tool"
           [class.active]="activeSection() === 'moderation'"
           [attr.aria-pressed]="activeSection() === 'moderation'"
+          [attr.aria-current]="activeSection() === 'moderation' ? 'page' : null"
           (click)="openSection('moderation')">
           <span class="tool-icon"><mat-icon>shield</mat-icon></span>
           <span><strong>Moderación</strong><small>Reportes y contenido denunciado</small></span>
