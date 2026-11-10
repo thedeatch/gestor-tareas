@@ -1,0 +1,25 @@
+<section class="overview" aria-labelledby="community-overview-title">
+  <header class="overview-header">
+    <div>
+      <span class="eyebrow">Explora tu comunidad</span>
+      <h2 id="community-overview-title">Todo el grupo, a un vistazo</h2>
+      <p>Elige una sección para descubrir su contenido y comenzar a participar.</p>
+    </div>
+    <mat-icon aria-hidden="true">explore</mat-icon>
+  </header>
+
+  <div class="overview-grid">
+    @for (card of cards(); track card.section) {
+      <button type="button" class="overview-card"
+        (click)="sectionSelected.emit(card.section)">
+        <span class="card-icon"><mat-icon>{{ card.icon }}</mat-icon></span>
+        <span class="card-copy">
+          <strong>{{ card.title }}</strong>
+          <small>{{ card.description }}</small>
+          @if (card.value) { <span class="card-value">{{ card.value }}</span> }
+        </span>
+        <mat-icon class="card-arrow" aria-hidden="true">arrow_forward</mat-icon>
+      </button>
+    }
+  </div>
+</section>

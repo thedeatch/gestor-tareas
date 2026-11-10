@@ -40,21 +40,20 @@ import { CommunityEvents } from '../../components/community-events/community-eve
 import { CommunityReports } from '../../components/community-reports/community-reports';
 import { ReportButton } from '../../components/community-reports/report-button';
 import { PostComments } from '../../components/post-comments/post-comments';
+import {
+  CommunityOverview,
+  CommunityOverviewSection
+} from '../../components/community-overview/community-overview';
 
 type CommunitySection =
   | 'overview'
-  | 'posts'
-  | 'members'
-  | 'productivity'
-  | 'events'
-  | 'channels'
-  | 'moderation';
+  | CommunityOverviewSection;
 
 @Component({
   selector: 'app-community-detail-page',
   imports: [RouterLink, ReactiveFormsModule, DatePipe, MatButtonModule, MatCardModule,
     MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatSnackBarModule, MatDialogModule, PostComments, CommunityReports, ReportButton, CommunityEvents, CommunityGallery, CommunityChannels, CommunityActivity, CommunityRanking, CommunityMetrics, CommunityAchievements, CommunityTasks],
+    MatSnackBarModule, MatDialogModule, PostComments, CommunityReports, ReportButton, CommunityEvents, CommunityGallery, CommunityChannels, CommunityActivity, CommunityRanking, CommunityMetrics, CommunityAchievements, CommunityTasks, CommunityOverview],
   templateUrl: './community-detail-page.html',
   styleUrl: './community-detail-page.css'
 })

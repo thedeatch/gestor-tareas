@@ -71,6 +71,14 @@
       }
     </nav>
 
+    <app-community-overview
+      [memberCount]="item.members.length"
+      [postCount]="posts().length"
+      [postsLoading]="postsLoading()"
+      [canManage]="canManage(item.currentUserRole)"
+      (sectionSelected)="openSection($event)"
+      [class.section-hidden]="activeSection() !== 'overview'" />
+
     <mat-card class="guidelines-card" [class.section-hidden]="activeSection() !== 'overview'">
       <mat-card-header><mat-card-title>Información y reglas del grupo</mat-card-title></mat-card-header>
       <mat-card-content>
