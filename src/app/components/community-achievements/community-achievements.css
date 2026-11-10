@@ -1,0 +1,32 @@
+:host { display: block; margin-bottom: 1rem; }
+mat-card-header { align-items: center; position: relative; padding-bottom: 1rem; }
+.section-icon { display: grid; place-items: center; background: var(--mat-sys-tertiary-container); color: var(--mat-sys-on-tertiary-container); }
+.header-action { margin-inline-start: auto; }
+.points-note { display: flex; align-items: center; gap: .65rem; padding: .8rem 1rem; border-radius: .75rem; background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
+.points-note mat-icon { flex: 0 0 auto; }
+.feedback { display: flex; align-items: center; gap: .5rem; }
+.error { color: var(--mat-sys-error); }
+.subheading { display: flex; align-items: center; gap: .45rem; margin-top: 1.25rem; }
+.subheading h3 { margin: 0; }
+.subheading mat-icon { color: var(--mat-sys-primary); }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr)); gap: .75rem; margin: .75rem 0 0; }
+.stat-card { display: flex; align-items: center; gap: .75rem; padding: .85rem; border: 1px solid var(--mat-sys-outline-variant); border-radius: .85rem; background: var(--mat-sys-surface-container-low); }
+.stat-card > mat-icon { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; flex: 0 0 2.5rem; border-radius: .7rem; background: var(--mat-sys-primary-container); color: var(--mat-sys-on-primary-container); }
+.stat-card dd { margin: 0; font-size: 1.35rem; font-weight: 700; }
+.stat-card dt { color: var(--mat-sys-on-surface-variant); font-size: .82rem; }
+.achievement-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: .75rem; margin-top: .75rem; }
+.achievement { display: flex; gap: .85rem; padding: 1rem; border: 1px solid var(--mat-sys-outline-variant); border-radius: 1rem; background: var(--mat-sys-surface-container-low); }
+.achievement.earned { border-color: var(--mat-sys-tertiary); background: color-mix(in srgb, var(--mat-sys-tertiary-container) 42%, var(--mat-sys-surface)); }
+.achievement-icon { display: grid; place-items: center; width: 3rem; height: 3rem; flex: 0 0 3rem; border-radius: 50%; background: var(--mat-sys-surface-container-highest); color: var(--mat-sys-on-surface-variant); }
+.earned .achievement-icon { background: var(--mat-sys-tertiary); color: var(--mat-sys-on-tertiary); }
+.achievement-copy { min-width: 0; flex: 1; }
+.achievement-copy > strong { font-size: 1rem; }
+.achievement-copy p { margin: .25rem 0 .7rem; color: var(--mat-sys-on-surface-variant); font-size: .875rem; }
+.earned-label { display: inline-flex; align-items: center; gap: .3rem; color: var(--mat-sys-tertiary); font-size: .8rem; font-weight: 600; }
+.earned-label mat-icon { width: 1rem; height: 1rem; font-size: 1rem; }
+.progress-label { display: flex; justify-content: space-between; margin-bottom: .3rem; color: var(--mat-sys-on-surface-variant); font-size: .78rem; }
+@media (max-width: 600px) {
+  mat-card-header { align-items: flex-start; padding-bottom: 3.5rem; }
+  .header-action { position: absolute; inset-inline: 1rem auto; inset-block-end: .5rem; }
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

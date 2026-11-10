@@ -4,6 +4,7 @@ import { Component, DestroyRef, inject, input, OnInit, signal } from '@angular/c
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
 import { finalize } from 'rxjs';
 
 import { getApiErrorMessage } from '../../models/api-error.model';
@@ -31,15 +32,9 @@ interface Ranking {
 
 @Component({
   selector: 'app-community-ranking',
-  imports: [DatePipe, MatButtonModule, MatCardModule],
+  imports: [DatePipe, MatButtonModule, MatCardModule, MatIconModule],
   templateUrl: './community-ranking.html',
-  styles: [`
-    :host { display: block; margin-bottom: 1rem; }
-    nav { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
-    li { padding-block: .35rem; overflow-wrap: anywhere; }
-    .badge { display: inline-block; padding: .15rem .5rem; margin: .2rem; border-radius: 1rem;
-      background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
-  `]
+  styleUrl: './community-ranking.css'
 })
 export class CommunityRanking implements OnInit {
   readonly groupId = input.required<number>();
@@ -74,5 +69,11 @@ export class CommunityRanking implements OnInit {
     const [year, month] = season.split('-').map(Number);
     const adjacent = new Date(Date.UTC(year, month - 1 + delta, 1));
     this.load(adjacent.toISOString().slice(0, 7));
+  }
+
+  protected positionIcon(position: number | null): string {
+    if (position === 1) return 'emoji_events';
+    if (position === 2 || position === 3) return 'workspace_premium';
+    return 'person';
   }
 }

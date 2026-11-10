@@ -1,0 +1,48 @@
+:host { display: block; margin-bottom: 1rem; }
+mat-card-header { align-items: center; padding-bottom: 1rem; }
+.section-icon { display: grid; place-items: center; background: var(--mat-sys-primary-container); color: var(--mat-sys-on-primary-container); }
+.feedback { display: flex; align-items: center; gap: .5rem; }
+.error { color: var(--mat-sys-error); }
+.season-nav { display: flex; align-items: center; justify-content: center; gap: .25rem; padding: .5rem; margin-bottom: .9rem; border-radius: 1rem; background: var(--mat-sys-surface-container-low); }
+.season-nav div { display: grid; min-width: 9rem; text-align: center; text-transform: capitalize; }
+.season-nav div span { color: var(--mat-sys-on-surface-variant); font-size: .75rem; }
+.viewer-summary { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; padding: .85rem 1rem; margin-bottom: .85rem; border: 1px solid var(--mat-sys-primary); border-radius: 1rem; background: color-mix(in srgb, var(--mat-sys-primary-container) 45%, var(--mat-sys-surface)); }
+.viewer-icon { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 50%; background: var(--mat-sys-primary); color: var(--mat-sys-on-primary); }
+.viewer-summary > div:nth-child(2) { display: grid; }
+.viewer-summary > div:nth-child(2) span { font-size: .75rem; color: var(--mat-sys-on-surface-variant); }
+.viewer-position { padding: .25rem .6rem; border-radius: 999px; background: var(--mat-sys-surface); font-weight: 600; }
+.badges { display: flex; gap: .35rem; flex-wrap: wrap; margin-inline-start: auto; }
+.badge { display: inline-flex; align-items: center; gap: .2rem; padding: .2rem .5rem; border-radius: 999px; background: var(--mat-sys-tertiary-container); color: var(--mat-sys-on-tertiary-container); font-size: .75rem; }
+.badge mat-icon { width: .95rem; height: .95rem; font-size: .95rem; }
+.leader-list { display: grid; gap: .6rem; }
+.leader { display: grid; grid-template-columns: 4rem minmax(9rem, 1fr) auto; align-items: center; gap: .75rem; padding: .8rem 1rem; border: 1px solid var(--mat-sys-outline-variant); border-radius: .9rem; background: var(--mat-sys-surface-container-low); }
+.leader.viewer { border-color: var(--mat-sys-primary); }
+.position { display: grid; grid-template-columns: auto auto; align-items: center; gap: .2rem; color: var(--mat-sys-on-surface-variant); }
+.position mat-icon { color: var(--mat-sys-outline); }
+.leader[data-position="1"] .position { color: #a86800; }
+.leader[data-position="1"] .position mat-icon { color: #e6a700; }
+.leader[data-position="2"] .position mat-icon { color: #8d959c; }
+.leader[data-position="3"] .position mat-icon { color: #a86235; }
+.identity { display: flex; align-items: center; gap: .5rem; min-width: 0; }
+.identity > mat-icon { color: var(--mat-sys-primary); }
+.identity div { display: flex; align-items: center; gap: .4rem; min-width: 0; }
+.identity strong { overflow-wrap: anywhere; }
+.identity span { padding: .1rem .4rem; border-radius: 999px; background: var(--mat-sys-primary-container); color: var(--mat-sys-on-primary-container); font-size: .7rem; }
+.entry-stats { display: flex; gap: .65rem; flex-wrap: wrap; color: var(--mat-sys-on-surface-variant); font-size: .8rem; }
+.entry-stats span { display: inline-flex; align-items: center; gap: .2rem; }
+.entry-stats mat-icon { width: 1rem; height: 1rem; font-size: 1rem; }
+.entry-stats .points { color: var(--mat-sys-primary); }
+.entry-badges { grid-column: 2 / -1; margin-inline-start: 0; }
+.empty-state { display: grid; justify-items: center; gap: .35rem; padding: 2rem; text-align: center; color: var(--mat-sys-on-surface-variant); }
+.empty-state mat-icon { width: 3rem; height: 3rem; font-size: 3rem; color: var(--mat-sys-primary); }
+.ranking-help { margin-top: 1rem; padding: .75rem 1rem; border-radius: .75rem; background: var(--mat-sys-surface-container-low); color: var(--mat-sys-on-surface-variant); }
+.ranking-help summary { cursor: pointer; color: var(--mat-sys-primary); font-weight: 600; }
+@media (max-width: 760px) {
+  .leader { grid-template-columns: 3.5rem minmax(0, 1fr); }
+  .entry-stats { grid-column: 2; }
+  .entry-badges { grid-column: 2; }
+}
+@media (max-width: 480px) {
+  .viewer-summary .badges { width: 100%; margin-inline-start: 0; }
+  .leader { padding: .7rem; gap: .45rem; }
+}

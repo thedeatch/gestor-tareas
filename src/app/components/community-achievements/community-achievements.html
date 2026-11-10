@@ -1,38 +1,44 @@
-<mat-card>
-  <mat-card-header><mat-card-title>Tu actividad en el grupo</mat-card-title></mat-card-header>
-  <mat-card-content>
-    <p>El progreso se acumula entre temporadas. Cada publicación suma 5 puntos y cada comentario suma 2.</p>
-    <button mat-button type="button" [disabled]="loading()" (click)="load()">
-      {{ items() ? 'Actualizar mi actividad' : 'Ver mis estadísticas y logros' }}
+<mat-card class="achievements-card">
+  <mat-card-header>
+    <div mat-card-avatar class="section-icon"><mat-icon>workspace_premium</mat-icon></div>
+    <mat-card-title>Tu actividad en el grupo</mat-card-title>
+    <mat-card-subtitle>Progreso, contribuciones y logros personales</mat-card-subtitle>
+    <button mat-stroked-button type="button" class="header-action" [disabled]="loading()" (click)="load()">
+      <mat-icon>{{ items() ? 'refresh' : 'insights' }}</mat-icon>
+      {{ items() ? 'Actualizar' : 'Ver mi progreso' }}
     </button>
-    @if (loading()) { <p role="status">Cargando tu actividad…</p> }
-    @if (error()) { <p role="alert">{{ error() }}</p> }
+  </mat-card-header>
+  <mat-card-content>
+    <div class="points-note"><mat-icon>auto_awesome</mat-icon><span>Tu progreso permanece entre temporadas: cada publicación suma <strong>5 puntos</strong> y cada comentario <strong>2 puntos</strong>.</span></div>
+    @if (loading()) { <p class="feedback" role="status"><mat-icon>hourglass_top</mat-icon>Cargando tu actividad…</p> }
+    @if (error()) { <p class="feedback error" role="alert"><mat-icon>error</mat-icon>{{ error() }}</p> }
     @if (stats(); as values) {
-      <h3>Mis estadísticas</h3>
-      <dl>
+      <div class="subheading"><mat-icon>query_stats</mat-icon><h3>Mis estadísticas</h3></div>
+      <dl class="stats-grid">
         @for (card of cards; track card.key) {
-          <div><dt>{{ card.label }}</dt><dd>{{ values[card.key] | number }}</dd></div>
+          <div class="stat-card"><mat-icon>{{ card.icon }}</mat-icon><div><dd>{{ values[card.key] | number }}</dd><dt>{{ card.label }}</dt></div></div>
         }
       </dl>
-      <p>Las reacciones cuentan las que otras personas dejaron en tus publicaciones disponibles.
-        Las inscripciones incluyen las que aún están registradas.</p>
     }
     @if (items(); as achievements) {
-      <h3>Mis logros</h3>
-      <ul>
+      <div class="subheading"><mat-icon>military_tech</mat-icon><h3>Mis logros</h3></div>
+      <div class="achievement-grid">
         @for (item of achievements; track item.code) {
-          <li>
-            <strong>{{ item.title }}</strong>
+          <article class="achievement" [class.earned]="!!item.earnedAt">
+            <div class="achievement-icon"><mat-icon>{{ item.earnedAt ? 'emoji_events' : 'lock' }}</mat-icon></div>
+            <div class="achievement-copy">
+              <strong>{{ item.title }}</strong>
             <p>{{ item.description }}</p>
             @if (item.earnedAt; as date) {
-              <p>Conseguido el {{ date | date:'dd/MM/yyyy' }}</p>
+                <span class="earned-label"><mat-icon>verified</mat-icon>Conseguido el {{ date | date:'dd/MM/yyyy' }}</span>
             } @else {
-              <progress [value]="item.current" [max]="item.target" [attr.aria-label]="item.title"></progress>
-              <span>{{ item.current }} de {{ item.target }}</span>
+                <div class="progress-label"><span>{{ item.current }} de {{ item.target }}</span><strong>{{ progress(item) | number:'1.0-0' }}%</strong></div>
+                <mat-progress-bar mode="determinate" [value]="progress(item)" [attr.aria-label]="item.title"></mat-progress-bar>
             }
-          </li>
+            </div>
+          </article>
         }
-      </ul>
+      </div>
     }
   </mat-card-content>
 </mat-card>

@@ -1,12 +1,25 @@
-<mat-card>
-  <mat-card-header><mat-card-title>Eventos del grupo</mat-card-title></mat-card-header>
-  <mat-card-content>
-    <p>Si estás inscrito, recibirás un aviso en la última hora antes del inicio, según tus preferencias de eventos.</p>
+<mat-card class="events-card">
+  <mat-card-header>
+    <div mat-card-avatar class="section-icon"><mat-icon>event</mat-icon></div>
+    <mat-card-title>Eventos del grupo</mat-card-title>
+    <mat-card-subtitle>Encuentros, actividades y fechas importantes</mat-card-subtitle>
     @if (canCreate() && !creating()) {
-      <button mat-button type="button" [disabled]="busy()" (click)="creating.set(true)">Crear evento</button>
+      <button mat-flat-button type="button" class="header-action" [disabled]="busy()" (click)="creating.set(true)">
+        <mat-icon>add</mat-icon> Crear evento
+      </button>
     }
+  </mat-card-header>
+  <mat-card-content>
+    <div class="event-notice">
+      <mat-icon>notifications_active</mat-icon>
+      <span>Si estás inscrito, recibirás un aviso antes del inicio según tus preferencias.</span>
+    </div>
     @if (canCreate() && creating()) {
-      <form [formGroup]="form" (ngSubmit)="create()">
+      <form class="event-form" [formGroup]="form" (ngSubmit)="create()">
+        <div class="form-heading">
+          <mat-icon>edit_calendar</mat-icon>
+          <div><strong>Nuevo evento</strong><span>Comparte una actividad con el grupo</span></div>
+        </div>
         <mat-form-field appearance="outline">
           <mat-label>Título</mat-label>
           <input matInput formControlName="title" maxlength="120" [readonly]="busy()">
@@ -19,38 +32,57 @@
           <mat-label>Fecha y hora local</mat-label>
           <input matInput type="datetime-local" formControlName="startsAt" [readonly]="busy()">
         </mat-form-field>
-        <div>
-          <button mat-flat-button type="submit" [disabled]="busy() || form.invalid">Publicar evento</button>
+        <div class="form-actions">
+          <button mat-flat-button type="submit" [disabled]="busy() || form.invalid">
+            <mat-icon>publish</mat-icon> Publicar evento
+          </button>
           <button mat-button type="button" [disabled]="busy()" (click)="creating.set(false)">Cancelar</button>
         </div>
       </form>
     }
 
-    @if (message()) { <p role="status">{{ message() }}</p> }
+    @if (message()) { <p class="feedback success" role="status"><mat-icon>check_circle</mat-icon>{{ message() }}</p> }
     @if (error()) {
-      <p role="alert">{{ error() }}</p>
+      <p class="feedback error" role="alert"><mat-icon>error</mat-icon>{{ error() }}</p>
       <button mat-button type="button" [disabled]="busy()" (click)="load()">Actualizar eventos</button>
     }
     @if (events(); as items) {
-      @for (event of items; track event.id) {
-        <article [id]="'evento-' + event.id" tabindex="-1">
-          <h3>{{ event.title }}</h3>
-          <time [attr.datetime]="event.startsAt">{{ event.startsAt | date:'dd/MM/yyyy HH:mm' }}</time>
-          <p>{{ event.description }}</p>
-          <p>{{ event.participantCount }} {{ event.participantCount === 1 ? 'inscrito' : 'inscritos' }}</p>
-          @if (started(event)) {
-            <span>{{ event.registered ? 'Estabas inscrito · Evento iniciado' : 'Evento iniciado' }}</span>
-          } @else {
-            <button mat-stroked-button type="button" [disabled]="busy()" (click)="toggleRegistration(event)">
-              {{ event.registered ? 'Cancelar inscripción' : 'Inscribirme' }}
-            </button>
-          }
-        </article>
-      } @empty {
-        <p>Aún no hay eventos en este grupo.</p>
-      }
+      <div class="event-grid">
+        @for (event of items; track event.id) {
+          <article class="event-item" [class.started]="started(event)" [id]="'evento-' + event.id" tabindex="-1">
+            <div class="date-block" aria-hidden="true">
+              <span>{{ event.startsAt | date:'MMM' }}</span>
+              <strong>{{ event.startsAt | date:'dd' }}</strong>
+            </div>
+            <div class="event-body">
+              <div class="event-title">
+                <h3>{{ event.title }}</h3>
+                @if (started(event)) { <span class="status-chip">Finalizado</span> }
+                @else if (event.registered) { <span class="status-chip registered">Inscrito</span> }
+              </div>
+              <time [attr.datetime]="event.startsAt"><mat-icon>schedule</mat-icon>{{ event.startsAt | date:'dd/MM/yyyy · HH:mm' }}</time>
+              <p>{{ event.description }}</p>
+              <footer>
+                <span class="participants"><mat-icon>group</mat-icon>{{ event.participantCount }} {{ event.participantCount === 1 ? 'persona' : 'personas' }}</span>
+                @if (started(event)) {
+                  <span class="ended"><mat-icon>event_busy</mat-icon>{{ event.registered ? 'Participaste en este evento' : 'Evento iniciado' }}</span>
+                } @else {
+                  <button [attr.aria-label]="event.registered ? 'Cancelar inscripción en ' + event.title : 'Inscribirme en ' + event.title"
+                    [attr.class]="event.registered ? 'registered-button' : null"
+                    mat-stroked-button type="button" [disabled]="busy()" (click)="toggleRegistration(event)">
+                    <mat-icon>{{ event.registered ? 'event_busy' : 'event_available' }}</mat-icon>
+                    {{ event.registered ? 'Cancelar inscripción' : 'Inscribirme' }}
+                  </button>
+                }
+              </footer>
+            </div>
+          </article>
+        } @empty {
+          <div class="empty-state"><mat-icon>event_note</mat-icon><strong>Aún no hay eventos</strong><span>Las próximas actividades aparecerán aquí.</span></div>
+        }
+      </div>
     } @else if (busy()) {
-      <p role="status">Cargando eventos...</p>
+      <p class="loading" role="status"><mat-icon>hourglass_top</mat-icon>Cargando eventos...</p>
     }
   </mat-card-content>
 </mat-card>

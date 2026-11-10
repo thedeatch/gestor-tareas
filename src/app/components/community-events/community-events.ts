@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatIconModule } from '@angular/material/icon';
 import { Observable, finalize, tap } from 'rxjs';
 
 import { getApiErrorMessage } from '../../models/api-error.model';
@@ -22,14 +23,9 @@ interface CommunityEvent {
 @Component({
   selector: 'app-community-events',
   imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatCardModule,
-    MatFormFieldModule, MatInputModule],
+    MatFormFieldModule, MatInputModule, MatIconModule],
   templateUrl: './community-events.html',
-  styles: [`
-    :host { display: block; margin-bottom: 1rem; }
-    form { display: grid; gap: .5rem; }
-    article { border-top: 1px solid var(--mat-sys-outline-variant); padding-block: .75rem; }
-    article p { white-space: pre-wrap; overflow-wrap: anywhere; }
-  `]
+  styleUrl: './community-events.css'
 })
 export class CommunityEvents implements OnInit {
   readonly groupId = input.required<number>();

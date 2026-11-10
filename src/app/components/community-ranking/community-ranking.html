@@ -1,47 +1,58 @@
-<mat-card>
-  <mat-card-header><mat-card-title>Ranking del grupo</mat-card-title></mat-card-header>
+<mat-card class="ranking-card">
+  <mat-card-header>
+    <div mat-card-avatar class="section-icon"><mat-icon>leaderboard</mat-icon></div>
+    <mat-card-title>Ranking del grupo</mat-card-title>
+    <mat-card-subtitle>Contribuciones destacadas de la temporada</mat-card-subtitle>
+  </mat-card-header>
   <mat-card-content>
-    @if (error()) { <p role="alert">{{ error() }}</p> }
+    @if (error()) { <p class="feedback error" role="alert"><mat-icon>error</mat-icon>{{ error() }}</p> }
     @if (ranking(); as board) {
-      <nav aria-label="Temporadas del ranking">
-        <button mat-button type="button" [disabled]="loading() || board.season === board.firstSeason"
-          (click)="move(board.season, -1)">Mes anterior</button>
-        <strong>{{ (board.season + '-01T00:00:00Z') | date:'MMMM yyyy':'UTC' }}</strong>
-        <button mat-button type="button" [disabled]="loading() || board.season === board.currentSeason"
-          (click)="move(board.season, 1)">Mes siguiente</button>
-        <button mat-button type="button" [disabled]="loading()" (click)="load(board.season)">Actualizar</button>
+      <nav class="season-nav" aria-label="Temporadas del ranking">
+        <button mat-icon-button type="button" aria-label="Mes anterior" [disabled]="loading() || board.season === board.firstSeason"
+          (click)="move(board.season, -1)"><mat-icon>chevron_left</mat-icon></button>
+        <div><span>Temporada</span><strong>{{ (board.season + '-01T00:00:00Z') | date:'MMMM yyyy':'UTC' }}</strong></div>
+        <button mat-icon-button type="button" aria-label="Mes siguiente" [disabled]="loading() || board.season === board.currentSeason"
+          (click)="move(board.season, 1)"><mat-icon>chevron_right</mat-icon></button>
+        <button mat-icon-button type="button" aria-label="Actualizar ranking" [disabled]="loading()" (click)="load(board.season)"><mat-icon>refresh</mat-icon></button>
       </nav>
       @if (board.viewer; as viewer) {
-        <p>
-          <strong>Tu resultado</strong> · {{ viewer.points }} pts
-          @if (viewer.position !== null) { · Puesto {{ viewer.position }} }
-        </p>
-        @for (badge of viewer.badges; track badge) {
-          <span class="badge">{{ badgeLabels[badge] }}</span>
-        }
+        <section class="viewer-summary">
+          <div class="viewer-icon"><mat-icon>{{ positionIcon(viewer.position) }}</mat-icon></div>
+          <div><span>Tu resultado</span><strong>{{ viewer.points }} puntos</strong></div>
+          @if (viewer.position !== null) { <span class="viewer-position">Puesto #{{ viewer.position }}</span> }
+          <div class="badges">
+            @for (badge of viewer.badges; track badge) { <span class="badge"><mat-icon>verified</mat-icon>{{ badgeLabels[badge] }}</span> }
+          </div>
+        </section>
       }
       @if (board.leaders.length) {
-        <ul aria-label="Clasificación">
+        <div class="leader-list" aria-label="Clasificación">
           @for (entry of board.leaders; track entry.userId) {
-            <li>
-              <strong>{{ entry.position }}. {{ entry.name }}</strong>
-              @if (entry.viewer) { (tú) }
-              · {{ entry.points }} pts · {{ entry.posts }} publ. · {{ entry.comments }} com.
-              @for (badge of entry.badges; track badge) {
-                <span class="badge">{{ badgeLabels[badge] }}</span>
+            <article class="leader" [class.viewer]="entry.viewer" [attr.data-position]="entry.position">
+              <div class="position"><mat-icon>{{ positionIcon(entry.position) }}</mat-icon><strong>#{{ entry.position }}</strong></div>
+              <div class="identity"><mat-icon>account_circle</mat-icon><div><strong>{{ entry.name }}</strong>@if (entry.viewer) { <span>Tú</span> }</div></div>
+              <div class="entry-stats">
+                <span class="points"><mat-icon>stars</mat-icon><strong>{{ entry.points }}</strong> pts</span>
+                <span><mat-icon>article</mat-icon>{{ entry.posts }} publ.</span>
+                <span><mat-icon>forum</mat-icon>{{ entry.comments }} com.</span>
+              </div>
+              @if (entry.badges.length) {
+                <div class="badges entry-badges">
+                  @for (badge of entry.badges; track badge) { <span class="badge"><mat-icon>verified</mat-icon>{{ badgeLabels[badge] }}</span> }
+                </div>
               }
-            </li>
+            </article>
           }
-        </ul>
+        </div>
       } @else {
-        <p>Aún no hay actividad con puntos en esta temporada.</p>
+        <div class="empty-state"><mat-icon>leaderboard</mat-icon><strong>El podio está esperando</strong><span>Aún no hay actividad con puntos en esta temporada.</span></div>
       }
     } @else if (loading()) {
-      <p role="status">Cargando ranking…</p>
+      <p class="feedback" role="status"><mat-icon>hourglass_top</mat-icon>Cargando ranking…</p>
     } @else {
-      <button mat-button type="button" (click)="load()">Reintentar</button>
+      <button mat-stroked-button type="button" (click)="load()"><mat-icon>refresh</mat-icon>Reintentar</button>
     }
-    <details>
+    <details class="ranking-help">
       <summary>Cómo se calculan los puntos y las insignias</summary>
       <p>Cada mes se calcula en UTC. Una publicación suma 5 puntos y un comentario suma 2 puntos.
         El ranking se calcula con el contenido disponible y los miembros activos del grupo.</p>

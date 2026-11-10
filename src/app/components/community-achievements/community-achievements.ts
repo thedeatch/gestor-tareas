@@ -4,6 +4,8 @@ import { Component, DestroyRef, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { catchError, finalize, forkJoin, of } from 'rxjs';
 
 import { getApiErrorMessage } from '../../models/api-error.model';
@@ -28,30 +30,22 @@ interface Achievement {
 
 @Component({
   selector: 'app-community-achievements',
-  imports: [DatePipe, DecimalPipe, MatButtonModule, MatCardModule],
+  imports: [DatePipe, DecimalPipe, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule],
   templateUrl: './community-achievements.html',
-  styles: [`
-    :host { display: block; margin-bottom: 1rem; }
-    dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: .75rem; }
-    dl div { border: 1px solid var(--mat-sys-outline-variant); border-radius: .75rem; padding: .75rem; }
-    dd { margin: .25rem 0 0; font-size: 1.4rem; font-weight: 600; }
-    li { margin-block: .75rem; }
-    li p { margin-block: .25rem; }
-    progress { max-width: 100%; margin-inline-end: .5rem; }
-  `]
+  styleUrl: './community-achievements.css'
 })
 export class CommunityAchievements {
   readonly groupId = input.required<number>();
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly stats = signal<PersonalStats | null>(null);
-  protected readonly cards: { key: keyof PersonalStats; label: string }[] = [
-    { key: 'posts', label: 'Publicaciones acumuladas' },
-    { key: 'comments', label: 'Comentarios acumulados' },
-    { key: 'points', label: 'Puntos acumulados' },
-    { key: 'reactionsReceived', label: 'Reacciones recibidas' },
-    { key: 'eventRegistrations', label: 'Inscripciones a eventos' },
-    { key: 'achievements', label: 'Logros obtenidos' }
+  protected readonly cards: { key: keyof PersonalStats; label: string; icon: string }[] = [
+    { key: 'posts', label: 'Publicaciones', icon: 'article' },
+    { key: 'comments', label: 'Comentarios', icon: 'forum' },
+    { key: 'points', label: 'Puntos', icon: 'stars' },
+    { key: 'reactionsReceived', label: 'Reacciones', icon: 'favorite' },
+    { key: 'eventRegistrations', label: 'Eventos', icon: 'event_available' },
+    { key: 'achievements', label: 'Logros', icon: 'emoji_events' }
   ];
   protected readonly items = signal<Achievement[] | null>(null);
   protected readonly loading = signal(false);
@@ -75,5 +69,10 @@ export class CommunityAchievements {
       },
       error: error => this.error.set(getApiErrorMessage(error, 'No se pudo cargar tu actividad personal.'))
     });
+  }
+
+  protected progress(item: Achievement): number {
+    if (item.target <= 0) return 100;
+    return Math.min(100, Math.max(0, item.current / item.target * 100));
   }
 }
