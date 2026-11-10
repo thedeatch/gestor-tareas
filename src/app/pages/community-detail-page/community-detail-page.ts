@@ -41,6 +41,15 @@ import { CommunityReports } from '../../components/community-reports/community-r
 import { ReportButton } from '../../components/community-reports/report-button';
 import { PostComments } from '../../components/post-comments/post-comments';
 
+type CommunitySection =
+  | 'overview'
+  | 'posts'
+  | 'members'
+  | 'productivity'
+  | 'events'
+  | 'channels'
+  | 'moderation';
+
 @Component({
   selector: 'app-community-detail-page',
   imports: [RouterLink, ReactiveFormsModule, DatePipe, MatButtonModule, MatCardModule,
@@ -56,6 +65,7 @@ export class CommunityDetailPage {
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
   protected readonly community = signal<CommunityDetail | null>(null);
+  protected readonly activeSection = signal<CommunitySection>('overview');
   protected readonly joinRequests = signal<CommunityAccess[]>([]);
   protected readonly posts = signal<CommunityPost[]>([]);
   protected readonly reactionTypes: { type: CommunityPostReactionType; icon: string; label: string }[] = [
@@ -103,6 +113,10 @@ export class CommunityDetailPage {
   });
 
   constructor() { this.load(); }
+
+  protected openSection(section: CommunitySection): void {
+    this.activeSection.set(section);
+  }
 
   protected load(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));

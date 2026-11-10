@@ -17,7 +17,61 @@
       <span>{{ item.members.length }} miembros</span>
     </div>
 
-    <mat-card class="guidelines-card">
+    <nav class="group-tools" aria-label="Secciones del grupo">
+      <button type="button" class="group-tool"
+        [class.active]="activeSection() === 'overview'"
+        [attr.aria-pressed]="activeSection() === 'overview'"
+        (click)="openSection('overview')">
+        <span class="tool-icon"><mat-icon>dashboard</mat-icon></span>
+        <span><strong>Resumen</strong><small>Información, actividad y estadísticas</small></span>
+      </button>
+      <button type="button" class="group-tool"
+        [class.active]="activeSection() === 'posts'"
+        [attr.aria-pressed]="activeSection() === 'posts'"
+        (click)="openSection('posts')">
+        <span class="tool-icon"><mat-icon>dynamic_feed</mat-icon></span>
+        <span><strong>Publicaciones</strong><small>Novedades y conversación del grupo</small></span>
+      </button>
+      <button type="button" class="group-tool"
+        [class.active]="activeSection() === 'members'"
+        [attr.aria-pressed]="activeSection() === 'members'"
+        (click)="openSection('members')">
+        <span class="tool-icon"><mat-icon>group</mat-icon></span>
+        <span><strong>Miembros</strong><small>Personas, roles e invitaciones</small></span>
+      </button>
+      <button type="button" class="group-tool"
+        [class.active]="activeSection() === 'productivity'"
+        [attr.aria-pressed]="activeSection() === 'productivity'"
+        (click)="openSection('productivity')">
+        <span class="tool-icon"><mat-icon>insights</mat-icon></span>
+        <span><strong>Progreso</strong><small>Ranking, logros y tareas</small></span>
+      </button>
+      <button type="button" class="group-tool"
+        [class.active]="activeSection() === 'events'"
+        [attr.aria-pressed]="activeSection() === 'events'"
+        (click)="openSection('events')">
+        <span class="tool-icon"><mat-icon>event</mat-icon></span>
+        <span><strong>Eventos y galería</strong><small>Actividades, álbumes e imágenes</small></span>
+      </button>
+      <button type="button" class="group-tool"
+        [class.active]="activeSection() === 'channels'"
+        [attr.aria-pressed]="activeSection() === 'channels'"
+        (click)="openSection('channels')">
+        <span class="tool-icon"><mat-icon>forum</mat-icon></span>
+        <span><strong>Canales</strong><small>Espacios de comunicación</small></span>
+      </button>
+      @if (canManage(item.currentUserRole)) {
+        <button type="button" class="group-tool"
+          [class.active]="activeSection() === 'moderation'"
+          [attr.aria-pressed]="activeSection() === 'moderation'"
+          (click)="openSection('moderation')">
+          <span class="tool-icon"><mat-icon>shield</mat-icon></span>
+          <span><strong>Moderación</strong><small>Reportes y contenido denunciado</small></span>
+        </button>
+      }
+    </nav>
+
+    <mat-card class="guidelines-card" [class.section-hidden]="activeSection() !== 'overview'">
       <mat-card-header><mat-card-title>Información y reglas del grupo</mat-card-title></mat-card-header>
       <mat-card-content>
         @if (editingGuidelines() && canManageRoles(item.currentUserRole)) {
@@ -57,23 +111,34 @@
       </mat-card-content>
     </mat-card>
 
-    <app-community-activity #activityFeed [groupId]="item.id" />
+    <app-community-activity #activityFeed [groupId]="item.id"
+      [class.section-hidden]="activeSection() !== 'overview'" />
 
-    <app-community-metrics [groupId]="item.id" />
+    <app-community-metrics [groupId]="item.id"
+      [class.section-hidden]="activeSection() !== 'overview'" />
 
-    <app-community-ranking [groupId]="item.id" />
+    <app-community-ranking [groupId]="item.id"
+      [class.section-hidden]="activeSection() !== 'productivity'" />
 
-    <app-community-achievements [groupId]="item.id" />
+    <app-community-achievements [groupId]="item.id"
+      [class.section-hidden]="activeSection() !== 'productivity'" />
 
-    <app-community-tasks [groupId]="item.id" [members]="item.members" [canManage]="canManage(item.currentUserRole)" />
+    <app-community-tasks [groupId]="item.id" [members]="item.members"
+      [canManage]="canManage(item.currentUserRole)"
+      [class.section-hidden]="activeSection() !== 'productivity'" />
 
-    <app-community-events [groupId]="item.id" [canCreate]="canManage(item.currentUserRole)" (eventCreated)="activityFeed.load()" />
+    <app-community-events [groupId]="item.id" [canCreate]="canManage(item.currentUserRole)"
+      (eventCreated)="activityFeed.load()"
+      [class.section-hidden]="activeSection() !== 'events'" />
 
-    <app-community-gallery [groupId]="item.id" [canManage]="canManage(item.currentUserRole)" (albumCreated)="activityFeed.load()" />
+    <app-community-gallery [groupId]="item.id" [canManage]="canManage(item.currentUserRole)"
+      (albumCreated)="activityFeed.load()"
+      [class.section-hidden]="activeSection() !== 'events'" />
 
-    <app-community-channels [groupId]="item.id" [canManage]="canManage(item.currentUserRole)" />
+    <app-community-channels [groupId]="item.id" [canManage]="canManage(item.currentUserRole)"
+      [class.section-hidden]="activeSection() !== 'channels'" />
 
-    <mat-card class="posts-card">
+    <mat-card class="posts-card" [class.section-hidden]="activeSection() !== 'posts'">
       <mat-card-header>
         <mat-card-title>Publicaciones</mat-card-title>
         <mat-card-subtitle>Comparte novedades con los miembros del grupo</mat-card-subtitle>
@@ -197,7 +262,7 @@
       </mat-card-content>
     </mat-card>
 
-    <mat-card>
+    <mat-card [class.section-hidden]="activeSection() !== 'members'">
       <mat-card-header><mat-card-title>Miembros</mat-card-title>
         <mat-card-subtitle>Personas que forman parte de este grupo</mat-card-subtitle>
       </mat-card-header>
@@ -244,8 +309,10 @@
     </mat-card>
 
     @if (canManage(item.currentUserRole)) {
-      <app-community-reports [groupId]="item.id" (contentRemoved)="loadPosts(item.id); activityFeed.load()" />
-      <mat-card class="management-card">
+      <app-community-reports [groupId]="item.id"
+        [class.section-hidden]="activeSection() !== 'moderation'"
+        (contentRemoved)="loadPosts(item.id); activityFeed.load()" />
+      <mat-card class="management-card" [class.section-hidden]="activeSection() !== 'members'">
         <mat-card-header>
           <mat-card-title>Invitar a una persona</mat-card-title>
           <mat-card-subtitle>Debe tener una cuenta registrada en la plataforma</mat-card-subtitle>
@@ -268,7 +335,7 @@
       </mat-card>
 
       @if (joinRequests().length) {
-        <mat-card class="management-card">
+        <mat-card class="management-card" [class.section-hidden]="activeSection() !== 'members'">
           <mat-card-header>
             <mat-card-title>Solicitudes de ingreso</mat-card-title>
             <mat-card-subtitle>Personas que desean entrar al grupo</mat-card-subtitle>
