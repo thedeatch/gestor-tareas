@@ -37,9 +37,30 @@
     </mat-select>
   </mat-form-field>
 
-  <mat-form-field appearance="outline" floatLabel="always">
+  <mat-form-field appearance="outline">
     <mat-label>Fecha límite opcional</mat-label>
-    <input matInput type="date" name="dueDate" [(ngModel)]="dueDate" min="0001-01-01" max="9999-12-31">
+    <input
+      matInput
+      name="dueDate"
+      [(ngModel)]="dueDate"
+      [matDatepicker]="dueDatePicker"
+      placeholder="Selecciona una fecha"
+      readonly
+    >
+    @if (dueDate) {
+      <button
+        mat-icon-button
+        matIconSuffix
+        type="button"
+        aria-label="Quitar fecha límite"
+        title="Quitar fecha límite"
+        (click)="dueDate = null; $event.stopPropagation()"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+    <mat-datepicker-toggle matIconSuffix [for]="dueDatePicker" />
+    <mat-datepicker #dueDatePicker />
   </mat-form-field>
 
   <mat-form-field appearance="outline">

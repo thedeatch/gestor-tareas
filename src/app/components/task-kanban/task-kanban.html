@@ -18,7 +18,8 @@
           [cdkDragDisabled]="busy() || task.canChangeStatus === false"
           [class.readonly]="task.canChangeStatus === false">
           <div class="card-placeholder" *cdkDragPlaceholder></div>
-          <header>
+          <header class="card-header" cdkDragHandle
+            [class.drag-disabled]="busy() || task.canChangeStatus === false">
             @if (task.canChangeStatus !== false) {
               <mat-icon class="drag-handle" aria-hidden="true">drag_indicator</mat-icon>
             }

@@ -22,13 +22,26 @@
   border-radius: .5rem;
   background: var(--mat-sys-surface);
   overflow-wrap: anywhere;
-  cursor: grab;
+  cursor: default;
   transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
 .card:hover { border-color: var(--mat-sys-primary); box-shadow: 0 3px 10px #0002; transform: translateY(-1px); }
-.card:active { cursor: grabbing; }
 .card.readonly { cursor: default; }
-header { display: flex; align-items: baseline; gap: .5rem; }
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  min-height: 2.25rem;
+  margin: -.35rem -.35rem .15rem;
+  padding: .35rem;
+  border-radius: .4rem;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.card-header:hover { background: var(--mat-sys-surface-container-high); }
+.card-header:active { cursor: grabbing; }
+.card-header.drag-disabled { cursor: default; }
 .drag-handle { flex: 0 0 auto; color: var(--mat-sys-on-surface-variant); touch-action: none; }
 .card p { margin-block: .5rem; font-size: .85rem; }
 .card-metadata { display: flex; flex-wrap: wrap; gap: .35rem; margin: .65rem 0; }
