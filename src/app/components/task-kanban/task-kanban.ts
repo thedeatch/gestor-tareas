@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { Component, computed, input, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 
 import {
   TASK_PRIORITY_LABELS, TASK_STATUS_LABELS, TaskStatus,
@@ -13,11 +14,12 @@ export type { KanbanTask, TaskMove };
 
 @Component({
   selector: 'app-task-kanban',
-  imports: [DatePipe, DragDropModule, MatButtonModule, TaskSubtasks],
+  imports: [DatePipe, DragDropModule, MatButtonModule, MatIconModule, TaskSubtasks],
   templateUrl: './task-kanban.html',
   styleUrl: './task-kanban.css'
 })
 export class TaskKanban {
+  private readonly statusOrder: TaskStatus[] = ['PENDING', 'IN_PROGRESS', 'COMPLETED'];
   readonly tasks = input.required<KanbanTask[]>();
   readonly busy = input(false);
   readonly taskEndpoint = input.required<string>();
@@ -38,10 +40,23 @@ export class TaskKanban {
     this.move(event.item.data, event.container.data);
   }
 
-  protected changeStatus(task: KanbanTask, select: HTMLSelectElement): void {
-    const status = select.value as TaskStatus;
-    select.value = this.statusOf(task);
-    this.move(task, status);
+  protected statusIcon(status: TaskStatus): string {
+    return { PENDING: 'pending_actions', IN_PROGRESS: 'autorenew',
+      COMPLETED: 'task_alt' }[status];
+  }
+
+  protected statusLabel(status: TaskStatus): string {
+    return TASK_STATUS_LABELS[status];
+  }
+
+  protected adjacentStatus(task: KanbanTask, direction: -1 | 1): TaskStatus | null {
+    const index = this.statusOrder.indexOf(this.statusOf(task));
+    return this.statusOrder[index + direction] ?? null;
+  }
+
+  protected moveAdjacent(task: KanbanTask, direction: -1 | 1): void {
+    const status = this.adjacentStatus(task, direction);
+    if (status) this.move(task, status);
   }
 
   private move(task: KanbanTask, status: TaskStatus): void {

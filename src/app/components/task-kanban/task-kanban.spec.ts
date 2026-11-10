@@ -31,7 +31,7 @@ describe('TaskKanban', () => {
     destination.dropped.emit(event);
     expect(changes).toEqual([{ id: 1, status: 'IN_PROGRESS' }]);
     expect(cards[1].injector.get(CdkDrag).disabled).toBe(true);
-    expect(cards[1].nativeElement.querySelector('select')).toBeNull();
+    expect(fixture.nativeElement.querySelector('select')).toBeNull();
 
     fixture.componentRef.setInput('busy', true);
     fixture.detectChanges();

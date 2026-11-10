@@ -1,16 +1,26 @@
-<p>Arrastra una tarjeta a otra columna o utiliza su selector de estado.</p>
+<p class="board-help"><mat-icon>drag_indicator</mat-icon>
+  Toma una tarjeta y suéltala en otra columna para cambiar su estado.</p>
 <div class="board" cdkDropListGroup aria-label="Tablero Kanban">
   @for (column of columns(); track column.status) {
-    <section class="column" [attr.aria-label]="column.label" cdkDropList
+    <section class="column" [attr.aria-label]="column.label"
+      [attr.data-status]="column.status" cdkDropList
       [cdkDropListData]="column.status" [cdkDropListDisabled]="busy()"
       [cdkDropListSortingDisabled]="true" (cdkDropListDropped)="drop($event)">
-      <h3>{{ column.label }} ({{ column.tasks.length }})</h3>
+      <header class="column-header">
+        <span class="column-icon"><mat-icon>{{ statusIcon(column.status) }}</mat-icon></span>
+        <h3>{{ column.label }}</h3>
+        <span class="task-count" [attr.aria-label]="column.tasks.length + ' tareas'">
+          {{ column.tasks.length }}
+        </span>
+      </header>
       @for (task of column.tasks; track task.id) {
         <article class="card" cdkDrag [cdkDragData]="task"
-          [cdkDragDisabled]="busy() || task.canChangeStatus === false">
+          [cdkDragDisabled]="busy() || task.canChangeStatus === false"
+          [class.readonly]="task.canChangeStatus === false">
+          <div class="card-placeholder" *cdkDragPlaceholder></div>
           <header>
             @if (task.canChangeStatus !== false) {
-              <span class="drag-handle" cdkDragHandle aria-hidden="true">⠿</span>
+              <mat-icon class="drag-handle" aria-hidden="true">drag_indicator</mat-icon>
             }
             <strong>{{ task.description }}</strong>
           </header>
@@ -23,14 +33,25 @@
             <p class="tags">{{ task.tags?.join(' · ') }}</p>
           }
           @if (task.canChangeStatus !== false) {
-            <label>Estado
-              <select #status [value]="column.status" [disabled]="busy()"
-                (change)="changeStatus(task, status)">
-                @for (option of columns(); track option.status) {
-                  <option [value]="option.status" [selected]="option.status === column.status">{{ option.label }}</option>
-                }
-              </select>
-            </label>
+            <div class="move-actions" aria-label="Mover tarea con el teclado">
+              @if (adjacentStatus(task, -1); as previous) {
+                <button mat-icon-button type="button" [disabled]="busy()"
+                  [attr.aria-label]="'Mover ' + task.description + ' a ' + statusLabel(previous)"
+                  [title]="'Mover a ' + statusLabel(previous)"
+                  (click)="moveAdjacent(task, -1)">
+                  <mat-icon>arrow_back</mat-icon>
+                </button>
+              }
+              <span>{{ column.label }}</span>
+              @if (adjacentStatus(task, 1); as next) {
+                <button mat-icon-button type="button" [disabled]="busy()"
+                  [attr.aria-label]="'Mover ' + task.description + ' a ' + statusLabel(next)"
+                  [title]="'Mover a ' + statusLabel(next)"
+                  (click)="moveAdjacent(task, 1)">
+                  <mat-icon>arrow_forward</mat-icon>
+                </button>
+              }
+            </div>
           }
           @if (allowEdit()) {
             <button mat-button type="button" [disabled]="busy()" (click)="edited.emit(task.id)">Editar tarea</button>
@@ -39,7 +60,8 @@
             [editable]="task.canChangeStatus !== false" />
         </article>
       } @empty {
-        <p class="empty">Sin tareas en esta columna.</p>
+        <div class="empty"><mat-icon>move_to_inbox</mat-icon>
+          <span>Suelta aquí una tarea</span></div>
       }
     </section>
   }

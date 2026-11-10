@@ -2,6 +2,7 @@ import {
   ComponentFixture,
   TestBed
 } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
@@ -9,6 +10,7 @@ import {
 } from '@angular/common/http/testing';
 
 import { TaskService } from '../../services/task';
+import { TaskKanban } from '../../components/task-kanban/task-kanban';
 import { TasksPage } from './tasks-page';
 
 describe('TasksPage', () => {
@@ -90,9 +92,9 @@ describe('TasksPage', () => {
     buttons.find(button => button.textContent.trim() === 'Kanban')!.click();
     fixture.detectChanges();
     await fixture.whenStable();
-    const select = fixture.nativeElement.querySelector('app-task-kanban article select') as HTMLSelectElement;
-    select.value = 'IN_PROGRESS';
-    select.dispatchEvent(new Event('change'));
+    const kanban = fixture.debugElement.query(By.directive(TaskKanban))
+      .componentInstance as TaskKanban;
+    kanban.moved.emit({ id: task.id, status: 'IN_PROGRESS' });
     fixture.detectChanges();
 
     const request = httpTesting.expectOne('/api/tasks/7/status');
