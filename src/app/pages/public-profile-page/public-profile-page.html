@@ -43,7 +43,8 @@
       <mat-card-content class="community-list">
         @for (community of user.communities; track community.id) {
           <a [routerLink]="['/grupos', community.id]" class="community-row">
-            <mat-icon>groups</mat-icon>
+            <app-community-avatar [communityId]="community.id" [hasImage]="community.hasImage"
+              [label]="community.name" />
             <strong>{{ community.name }}</strong>
             <span>{{ roleLabel(community.role) }}</span>
           </a>

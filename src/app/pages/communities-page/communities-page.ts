@@ -17,12 +17,13 @@ import {
   CommunityVisibility
 } from '../../models/community.model';
 import { CommunityService } from '../../services/community';
+import { CommunityAvatar } from '../../components/community-avatar/community-avatar';
 
 @Component({
   selector: 'app-communities-page',
   imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatCardModule,
     MatFormFieldModule, MatIconModule, MatInputModule, MatSelectModule,
-    MatSnackBarModule],
+    MatSnackBarModule, CommunityAvatar],
   templateUrl: './communities-page.html',
   styleUrl: './communities-page.css'
 })
@@ -109,6 +110,7 @@ export class CommunitiesPage {
       next: () => {
         this.invitations.update(items =>
           items.filter(item => item.id !== invitation.id));
+        this.loadDiscovery();
         if (accept) this.load();
         this.snackBar.open(accept ? 'Invitación aceptada.' : 'Invitación rechazada.',
           'Cerrar', { duration: 2500 });
@@ -116,6 +118,11 @@ export class CommunitiesPage {
       error: () => this.snackBar.open('No fue posible responder la invitación.',
         'Cerrar', { duration: 3000 })
     });
+  }
+
+  protected pendingInvitation(groupId: number): CommunityAccess | undefined {
+    return this.invitations().find(invitation =>
+      invitation.communityId === groupId && invitation.status === 'PENDING');
   }
 
   private loadDiscovery(): void {

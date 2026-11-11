@@ -7,6 +7,7 @@ public record CommunityDiscoveryResponse(
     String name,
     String slug,
     String description,
+    boolean hasImage,
     long memberCount,
     CommunityAccessStatus requestStatus
 ) {}

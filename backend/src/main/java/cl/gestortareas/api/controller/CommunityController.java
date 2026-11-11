@@ -3,8 +3,12 @@ package cl.gestortareas.api.controller;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.CacheControl;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import cl.gestortareas.api.dto.*;
 import cl.gestortareas.api.service.CommunityService;
@@ -36,6 +40,30 @@ public class CommunityController {
     public CommunityDetailResponse updateGuidelines(@PathVariable Long id,
         @Valid @RequestBody CommunityGuidelinesRequest request, Authentication authentication) {
         return communityService.updateGuidelines(id, request, authentication.getName());
+    }
+
+    @GetMapping("/{id}/image")
+    public ResponseEntity<byte[]> getImage(@PathVariable Long id,
+        Authentication authentication) {
+        CommunityService.ImageData image = communityService.getImage(id, authentication.getName());
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(image.contentType()))
+            .cacheControl(CacheControl.noStore())
+            .body(image.bytes());
+    }
+
+    @PostMapping(path = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> updateImage(@PathVariable Long id,
+        @RequestPart("file") MultipartFile file, Authentication authentication) {
+        communityService.updateImage(id, file, authentication.getName());
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}/image")
+    public ResponseEntity<Void> removeImage(@PathVariable Long id,
+        Authentication authentication) {
+        communityService.removeImage(id, authentication.getName());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/discover")

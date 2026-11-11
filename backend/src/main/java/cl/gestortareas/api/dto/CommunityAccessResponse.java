@@ -9,6 +9,7 @@ public record CommunityAccessResponse(
     Long id,
     Long communityId,
     String communityName,
+    boolean communityHasImage,
     Long userId,
     String userName,
     String userEmail,

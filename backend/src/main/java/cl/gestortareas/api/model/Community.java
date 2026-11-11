@@ -12,6 +12,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -36,6 +37,10 @@ public class Community {
 
     @Column(nullable = false, length = 5000)
     private String rules = "";
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "image_file_id")
+    private StoredFile imageFile;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -65,6 +70,20 @@ public class Community {
     public String getDescription() { return description; }
     public String getExtendedDescription() { return extendedDescription; }
     public String getRules() { return rules; }
+    public StoredFile getImageFile() { return imageFile; }
+    public boolean hasImage() { return imageFile != null; }
+
+    public StoredFile updateImage(StoredFile file) {
+        StoredFile previous = imageFile;
+        imageFile = file;
+        return previous;
+    }
+
+    public StoredFile removeImage() {
+        StoredFile previous = imageFile;
+        imageFile = null;
+        return previous;
+    }
 
     public void updateGuidelines(String extendedDescription, String rules) {
         this.extendedDescription = extendedDescription;

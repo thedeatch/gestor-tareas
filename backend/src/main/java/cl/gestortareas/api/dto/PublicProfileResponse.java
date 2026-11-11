@@ -17,6 +17,7 @@ public record PublicProfileResponse(
         Long id,
         String name,
         String slug,
+        boolean hasImage,
         CommunityRole role
     ) {}
 }

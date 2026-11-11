@@ -10,6 +10,7 @@ public record CommunitySummaryResponse(
     String name,
     String slug,
     String description,
+    boolean hasImage,
     CommunityVisibility visibility,
     CommunityRole currentUserRole,
     long memberCount,

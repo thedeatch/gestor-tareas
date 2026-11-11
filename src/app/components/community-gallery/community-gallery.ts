@@ -9,7 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
-import { catchError, finalize, forkJoin, Observable, of, switchMap } from 'rxjs';
+import { catchError, concatMap, finalize, forkJoin, from, Observable, of, switchMap, toArray } from 'rxjs';
 
 import { getApiErrorMessage } from '../../models/api-error.model';
 import { GalleryImageDialog, GalleryDialogImage } from './gallery-image-dialog';
@@ -48,6 +48,7 @@ export class CommunityGallery implements OnInit {
   protected readonly imageUrls = signal<Record<number, string>>({});
   protected readonly imagesLoading = signal(false);
   protected readonly busy = signal(false);
+  protected readonly draggingImages = signal(false);
   protected readonly creating = signal(false);
   protected readonly error = signal('');
   protected readonly message = signal('');
@@ -96,24 +97,54 @@ export class CommunityGallery implements OnInit {
   }
 
   protected upload(input: HTMLInputElement, album: Album): void {
-    const file = input.files?.item(0);
+    const files = Array.from(input.files ?? []);
     input.value = '';
-    if (!file || this.busy()) return;
-    if (!['image/jpeg', 'image/png'].includes(file.type) || file.size > 2 * 1024 * 1024 || file.size === 0) {
-      this.error.set('Selecciona una imagen JPEG o PNG de hasta 2 MB.');
+    this.uploadFiles(files, album);
+  }
+
+  protected dragOver(event: DragEvent): void {
+    event.preventDefault();
+    if (!this.busy()) this.draggingImages.set(true);
+  }
+
+  protected dragLeave(event: DragEvent): void {
+    event.preventDefault();
+    this.draggingImages.set(false);
+  }
+
+  protected dropImages(event: DragEvent, album: Album): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.draggingImages.set(false);
+    this.uploadFiles(Array.from(event.dataTransfer?.files ?? []), album);
+  }
+
+  private uploadFiles(files: File[], album: Album): void {
+    if (!files.length || this.busy()) return;
+    const invalid = files.find(file => !['image/jpeg', 'image/png'].includes(file.type)
+      || file.size > 2 * 1024 * 1024 || file.size === 0);
+    if (invalid) {
+      this.error.set('Todas las imágenes deben ser JPEG o PNG y pesar hasta 2 MB cada una.');
       return;
     }
-    const body = new FormData();
-    body.append('file', file);
-    this.run(this.http.post<AlbumImage>(this.imagesUrl(album.id), body).pipe(
+    const uploads = files.map(file => {
+      const body = new FormData();
+      body.append('file', file);
+      return body;
+    });
+    this.run(from(uploads).pipe(
+      concatMap(body => this.http.post<AlbumImage>(this.imagesUrl(album.id), body)),
+      toArray(),
       switchMap(() => this.http.get<AlbumImage[]>(this.imagesUrl(album.id)))),
-    'No se pudo subir la imagen.', images => {
+    files.length === 1 ? 'No se pudo subir la imagen.' : 'No se pudieron subir las imágenes.', images => {
       this.images.set(images);
       this.loadImageUrls(album, images);
       this.albums.update(items => items?.map(item => item.id === album.id
         ? { ...item, imageCount: images.length, coverImageId: images[0]?.id ?? null } : item) ?? null);
       if (this.albums()) this.loadCovers(this.albums()!);
-      this.message.set('Imagen añadida al álbum.');
+      this.message.set(files.length === 1
+        ? 'Imagen añadida al álbum.'
+        : `${files.length} imágenes añadidas al álbum.`);
     });
   }
 

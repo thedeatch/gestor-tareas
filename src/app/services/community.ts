@@ -28,6 +28,20 @@ export class CommunityService {
     return this.http.get<CommunityDetail>(`${this.apiUrl}/${id}`);
   }
 
+  getImage(id: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${id}/image`, { responseType: 'blob' });
+  }
+
+  updateImage(id: number, file: File): Observable<void> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<void>(`${this.apiUrl}/${id}/image`, formData);
+  }
+
+  removeImage(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}/image`);
+  }
+
   updateGuidelines(groupId: number, extendedDescription: string, rules: string): Observable<CommunityDetail> {
     return this.http.patch<CommunityDetail>(`${this.apiUrl}/${groupId}/guidelines`, {
       extendedDescription, rules

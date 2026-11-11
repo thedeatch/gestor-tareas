@@ -12,13 +12,36 @@
     </div>
   } @else if (community(); as item) {
     <header class="community-header">
-      <div class="community-icon"><mat-icon>groups</mat-icon></div>
+      <div class="community-image-shell">
+        <div class="community-icon">
+          @if (groupImageUrl(); as imageUrl) {
+            <img [src]="imageUrl" [alt]="'Imagen de ' + item.name">
+          } @else {
+            <mat-icon>groups</mat-icon>
+          }
+        </div>
+        @if (canManageRoles(item.currentUserRole)) {
+          <button mat-icon-button type="button" class="community-image-edit"
+            [disabled]="imageInProgress()" title="Cambiar imagen del grupo"
+            aria-label="Cambiar imagen del grupo" (click)="groupImageInput.click()">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <input #groupImageInput hidden type="file"
+            accept="image/jpeg,image/png,image/webp" (change)="selectGroupImage($event)">
+        }
+      </div>
       <div><h1>{{ item.name }}</h1><p>{{ item.description }}</p></div>
     </header>
     <div class="summary">
       <span>{{ visibilityLabel(item.visibility) }}</span>
       <span>{{ roleLabel(item.currentUserRole) }}</span>
       <span>{{ item.members.length }} miembros</span>
+      @if (item.hasImage && canManageRoles(item.currentUserRole)) {
+        <button mat-button type="button" class="remove-community-image"
+          [disabled]="imageInProgress()" (click)="removeGroupImage(item)">
+          <mat-icon>delete_outline</mat-icon>Eliminar imagen
+        </button>
+      }
     </div>
 
     <nav class="group-tools" aria-label="Secciones del grupo">
@@ -351,7 +374,7 @@
           <mat-card-subtitle>Debe tener una cuenta registrada en la plataforma</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
-          <form class="invite-form" (ngSubmit)="invite()">
+          <div class="invite-form">
             <mat-form-field appearance="outline">
               <mat-label>Correo electrónico</mat-label>
               <input matInput type="email" [formControl]="invitationEmail">
@@ -359,11 +382,12 @@
                 <mat-error>Ingresa un correo válido.</mat-error>
               }
             </mat-form-field>
-            <button mat-flat-button type="submit" [disabled]="isInviting()">
+            <button mat-flat-button type="button" (click)="invite()"
+              [disabled]="isInviting() || invitationEmail.invalid">
               <mat-icon>person_add</mat-icon>
               {{ isInviting() ? 'Enviando...' : 'Enviar invitación' }}
             </button>
-          </form>
+          </div>
         </mat-card-content>
       </mat-card>
       }

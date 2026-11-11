@@ -13,6 +13,7 @@ public record CommunityDetailResponse(
     String description,
     String extendedDescription,
     String rules,
+    boolean hasImage,
     CommunityVisibility visibility,
     CommunityRole currentUserRole,
     Instant createdAt,

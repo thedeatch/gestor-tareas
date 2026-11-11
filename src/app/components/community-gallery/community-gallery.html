@@ -47,13 +47,6 @@
           <button mat-button type="button" (click)="closeAlbum()">
             <mat-icon>arrow_back</mat-icon>Todos los álbumes
           </button>
-          @if (canManage()) {
-            <input #imageInput class="visually-hidden" id="community-gallery-upload" type="file"
-              accept="image/jpeg,image/png" [disabled]="busy()" (change)="upload(imageInput, selected)">
-            <button mat-flat-button type="button" [disabled]="busy()" (click)="imageInput.click()">
-              <mat-icon>add_photo_alternate</mat-icon>Añadir imagen
-            </button>
-          }
         </div>
         <div class="album-title-row">
           <div>
@@ -62,6 +55,23 @@
           </div>
           <span class="image-count"><mat-icon>photo</mat-icon>{{ images().length }}</span>
         </div>
+
+        @if (canManage()) {
+          <input #imageInput class="visually-hidden" id="community-gallery-upload" type="file"
+            accept="image/jpeg,image/png" multiple [disabled]="busy()"
+            (change)="upload(imageInput, selected)">
+          <button class="upload-dropzone" type="button" [disabled]="busy()"
+            [class.dragging]="draggingImages()"
+            (click)="imageInput.click()"
+            (dragenter)="dragOver($event)" (dragover)="dragOver($event)"
+            (dragleave)="dragLeave($event)" (drop)="dropImages($event, selected)">
+            <mat-icon>{{ busy() ? 'hourglass_top' : 'cloud_upload' }}</mat-icon>
+            <span>
+              <strong>{{ busy() ? 'Subiendo imágenes…' : 'Añadir imágenes' }}</strong>
+              <small>Haz clic para buscarlas o arrastra aquí uno o varios archivos JPEG o PNG de hasta 2 MB.</small>
+            </span>
+          </button>
+        }
 
         @if (imagesLoading()) {
           <div class="loading-state" role="status">

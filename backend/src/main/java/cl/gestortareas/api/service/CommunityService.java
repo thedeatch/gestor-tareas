@@ -8,6 +8,7 @@ import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import cl.gestortareas.api.dto.*;
@@ -20,6 +21,8 @@ import cl.gestortareas.api.model.CommunityMembership;
 import cl.gestortareas.api.model.CommunityRole;
 import cl.gestortareas.api.model.CommunityVisibility;
 import cl.gestortareas.api.model.NotificationType;
+import cl.gestortareas.api.model.FilePurpose;
+import cl.gestortareas.api.model.StoredFile;
 import cl.gestortareas.api.repository.AppUserRepository;
 import cl.gestortareas.api.repository.CommunityAccessRequestRepository;
 import cl.gestortareas.api.repository.CommunityMembershipRepository;
@@ -27,24 +30,30 @@ import cl.gestortareas.api.repository.CommunityRepository;
 
 @Service
 public class CommunityService {
+    private static final long MAX_IMAGE_SIZE = 2L * 1024 * 1024;
+    private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of(
+        "image/jpeg", "image/png", "image/webp");
     private final CommunityRepository communityRepository;
     private final CommunityMembershipRepository membershipRepository;
     private final CommunityAccessRequestRepository accessRepository;
     private final AppUserRepository userRepository;
     private final NotificationService notificationService;
     private final UserBlockService blocks;
+    private final FileStorageService fileStorageService;
 
     public CommunityService(CommunityRepository communityRepository,
                             CommunityMembershipRepository membershipRepository,
                             CommunityAccessRequestRepository accessRepository,
                             AppUserRepository userRepository,
-                            NotificationService notificationService, UserBlockService blocks) {
+                            NotificationService notificationService, UserBlockService blocks,
+                            FileStorageService fileStorageService) {
         this.communityRepository = communityRepository;
         this.membershipRepository = membershipRepository;
         this.accessRepository = accessRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
         this.blocks = blocks;
+        this.fileStorageService = fileStorageService;
     }
 
     @Transactional(readOnly = true)
@@ -87,8 +96,73 @@ public class CommunityService {
         return new CommunityDetailResponse(
             community.getId(), community.getName(), community.getSlug(),
             community.getDescription(), community.getExtendedDescription(), community.getRules(),
+            community.hasImage(),
             community.getVisibility(), membership.getRole(), community.getCreatedAt(), members);
     }
+
+    @Transactional(readOnly = true)
+    public ImageData getImage(Long id, String email) {
+        AppUser viewer = requireUser(email);
+        Community community = communityRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "Grupo no encontrado"));
+        boolean isMember = membershipRepository
+            .existsByCommunityIdAndUserId(id, viewer.getId());
+        boolean hasInvitation = accessRepository
+            .findByCommunityIdAndUserIdAndType(id, viewer.getId(),
+                CommunityAccessType.INVITATION)
+            .filter(invitation -> invitation.getStatus()
+                == CommunityAccessStatus.PENDING)
+            .isPresent();
+        boolean isDiscoverable = community.getVisibility()
+            != CommunityVisibility.HIDDEN;
+        if (!isMember && !hasInvitation && !isDiscoverable) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "Grupo no encontrado");
+        }
+        if (!community.hasImage()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "El grupo no tiene una imagen");
+        }
+        StoredFile image = community.getImageFile();
+        return new ImageData(fileStorageService.readBytes(image), image.getContentType());
+    }
+
+    @Transactional
+    public void updateImage(Long id, MultipartFile file, String email) {
+        CommunityMembership membership = requireImageManager(id, email);
+        if (file.isEmpty() || file.getSize() > MAX_IMAGE_SIZE) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "La imagen debe pesar como máximo 2 MB");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType)) {
+            throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                "Utiliza una imagen JPEG, PNG o WebP");
+        }
+        StoredFile stored = fileStorageService.store(
+            email, file, FilePurpose.COMMUNITY_IMAGE, MAX_IMAGE_SIZE, ALLOWED_IMAGE_TYPES);
+        StoredFile previous = membership.getCommunity().updateImage(stored);
+        if (previous != null) fileStorageService.delete(previous);
+    }
+
+    @Transactional
+    public void removeImage(Long id, String email) {
+        StoredFile previous = requireImageManager(id, email).getCommunity().removeImage();
+        if (previous != null) fileStorageService.delete(previous);
+    }
+
+    private CommunityMembership requireImageManager(Long id, String email) {
+        CommunityMembership membership = requireMembership(id, email);
+        if (membership.getRole() != CommunityRole.OWNER
+            && membership.getRole() != CommunityRole.COMMUNITY_ADMIN) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "No tienes permisos para editar la imagen del grupo");
+        }
+        return membership;
+    }
+
+    public record ImageData(byte[] bytes, String contentType) {}
 
     @Transactional
     public CommunitySummaryResponse create(CreateCommunityRequest request,
@@ -115,7 +189,7 @@ public class CommunityService {
                 .existsByCommunityIdAndUserId(group.getId(), user.getId()))
             .map(group -> new CommunityDiscoveryResponse(
                 group.getId(), group.getName(), group.getSlug(),
-                group.getDescription(),
+                group.getDescription(), group.hasImage(),
                 membershipRepository.countByCommunityId(group.getId()),
                 accessRepository.findByCommunityIdAndUserIdAndType(
                     group.getId(), user.getId(), CommunityAccessType.JOIN_REQUEST)
@@ -129,6 +203,16 @@ public class CommunityService {
         AppUser requester = requireUser(email);
         Community group = visibleGroup(communityId);
         ensureNotMember(group.getId(), requester.getId());
+        boolean hasPendingInvitation = accessRepository
+            .findByCommunityIdAndUserIdAndType(group.getId(), requester.getId(),
+                CommunityAccessType.INVITATION)
+            .filter(invitation -> invitation.getStatus()
+                == CommunityAccessStatus.PENDING)
+            .isPresent();
+        if (hasPendingInvitation) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Ya tienes una invitación pendiente para este grupo");
+        }
         CommunityAccessRequest request = accessRepository
             .findByCommunityIdAndUserIdAndType(group.getId(), requester.getId(),
                 CommunityAccessType.JOIN_REQUEST)
@@ -212,7 +296,7 @@ public class CommunityService {
         notificationService.create(invited, manager, NotificationType.INVITATION,
             "Invitación a un grupo",
             manager.getName() + " te invitó a " + group.getName() + ".",
-            "/grupos");
+            "/grupos?invitacion=" + invitation.getId());
         return toAccessResponse(invitation);
     }
 
@@ -285,7 +369,7 @@ public class CommunityService {
         Community community = membership.getCommunity();
         return new CommunitySummaryResponse(
             community.getId(), community.getName(), community.getSlug(),
-            community.getDescription(), community.getVisibility(),
+            community.getDescription(), community.hasImage(), community.getVisibility(),
             membership.getRole(),
             membershipRepository.countByCommunityId(community.getId()),
             community.getCreatedAt());
@@ -301,6 +385,7 @@ public class CommunityService {
         CommunityAccessRequest request) {
         return new CommunityAccessResponse(request.getId(),
             request.getCommunity().getId(), request.getCommunity().getName(),
+            request.getCommunity().hasImage(),
             request.getUser().getId(), request.getUser().getName(),
             request.getUser().getEmail(), request.getType(), request.getStatus(),
             request.getCreatedAt());

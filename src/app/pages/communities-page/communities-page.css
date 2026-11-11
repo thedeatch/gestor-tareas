@@ -18,9 +18,24 @@ form button { justify-self: start; }
 .access-section h2, .discover-section h2, .discover-section > p { margin: 0 0 .5rem; }
 .discover-section > p { color: var(--mat-sys-on-surface-variant); }
 .access-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: .75rem; padding: 1rem; }
-.access-row > div:first-child { display: flex; flex-direction: column; gap: .2rem; }
+.access-community { display: flex; align-items: center; gap: .8rem; min-width: 0; }
+.access-community > div { display: flex; min-width: 0; flex-direction: column; gap: .2rem; }
 .access-row span { color: var(--mat-sys-on-surface-variant); }
 .actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.invitation-card-actions {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1.25rem;
+}
+.invitation-card-actions > span {
+  color: var(--mat-sys-on-surface-variant);
+}
 .empty-state { grid-column: 1 / -1; border: 1px dashed var(--mat-sys-outline-variant); border-radius: 1rem; }
 .empty-state > mat-icon { font-size: 48px; width: 48px; height: 48px; }
-@media (max-width: 600px) { .page-header, .access-row { align-items: stretch; flex-direction: column; } }
+@media (max-width: 600px) {
+  .page-header, .access-row { align-items: stretch; flex-direction: column; }
+  .access-community { align-items: center; }
+  .invitation-card-actions { align-items: flex-start; flex-direction: column; gap: .75rem; }
+}

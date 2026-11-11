@@ -144,6 +144,22 @@ class CommunityControllerIntegrationTests {
             .andExpect(jsonPath("$.type").value("INVITATION"));
 
         Long invitationId = accessRepository.findAll().get(0).getId();
+        mockMvc.perform(get("/api/communities/invitations")
+                .with(jwt().jwt(token -> token.subject(OTHER_EMAIL))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].id").value(invitationId))
+            .andExpect(jsonPath("$[0].status").value("PENDING"));
+        mockMvc.perform(get("/api/notifications")
+                .param("page", "0").param("size", "10")
+                .with(jwt().jwt(token -> token.subject(OTHER_EMAIL))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].type").value("INVITATION"))
+            .andExpect(jsonPath("$.content[0].targetUrl")
+                .value("/grupos?invitacion=" + invitationId));
+        mockMvc.perform(post("/api/communities/{id}/join-requests", groupId)
+                .with(jwt().jwt(token -> token.subject(OTHER_EMAIL))))
+            .andExpect(status().isConflict());
+
         mockMvc.perform(patch(
                 "/api/communities/invitations/{id}/accept", invitationId)
                 .with(jwt().jwt(token -> token.subject(OTHER_EMAIL))))

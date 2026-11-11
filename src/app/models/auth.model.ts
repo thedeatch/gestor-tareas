@@ -39,6 +39,7 @@ export interface PublicProfileCommunity {
   id: number;
   name: string;
   slug: string;
+  hasImage: boolean;
   role: import('./community.model').CommunityRole;
 }
 

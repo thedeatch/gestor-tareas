@@ -54,3 +54,32 @@ html.reduced-motion *::after {
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
 }
+/* El botón superpuesto de la foto de grupo debe ignorar el espaciado interno
+   de mat-icon-button para mantener el lápiz centrado. */
+.community-image-edit {
+  position: absolute !important;
+  right: -7px;
+  bottom: -5px;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 36px !important;
+  height: 36px !important;
+  padding: 0 !important;
+  line-height: 0 !important;
+  border: 2px solid var(--mat-sys-surface);
+  background: var(--mat-sys-primary) !important;
+  color: var(--mat-sys-on-primary) !important;
+  box-shadow: var(--mat-sys-level2);
+}
+.community-image-edit mat-icon {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+  line-height: 20px;
+}

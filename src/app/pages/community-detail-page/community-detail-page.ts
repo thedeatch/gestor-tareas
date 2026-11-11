@@ -1,6 +1,6 @@
 import { Observable } from 'rxjs';
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, inject, OnDestroy, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -45,6 +45,7 @@ import {
   CommunityOverview,
   CommunityOverviewSection
 } from '../../components/community-overview/community-overview';
+import { AvatarCropDialog } from '../../components/avatar-crop-dialog/avatar-crop-dialog';
 
 type CommunitySection =
   | 'overview'
@@ -68,7 +69,7 @@ const COMMUNITY_SECTIONS: readonly CommunitySection[] = [
   templateUrl: './community-detail-page.html',
   styleUrl: './community-detail-page.css'
 })
-export class CommunityDetailPage {
+export class CommunityDetailPage implements OnDestroy {
   protected readonly activity = viewChild(CommunityActivity);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -123,6 +124,8 @@ export class CommunityDetailPage {
   protected readonly selectedRoles = signal<Record<number, CommunityRole>>({});
   protected readonly savingRoleFor = signal<number | null>(null);
   protected readonly error = signal<string | null>(null);
+  protected readonly groupImageUrl = signal<string | null>(null);
+  protected readonly imageInProgress = signal(false);
   protected readonly invitationEmail = new FormControl('', {
     nonNullable: true,
     validators: [Validators.required, Validators.email]
@@ -185,6 +188,7 @@ export class CommunityDetailPage {
     this.service.findById(id).subscribe({
       next: community => {
         this.community.set(community);
+        this.loadGroupImage(community);
         if (this.activeSection() === 'moderation' && !this.canManage(community.currentUserRole)) {
           this.openSection('overview');
         }
@@ -197,6 +201,96 @@ export class CommunityDetailPage {
       },
       error: () => { this.error.set('No fue posible abrir el grupo.'); this.isLoading.set(false); }
     });
+  }
+
+  protected selectGroupImage(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      this.snackBar.open('La imagen debe pesar como máximo 2 MB.', 'Cerrar', { duration: 3500 });
+      input.value = '';
+      return;
+    }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      this.snackBar.open('Utiliza una imagen JPEG, PNG o WebP.', 'Cerrar', { duration: 3500 });
+      input.value = '';
+      return;
+    }
+    const sourceUrl = URL.createObjectURL(file);
+    this.dialog.open(AvatarCropDialog, {
+      data: { sourceUrl }, width: 'min(92vw, 520px)', maxWidth: '92vw'
+    }).afterClosed().subscribe((croppedFile?: File) => {
+      URL.revokeObjectURL(sourceUrl);
+      input.value = '';
+      if (croppedFile) this.uploadGroupImage(croppedFile);
+    });
+  }
+
+  protected removeGroupImage(group: CommunityDetail): void {
+    const ref = this.dialog.open(ConfirmDialog, {
+      data: <ConfirmDialogData>{
+        title: 'Eliminar imagen del grupo',
+        itemLabel: 'la imagen del grupo',
+        itemName: group.name,
+        confirmLabel: 'Eliminar imagen'
+      }
+    });
+    ref.afterClosed().subscribe(confirmed => {
+      if (!confirmed) return;
+      this.imageInProgress.set(true);
+      this.service.removeImage(group.id).subscribe({
+        next: () => {
+          this.revokeGroupImageUrl();
+          this.community.update(current => current ? { ...current, hasImage: false } : current);
+          this.imageInProgress.set(false);
+          this.snackBar.open('Imagen del grupo eliminada.', 'Cerrar', { duration: 2500 });
+        },
+        error: error => {
+          this.imageInProgress.set(false);
+          this.snackBar.open(getApiErrorMessage(error, 'No se pudo eliminar la imagen.'),
+            'Cerrar', { duration: 3500 });
+        }
+      });
+    });
+  }
+
+  private uploadGroupImage(file: File): void {
+    const group = this.community();
+    if (!group || this.imageInProgress()) return;
+    this.imageInProgress.set(true);
+    this.service.updateImage(group.id, file).subscribe({
+      next: () => {
+        this.community.update(current => current ? { ...current, hasImage: true } : current);
+        this.loadGroupImage({ ...group, hasImage: true });
+        this.imageInProgress.set(false);
+        this.snackBar.open('Imagen del grupo actualizada.', 'Cerrar', { duration: 2500 });
+      },
+      error: error => {
+        this.imageInProgress.set(false);
+        this.snackBar.open(getApiErrorMessage(error, 'No se pudo guardar la imagen.'),
+          'Cerrar', { duration: 3500 });
+      }
+    });
+  }
+
+  private loadGroupImage(group: CommunityDetail): void {
+    this.revokeGroupImageUrl();
+    if (!group.hasImage) return;
+    this.service.getImage(group.id).subscribe({
+      next: blob => this.groupImageUrl.set(URL.createObjectURL(blob)),
+      error: () => this.groupImageUrl.set(null)
+    });
+  }
+
+  private revokeGroupImageUrl(): void {
+    const url = this.groupImageUrl();
+    if (url) URL.revokeObjectURL(url);
+    this.groupImageUrl.set(null);
+  }
+
+  ngOnDestroy(): void {
+    this.revokeGroupImageUrl();
   }
 
   protected editGuidelines(group: CommunityDetail): void {
@@ -428,17 +522,23 @@ export class CommunityDetailPage {
       this.invitationEmail.markAsTouched();
       return;
     }
+    const email = this.invitationEmail.value.trim();
+    if (!email) {
+      this.invitationEmail.markAsTouched();
+      return;
+    }
     this.isInviting.set(true);
-    this.service.invite(group.id, this.invitationEmail.value).subscribe({
+    this.service.invite(group.id, email).subscribe({
       next: () => {
         this.isInviting.set(false);
         this.invitationEmail.reset('');
         this.snackBar.open('Invitación enviada.', 'Cerrar', { duration: 2500 });
       },
-      error: () => {
+      error: error => {
         this.isInviting.set(false);
-        this.snackBar.open('No fue posible invitar a ese usuario.', 'Cerrar',
-          { duration: 3000 });
+        this.snackBar.open(getApiErrorMessage(error,
+          'No fue posible invitar a ese usuario.'), 'Cerrar',
+          { duration: 4500 });
       }
     });
   }

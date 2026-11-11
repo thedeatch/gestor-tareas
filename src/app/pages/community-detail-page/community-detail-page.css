@@ -2,8 +2,11 @@
 .community-header { display: flex; align-items: center; gap: 1rem; margin: 1rem 0; }
 .community-header h1, .community-header p { margin: 0; }
 .community-header p { margin-top: .35rem; color: var(--mat-sys-on-surface-variant); }
-.community-icon { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--mat-sys-primary-container); color: var(--mat-sys-on-primary-container); }
+.community-image-shell { position: relative; flex: 0 0 72px; width: 72px; height: 72px; }
+.community-icon { display: grid; place-items: center; width: 72px; height: 72px; overflow: hidden; border-radius: 50%; background: var(--mat-sys-primary-container); color: var(--mat-sys-on-primary-container); }
 .community-icon mat-icon { font-size: 34px; width: 34px; height: 34px; }
+.community-icon img { width: 100%; height: 100%; object-fit: cover; }
+.remove-community-image { margin: -.25rem 0; color: var(--mat-sys-error) !important; }
 .summary { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: 1.5rem; }
 .summary span, .role-chip { padding: .35rem .7rem; border-radius: 999px; background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
 .group-tools { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin-bottom: 1.25rem; }

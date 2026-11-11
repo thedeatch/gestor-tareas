@@ -12,10 +12,11 @@ import { BlockStatus, UserBlocksService } from '../../services/user-blocks';
 import { getApiErrorMessage } from '../../models/api-error.model';
 import { AuthService } from '../../services/auth';
 import { ModuleConfigurationService } from '../../services/module-configuration';
+import { CommunityAvatar } from '../../components/community-avatar/community-avatar';
 
 @Component({
   selector: 'app-public-profile-page',
-  imports: [DatePipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule],
+  imports: [DatePipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, CommunityAvatar],
   templateUrl: './public-profile-page.html',
   styleUrl: './public-profile-page.css'
 })

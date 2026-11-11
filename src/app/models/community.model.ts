@@ -10,6 +10,7 @@ export interface CommunitySummary {
   name: string;
   slug: string;
   description: string;
+  hasImage: boolean;
   visibility: CommunityVisibility;
   currentUserRole: CommunityRole;
   memberCount: number;
@@ -47,6 +48,7 @@ export interface CommunityAccess {
   id: number;
   communityId: number;
   communityName: string;
+  communityHasImage: boolean;
   userId: number;
   userName: string;
   userEmail: string;
@@ -60,6 +62,7 @@ export interface CommunityDiscovery {
   name: string;
   slug: string;
   description: string;
+  hasImage: boolean;
   memberCount: number;
   requestStatus: CommunityAccessStatus | null;
 }

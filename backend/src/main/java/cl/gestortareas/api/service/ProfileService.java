@@ -122,6 +122,7 @@ public class ProfileService {
                     membership.getCommunity().getId(),
                     membership.getCommunity().getName(),
                     membership.getCommunity().getSlug(),
+                    membership.getCommunity().hasImage(),
                     membership.getRole()
                 ))
                 .toList()
