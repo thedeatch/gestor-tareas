@@ -628,7 +628,7 @@ class CommunityControllerIntegrationTests {
         mockMvc.perform(put(registration).with(memberJwt)).andExpect(status().isBadRequest());
     }
     @Test
-    void shouldProtectAlbumUploadsAndImageDownloadsByGroupMembership() throws Exception {
+    void shouldProtectAlbumImagesAndAllowMembersToCommentAndReact() throws Exception {
         createCommunity();
         var group = communityRepository.findAll().get(0);
         var ownerJwt = jwt().jwt(token -> token.subject(OWNER_EMAIL));
@@ -658,18 +658,59 @@ class CommunityControllerIntegrationTests {
             .param("id", albumId).query(Long.class).single();
 
         mockMvc.perform(get(images + "/" + fileId).with(memberJwt)).andExpect(status().isNotFound());
+        var comments = images + "/" + fileId + "/comments";
+        mockMvc.perform(get(comments).with(memberJwt)).andExpect(status().isNotFound());
+        mockMvc.perform(post(comments).with(memberJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"content\":\"Hola\"}")).andExpect(status().isNotFound());
         mockMvc.perform(get("/api/files/" + fileId).with(ownerJwt)).andExpect(status().isNotFound());
         var member = userRepository.findByEmailIgnoreCase(OTHER_EMAIL).orElseThrow();
         membershipRepository.save(new CommunityMembership(group, member, CommunityRole.MEMBER));
         mockMvc.perform(get(albums).with(memberJwt)).andExpect(status().isOk())
             .andExpect(jsonPath("$[0].title").value("Encuentro"));
         mockMvc.perform(get(images).with(memberJwt)).andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].id").value(fileId));
+            .andExpect(jsonPath("$[0].id").value(fileId))
+            .andExpect(jsonPath("$[0].commentCount").value(0));
         mockMvc.perform(get(images + "/" + fileId).with(memberJwt)).andExpect(status().isOk())
             .andExpect(content().contentType(MediaType.IMAGE_PNG)).andExpect(content().bytes(png));
         mockMvc.perform(multipart(images).file(image).with(memberJwt)).andExpect(status().isForbidden());
         mockMvc.perform(post(albums).with(memberJwt).contentType(MediaType.APPLICATION_JSON)
                 .content(payload)).andExpect(status().isForbidden());
+
+        mockMvc.perform(post(comments).with(ownerJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"content\":\"  Buena foto  \"}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.authorName").value("Propietaria"))
+            .andExpect(jsonPath("$.content").value("Buena foto"))
+            .andExpect(jsonPath("$.createdAt").isNotEmpty());
+        mockMvc.perform(post(comments).with(memberJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"content\":\"¡Gracias!\"}")).andExpect(status().isCreated());
+        mockMvc.perform(get(images).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].commentCount").value(2));
+        mockMvc.perform(multipart(images).file(image).with(ownerJwt)).andExpect(status().isCreated());
+        mockMvc.perform(get(images).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].commentCount").value(0))
+            .andExpect(jsonPath("$[1].id").value(fileId))
+            .andExpect(jsonPath("$[1].commentCount").value(2));
+        mockMvc.perform(post(comments).with(memberJwt).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"content\":\"   \"}")).andExpect(status().isBadRequest());
+
+        var commentId = jdbc.sql("SELECT MIN(id) FROM community_image_comments WHERE image_id = :id")
+            .param("id", fileId).query(Long.class).single();
+        var like = comments + "/" + commentId + "/like";
+        mockMvc.perform(put(like).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.liked").value(true)).andExpect(jsonPath("$.likeCount").value(1));
+        mockMvc.perform(put(like).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.likeCount").value(1));
+        jdbc.sql("UPDATE users SET avatar_data = :avatar WHERE email = :email")
+            .param("avatar", png).param("email", OWNER_EMAIL).update();
+        mockMvc.perform(get(comments).with(ownerJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].liked").value(false)).andExpect(jsonPath("$[0].likeCount").value(1))
+            .andExpect(jsonPath("$[0].authorHasAvatar").value(true))
+            .andExpect(jsonPath("$[1].authorName").value("Otra persona"));
+        mockMvc.perform(delete(like).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.liked").value(false)).andExpect(jsonPath("$.likeCount").value(0));
+        mockMvc.perform(get(albums + "/0/images/" + fileId + "/comments").with(ownerJwt))
+            .andExpect(status().isNotFound());
     }
     @Test
     void shouldDeliverNewChatMessagesToWaitingGroupMembers() throws Exception {

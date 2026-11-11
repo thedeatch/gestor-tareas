@@ -25,6 +25,7 @@ interface Album {
 interface AlbumImage {
   id: number;
   name: string;
+  commentCount: number;
 }
 
 @Component({
@@ -161,9 +162,17 @@ export class CommunityGallery implements OnInit {
       .map(item => ({ ...item, url: this.imageUrls()[item.id] }));
     const index = available.findIndex(item => item.id === image.id);
     if (!selected || index < 0) return;
-    this.dialog.open(GalleryImageDialog, {
-      data: { albumTitle: selected.title, images: available, initialIndex: index },
-      width: 'min(1000px, 96vw)', maxWidth: '96vw'
+    const dialogRef = this.dialog.open(GalleryImageDialog, {
+      data: {
+        albumTitle: selected.title, images: available, initialIndex: index,
+        imagesUrl: this.imagesUrl(selected.id)
+      },
+      width: 'min(1440px, 98vw)', maxWidth: '98vw', maxHeight: '96dvh'
+    });
+    dialogRef.componentInstance.commentCountChanged.subscribe(({ imageId, count }) => {
+      if (this.album()?.id !== selected.id) return;
+      this.images.update(images => images.map(item =>
+        item.id === imageId ? { ...item, commentCount: count } : item));
     });
   }
 

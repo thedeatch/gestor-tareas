@@ -233,7 +233,25 @@
 .image-tile:hover img {
   transform: scale(1.04);
 }
-.image-tile span {
+.image-tile .comment-count {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 999px;
+  background: #000c;
+  color: #fff;
+  font-size: 0.78rem;
+}
+.comment-count mat-icon {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+}
+.image-tile .image-name {
   position: absolute;
   right: 0;
   bottom: 0;

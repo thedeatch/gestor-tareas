@@ -1,4 +1,4 @@
-import { Component, effect, inject, input, OnDestroy } from '@angular/core';
+import { Component, effect, inject, input, OnDestroy, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Subscription } from 'rxjs';
 
@@ -19,7 +19,7 @@ export class CommunityAvatar implements OnDestroy {
   readonly hasImage = input(false);
   readonly label = input('Grupo');
 
-  protected imageUrl: string | null = null;
+  protected readonly imageUrl = signal<string | null>(null);
 
   constructor() {
     effect(() => {
@@ -37,16 +37,16 @@ export class CommunityAvatar implements OnDestroy {
   private loadImage(id: number, hasImage: boolean): void {
     this.imageRequest?.unsubscribe();
     this.revokeObjectUrl();
-    this.imageUrl = null;
+    this.imageUrl.set(null);
     if (!hasImage) return;
 
     this.imageRequest = this.communityService.getImage(id).subscribe({
       next: blob => {
         this.revokeObjectUrl();
         this.objectUrl = URL.createObjectURL(blob);
-        this.imageUrl = this.objectUrl;
+        this.imageUrl.set(this.objectUrl);
       },
-      error: () => this.imageUrl = null
+      error: () => this.imageUrl.set(null)
     });
   }
 

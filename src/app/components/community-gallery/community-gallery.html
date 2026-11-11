@@ -81,9 +81,13 @@
           <div class="image-grid" aria-label="Imágenes del álbum">
             @for (image of images(); track image.id) {
               @if (imageUrls()[image.id]; as imageUrl) {
-                <button class="image-tile" type="button" (click)="view(image)" [attr.aria-label]="'Ver ' + image.name">
+                <button class="image-tile" type="button" (click)="view(image)"
+                  [attr.aria-label]="'Ver ' + image.name + ', ' + image.commentCount + ' comentarios'">
                   <img [src]="imageUrl" [alt]="image.name">
-                  <span>{{ image.name }}</span>
+                  <span class="comment-count" aria-hidden="true">
+                    <mat-icon>chat_bubble_outline</mat-icon>{{ image.commentCount }}
+                  </span>
+                  <span class="image-name">{{ image.name }}</span>
                 </button>
               }
             }
