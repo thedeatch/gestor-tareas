@@ -17,8 +17,8 @@ describe('GalleryImageDialog', () => {
           useValue: {
             albumTitle: 'Encuentro', initialIndex: 0, imagesUrl: '/api/communities/2/albums/1/images',
             images: [
-              { id: 3, name: 'Primera foto', url: '/primera.png' },
-              { id: 4, name: 'Segunda foto', url: '/segunda.png' }
+              { id: 3, name: 'Primera foto', url: '/primera.png', likeCount: 0, liked: false },
+              { id: 4, name: 'Segunda foto', url: '/segunda.png', likeCount: 0, liked: false }
             ]
           }
         }
@@ -41,12 +41,27 @@ describe('GalleryImageDialog', () => {
     fixture.detectChanges();
     expect(root.querySelector('#image-comments')?.hasAttribute('hidden')).toBe(false);
     expect(root.querySelector('textarea')?.value).toBe('Mi comentario pendiente');
+    (root.querySelector('app-gallery-image-like button') as HTMLButtonElement).click();
+    const like = http.expectOne({ method: 'PUT', url: '/api/communities/2/albums/1/images/3/like' });
     (root.querySelector('[aria-label="Imagen siguiente"]') as HTMLButtonElement).click();
     fixture.detectChanges();
     http.expectOne('/api/communities/2/albums/1/images/4/comments').flush([]);
     fixture.detectChanges();
     expect(root.querySelector('.image-button img')?.getAttribute('alt')).toBe('Segunda foto');
     expect(root.querySelector('textarea')?.value).toBe('');
+    like.flush({ likeCount: 1, liked: true });
+    fixture.detectChanges();
+    expect(root.querySelector('app-gallery-image-like button')?.getAttribute('aria-pressed')).toBe('false');
+    (root.querySelector('[aria-label="Imagen anterior"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    http.expectOne('/api/communities/2/albums/1/images/3/comments').flush([]);
+    fixture.detectChanges();
+    expect(root.querySelector('app-gallery-image-like button')?.getAttribute('aria-pressed')).toBe('true');
+    (root.querySelector('app-gallery-image-like button') as HTMLButtonElement).click();
+    http.expectOne({ method: 'DELETE', url: '/api/communities/2/albums/1/images/3/like' })
+      .flush({ likeCount: 0, liked: false });
+    fixture.detectChanges();
+    expect(root.querySelector('app-gallery-image-like button')?.getAttribute('aria-pressed')).toBe('false');
     http.verify();
   });
 });

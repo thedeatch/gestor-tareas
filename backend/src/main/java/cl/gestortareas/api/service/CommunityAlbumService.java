@@ -35,7 +35,8 @@ public class CommunityAlbumService {
         """;
 
     public record Album(Long id, String title, String description, long imageCount, Long coverImageId) {}
-    public record Image(Long id, String name, long commentCount) {}
+    public record Image(Long id, String name, long commentCount, long likeCount, boolean liked) {}
+    public record ImageLikes(long likeCount, boolean liked) {}
     public record ImageData(String contentType, byte[] data) {}
     public record ImageComment(Long id, Long authorId, String authorName, boolean authorHasAvatar,
                                String content, OffsetDateTime createdAt, long likeCount, boolean liked) {}
@@ -75,14 +76,17 @@ public class CommunityAlbumService {
 
     @Transactional(readOnly = true)
     public List<Image> images(Long groupId, Long albumId, String email) {
-        communities.requireMembership(groupId, email);
+        Long userId = communities.requireMembership(groupId, email).getUser().getId();
         requireAlbum(groupId, albumId);
         return jdbc.sql("""
             SELECT f.id, f.original_name AS name,
-                   (SELECT COUNT(*) FROM community_image_comments c WHERE c.image_id = f.id) AS comment_count
+                   (SELECT COUNT(*) FROM community_image_comments c WHERE c.image_id = f.id) AS comment_count,
+                   (SELECT COUNT(*) FROM community_image_likes r WHERE r.image_id = f.id) AS like_count,
+                   EXISTS (SELECT 1 FROM community_image_likes r
+                           WHERE r.image_id = f.id AND r.user_id = :userId) AS liked
             FROM community_album_images i JOIN stored_files f ON f.id = i.file_id
             WHERE i.album_id = :albumId ORDER BY f.id DESC
-            """).param("albumId", albumId).query(Image.class).list();
+            """).param("albumId", albumId).param("userId", userId).query(Image.class).list();
     }
 
     public Image upload(Long groupId, Long albumId, String email, MultipartFile file) {
@@ -93,7 +97,7 @@ public class CommunityAlbumService {
         jdbc.sql("""
             INSERT INTO community_album_images (album_id, file_id) VALUES (:albumId, :fileId)
             """).param("albumId", albumId).param("fileId", saved.getId()).update();
-        return new Image(saved.getId(), saved.getOriginalName(), 0);
+        return new Image(saved.getId(), saved.getOriginalName(), 0, 0, false);
     }
 
     @Transactional(readOnly = true)
@@ -143,6 +147,24 @@ public class CommunityAlbumService {
             """ : "DELETE FROM community_image_comment_likes WHERE comment_id = :commentId AND user_id = :userId";
         jdbc.sql(sql).param("commentId", commentId).param("userId", userId).update();
         return findComment(imageId, commentId, userId);
+    }
+
+    public ImageLikes setImageLike(Long groupId, Long albumId, Long imageId, String email, boolean liked) {
+        Long userId = requireImageMember(groupId, albumId, imageId, email);
+        jdbc.sql("SELECT file_id FROM community_album_images WHERE file_id = :imageId FOR UPDATE")
+            .param("imageId", imageId).query(Long.class).single();
+        String sql = liked ? """
+            INSERT INTO community_image_likes (image_id, user_id)
+            SELECT :imageId, :userId WHERE NOT EXISTS (
+                SELECT 1 FROM community_image_likes WHERE image_id = :imageId AND user_id = :userId
+            )
+            """ : "DELETE FROM community_image_likes WHERE image_id = :imageId AND user_id = :userId";
+        jdbc.sql(sql).param("imageId", imageId).param("userId", userId).update();
+        return jdbc.sql("""
+            SELECT COUNT(*) AS like_count,
+                   EXISTS (SELECT 1 FROM community_image_likes WHERE image_id = :imageId AND user_id = :userId) AS liked
+            FROM community_image_likes WHERE image_id = :imageId
+            """).param("imageId", imageId).param("userId", userId).query(ImageLikes.class).single();
     }
 
     private ImageComment findComment(Long imageId, Long commentId, Long userId) {

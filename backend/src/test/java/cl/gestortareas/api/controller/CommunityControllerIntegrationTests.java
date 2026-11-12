@@ -659,6 +659,9 @@ class CommunityControllerIntegrationTests {
 
         mockMvc.perform(get(images + "/" + fileId).with(memberJwt)).andExpect(status().isNotFound());
         var comments = images + "/" + fileId + "/comments";
+        var imageLike = images + "/" + fileId + "/like";
+        mockMvc.perform(put(imageLike).with(memberJwt)).andExpect(status().isNotFound());
+        mockMvc.perform(delete(imageLike).with(memberJwt)).andExpect(status().isNotFound());
         mockMvc.perform(get(comments).with(memberJwt)).andExpect(status().isNotFound());
         mockMvc.perform(post(comments).with(memberJwt).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"content\":\"Hola\"}")).andExpect(status().isNotFound());
@@ -669,6 +672,8 @@ class CommunityControllerIntegrationTests {
             .andExpect(jsonPath("$[0].title").value("Encuentro"));
         mockMvc.perform(get(images).with(memberJwt)).andExpect(status().isOk())
             .andExpect(jsonPath("$[0].id").value(fileId))
+            .andExpect(jsonPath("$[0].likeCount").value(0))
+            .andExpect(jsonPath("$[0].liked").value(false))
             .andExpect(jsonPath("$[0].commentCount").value(0));
         mockMvc.perform(get(images + "/" + fileId).with(memberJwt)).andExpect(status().isOk())
             .andExpect(content().contentType(MediaType.IMAGE_PNG)).andExpect(content().bytes(png));
@@ -711,6 +716,24 @@ class CommunityControllerIntegrationTests {
             .andExpect(jsonPath("$.liked").value(false)).andExpect(jsonPath("$.likeCount").value(0));
         mockMvc.perform(get(albums + "/0/images/" + fileId + "/comments").with(ownerJwt))
             .andExpect(status().isNotFound());
+        mockMvc.perform(put(imageLike).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.likeCount").value(1)).andExpect(jsonPath("$.liked").value(true));
+        mockMvc.perform(put(imageLike).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.likeCount").value(1));
+        mockMvc.perform(get(images).with(ownerJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].likeCount").value(0))
+            .andExpect(jsonPath("$[1].likeCount").value(1))
+            .andExpect(jsonPath("$[1].liked").value(false));
+        mockMvc.perform(put(imageLike).with(ownerJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.likeCount").value(2));
+        mockMvc.perform(delete(imageLike).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.likeCount").value(1)).andExpect(jsonPath("$.liked").value(false));
+        mockMvc.perform(delete(imageLike).with(memberJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.likeCount").value(1));
+        mockMvc.perform(put(albums + "/0/images/" + fileId + "/like").with(ownerJwt))
+            .andExpect(status().isNotFound());
+        mockMvc.perform(get(comments).with(ownerJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].likeCount").value(0));
     }
     @Test
     void shouldDeliverNewChatMessagesToWaitingGroupMembers() throws Exception {

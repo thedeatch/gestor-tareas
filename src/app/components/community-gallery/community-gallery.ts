@@ -13,6 +13,7 @@ import { catchError, concatMap, finalize, forkJoin, from, Observable, of, switch
 
 import { getApiErrorMessage } from '../../models/api-error.model';
 import { GalleryImageDialog, GalleryDialogImage } from './gallery-image-dialog';
+import { GalleryImageLike, GalleryImageLikes } from './gallery-image-like';
 
 interface Album {
   id: number;
@@ -22,7 +23,7 @@ interface Album {
   coverImageId: number | null;
 }
 
-interface AlbumImage {
+interface AlbumImage extends GalleryImageLikes {
   id: number;
   name: string;
   commentCount: number;
@@ -31,7 +32,7 @@ interface AlbumImage {
 @Component({
   selector: 'app-community-gallery',
   imports: [ReactiveFormsModule, MatButtonModule, MatCardModule, MatFormFieldModule,
-    MatInputModule, MatIconModule, MatProgressSpinnerModule],
+    MatInputModule, MatIconModule, MatProgressSpinnerModule, GalleryImageLike],
   templateUrl: './community-gallery.html',
   styleUrl: './community-gallery.css'
 })
@@ -174,6 +175,18 @@ export class CommunityGallery implements OnInit {
       this.images.update(images => images.map(item =>
         item.id === imageId ? { ...item, commentCount: count } : item));
     });
+    dialogRef.componentInstance.likesChanged.subscribe(({ imageId, likes }) => {
+      if (this.album()?.id === selected.id) this.updateLikes(imageId, likes);
+    });
+  }
+
+  protected imageLikeUrl(imageId: number): string {
+    return `${this.imagesUrl(this.album()!.id)}/${imageId}/like`;
+  }
+
+  protected updateLikes(imageId: number, likes: GalleryImageLikes): void {
+    this.images.update(images => images.map(image =>
+      image.id === imageId ? { ...image, ...likes } : image));
   }
 
   private setAlbums(albums: Album[]): void { this.albums.set(albums); this.loadCovers(albums); }

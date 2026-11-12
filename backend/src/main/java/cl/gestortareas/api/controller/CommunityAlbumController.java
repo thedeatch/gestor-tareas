@@ -23,6 +23,7 @@ import cl.gestortareas.api.service.CommunityAlbumService;
 import cl.gestortareas.api.service.CommunityAlbumService.Album;
 import cl.gestortareas.api.service.CommunityAlbumService.Image;
 import cl.gestortareas.api.service.CommunityAlbumService.ImageComment;
+import cl.gestortareas.api.service.CommunityAlbumService.ImageLikes;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -72,6 +73,18 @@ public class CommunityAlbumController {
         var image = albums.read(groupId, albumId, imageId, auth.getName());
         return ResponseEntity.ok().contentType(MediaType.parseMediaType(image.contentType()))
             .cacheControl(CacheControl.noStore()).body(image.data());
+    }
+
+    @PutMapping("/{albumId}/images/{imageId}/like")
+    public ImageLikes likeImage(@PathVariable Long groupId, @PathVariable Long albumId,
+                                @PathVariable Long imageId, Authentication auth) {
+        return albums.setImageLike(groupId, albumId, imageId, auth.getName(), true);
+    }
+
+    @DeleteMapping("/{albumId}/images/{imageId}/like")
+    public ImageLikes unlikeImage(@PathVariable Long groupId, @PathVariable Long albumId,
+                                  @PathVariable Long imageId, Authentication auth) {
+        return albums.setImageLike(groupId, albumId, imageId, auth.getName(), false);
     }
 
     @GetMapping(COMMENTS)

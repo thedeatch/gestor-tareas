@@ -230,6 +230,24 @@
   object-fit: cover;
   transition: transform 180ms ease;
 }
+.image-open {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.image-open:focus-visible {
+  outline: 2px solid var(--mat-sys-primary);
+  outline-offset: -3px;
+}
+.image-like {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+}
 .image-tile:hover img {
   transform: scale(1.04);
 }

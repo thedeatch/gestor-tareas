@@ -6,8 +6,9 @@ import { GalleryImageComments } from './gallery-image-comments';
 import { NavigationEnd, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
+import { GalleryImageLike, GalleryImageLikes, GalleryImageLikeChange } from './gallery-image-like';
 
-export interface GalleryDialogImage { id: number; name: string; url: string; }
+export interface GalleryDialogImage extends GalleryImageLikes { id: number; name: string; url: string; }
 export interface GalleryImageDialogData {
   albumTitle: string;
   images: GalleryDialogImage[];
@@ -17,7 +18,7 @@ export interface GalleryImageDialogData {
 
 @Component({
   selector: 'app-gallery-image-dialog',
-  imports: [MatDialogModule, MatButtonModule, MatIconModule, GalleryImageComments],
+  imports: [MatDialogModule, MatButtonModule, MatIconModule, GalleryImageComments, GalleryImageLike],
   template: `
     <header mat-dialog-title>
       <div><strong>{{ data.albumTitle }}</strong><span>{{ current().name }}</span></div>
@@ -49,7 +50,12 @@ export interface GalleryImageDialogData {
           <button mat-icon-button type="button" aria-label="Imagen siguiente"
             [disabled]="data.images.length < 2" (click)="next()"><mat-icon>chevron_right</mat-icon></button>
         </div>
-        <p class="position" aria-live="polite">{{ index() + 1 }} de {{ data.images.length }}</p>
+        <div class="photo-actions">
+          <app-gallery-image-like [imageId]="current().id" [url]="data.imagesUrl + '/' + current().id + '/like'"
+            [likeCount]="current().likeCount" [liked]="current().liked"
+            (likesChanged)="updateLikes($event)" />
+          <p class="position" aria-live="polite">{{ index() + 1 }} de {{ data.images.length }}</p>
+        </div>
       </div>
       @for (image of [current()]; track image.id) {
         <app-gallery-image-comments id="image-comments" [hidden]="!commentsVisible()"
@@ -92,6 +98,7 @@ export interface GalleryImageDialogData {
       background: var(--mat-sys-surface-container-high); pointer-events: none;
     }
     .position { margin: .5rem 0; color: var(--mat-sys-on-surface-variant); text-align: center; }
+    .photo-actions { display: flex; align-items: center; justify-content: center; gap: 1rem; }
     app-gallery-image-comments { border-inline-start: 1px solid var(--mat-sys-outline-variant); padding-inline-start: 1rem; }
     app-gallery-image-comments[hidden] { display: none; }
     @media (max-width: 850px) {
@@ -109,17 +116,24 @@ export interface GalleryImageDialogData {
 })
 export class GalleryImageDialog {
   readonly commentCountChanged = output<{ imageId: number; count: number }>();
+  readonly likesChanged = output<GalleryImageLikeChange>();
   readonly data = inject<GalleryImageDialogData>(MAT_DIALOG_DATA);
   readonly dialogRef = inject(MatDialogRef<GalleryImageDialog>);
   readonly index = signal(this.data.initialIndex);
   readonly commentsVisible = signal(true);
   readonly toggle = (value: boolean): boolean => !value;
-  readonly current = computed(() => this.data.images[this.index()]);
+  readonly images = signal(this.data.images);
+  readonly current = computed(() => this.images()[this.index()]);
   constructor() {
     inject(Router).events.pipe(
       filter(event => event instanceof NavigationEnd),
       takeUntilDestroyed()
     ).subscribe(() => this.dialogRef.close());
+  }
+  protected updateLikes(change: GalleryImageLikeChange): void {
+    const { imageId, likes } = change;
+    this.images.update(images => images.map(image => image.id === imageId ? { ...image, ...likes } : image));
+    this.likesChanged.emit(change);
   }
   previous(): void { this.index.update(value => (value - 1 + this.data.images.length) % this.data.images.length); }
   next(): void { this.index.update(value => (value + 1) % this.data.images.length); }
