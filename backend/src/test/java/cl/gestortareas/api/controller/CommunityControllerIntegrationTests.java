@@ -1,5 +1,7 @@
 package cl.gestortareas.api.controller;
 
+import static org.hamcrest.Matchers.hasSize;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -657,11 +659,28 @@ class CommunityControllerIntegrationTests {
         var fileId = jdbc.sql("SELECT file_id FROM community_album_images WHERE album_id = :id")
             .param("id", albumId).query(Long.class).single();
 
+        var share = images + "/" + fileId + "/share";
+        mockMvc.perform(post(share)).andExpect(status().isUnauthorized());
+        mockMvc.perform(post(share).with(ownerJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.token").isNotEmpty());
+        var shareToken = jdbc.sql("""
+            SELECT token FROM community_image_share_links WHERE image_id = :id AND revoked_at IS NULL
+            """).param("id", fileId).query(String.class).single();
+        var publicImage = "/api/public/gallery-images/" + shareToken;
+        mockMvc.perform(get(publicImage)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("foto.png"))
+            .andExpect(jsonPath("$.albumTitle").value("Encuentro"))
+            .andExpect(jsonPath("$.communityName").value("Comunidad Angular"));
+        mockMvc.perform(get(publicImage + "/content")).andExpect(status().isOk())
+            .andExpect(content().contentType(MediaType.IMAGE_PNG)).andExpect(content().bytes(png));
+
         mockMvc.perform(get(images + "/" + fileId).with(memberJwt)).andExpect(status().isNotFound());
         var comments = images + "/" + fileId + "/comments";
         var imageLike = images + "/" + fileId + "/like";
+        var imageLikers = images + "/" + fileId + "/likes";
         mockMvc.perform(put(imageLike).with(memberJwt)).andExpect(status().isNotFound());
         mockMvc.perform(delete(imageLike).with(memberJwt)).andExpect(status().isNotFound());
+        mockMvc.perform(get(imageLikers).with(memberJwt)).andExpect(status().isNotFound());
         mockMvc.perform(get(comments).with(memberJwt)).andExpect(status().isNotFound());
         mockMvc.perform(post(comments).with(memberJwt).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"content\":\"Hola\"}")).andExpect(status().isNotFound());
@@ -726,6 +745,11 @@ class CommunityControllerIntegrationTests {
             .andExpect(jsonPath("$[1].liked").value(false));
         mockMvc.perform(put(imageLike).with(ownerJwt)).andExpect(status().isOk())
             .andExpect(jsonPath("$.likeCount").value(2));
+        mockMvc.perform(get(imageLikers).with(ownerJwt)).andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(2)))
+            .andExpect(jsonPath("$[0].userId").isNumber())
+            .andExpect(jsonPath("$[0].name").isString())
+            .andExpect(jsonPath("$[0].hasAvatar").isBoolean());
         mockMvc.perform(delete(imageLike).with(memberJwt)).andExpect(status().isOk())
             .andExpect(jsonPath("$.likeCount").value(1)).andExpect(jsonPath("$.liked").value(false));
         mockMvc.perform(delete(imageLike).with(memberJwt)).andExpect(status().isOk())
@@ -734,6 +758,9 @@ class CommunityControllerIntegrationTests {
             .andExpect(status().isNotFound());
         mockMvc.perform(get(comments).with(ownerJwt)).andExpect(status().isOk())
             .andExpect(jsonPath("$[0].likeCount").value(0));
+        mockMvc.perform(delete(share).with(ownerJwt)).andExpect(status().isNoContent());
+        mockMvc.perform(get(publicImage)).andExpect(status().isNotFound());
+        mockMvc.perform(get(publicImage + "/content")).andExpect(status().isNotFound());
     }
     @Test
     void shouldDeliverNewChatMessagesToWaitingGroupMembers() throws Exception {

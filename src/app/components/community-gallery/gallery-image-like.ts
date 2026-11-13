@@ -26,7 +26,7 @@ export interface GalleryImageLikeChange {
       (click)="toggle()">
       <mat-icon>{{ liked() ? 'favorite' : 'favorite_border' }}</mat-icon>
       @if (!compact()) { Me gusta }
-      {{ likeCount() }}
+      @if (showCount()) { {{ likeCount() }} }
     </button>
   `,
   styles: [`
@@ -47,6 +47,7 @@ export class GalleryImageLike {
   readonly likeCount = input(0);
   readonly liked = input(false);
   readonly compact = input(false);
+  readonly showCount = input(true);
   readonly likesChanged = output<GalleryImageLikeChange>();
   protected readonly busy = signal(false);
   private readonly http = inject(HttpClient);

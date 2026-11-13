@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -37,7 +38,10 @@ public class CommunityAlbumService {
     public record Album(Long id, String title, String description, long imageCount, Long coverImageId) {}
     public record Image(Long id, String name, long commentCount, long likeCount, boolean liked) {}
     public record ImageLikes(long likeCount, boolean liked) {}
+    public record ImageLiker(Long userId, String name, boolean hasAvatar) {}
     public record ImageData(String contentType, byte[] data) {}
+    public record ShareLink(String token) {}
+    public record PublicImage(String name, String albumTitle, String communityName) {}
     public record ImageComment(Long id, Long authorId, String authorName, boolean authorHasAvatar,
                                String content, OffsetDateTime createdAt, long likeCount, boolean liked) {}
 
@@ -165,6 +169,79 @@ public class CommunityAlbumService {
                    EXISTS (SELECT 1 FROM community_image_likes WHERE image_id = :imageId AND user_id = :userId) AS liked
             FROM community_image_likes WHERE image_id = :imageId
             """).param("imageId", imageId).param("userId", userId).query(ImageLikes.class).single();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ImageLiker> imageLikers(Long groupId, Long albumId, Long imageId, String email) {
+        requireImageMember(groupId, albumId, imageId, email);
+        return jdbc.sql("""
+            SELECT u.id AS user_id, u.name,
+                   (u.avatar_file_id IS NOT NULL OR COALESCE(OCTET_LENGTH(u.avatar_data), 0) > 0) AS has_avatar
+            FROM community_image_likes r
+            JOIN users u ON u.id = r.user_id
+            WHERE r.image_id = :imageId
+            ORDER BY UPPER(u.name), u.id
+            """).param("imageId", imageId).query(ImageLiker.class).list();
+    }
+
+    public ShareLink createShareLink(Long groupId, Long albumId, Long imageId, String email) {
+        Long userId = requireImageMember(groupId, albumId, imageId, email);
+        return jdbc.sql("""
+            SELECT token FROM community_image_share_links
+            WHERE image_id = :imageId AND created_by_user_id = :userId AND revoked_at IS NULL
+            """).param("imageId", imageId).param("userId", userId).query(String.class).optional()
+            .map(ShareLink::new).orElseGet(() -> restoreShareLink(imageId, userId));
+    }
+
+    public void revokeShareLink(Long groupId, Long albumId, Long imageId, String email) {
+        Long userId = requireImageMember(groupId, albumId, imageId, email);
+        jdbc.sql("""
+            UPDATE community_image_share_links SET revoked_at = CURRENT_TIMESTAMP
+            WHERE image_id = :imageId AND created_by_user_id = :userId AND revoked_at IS NULL
+            """).param("imageId", imageId).param("userId", userId).update();
+    }
+
+    @Transactional(readOnly = true)
+    public PublicImage publicImage(String token) {
+        return jdbc.sql("""
+            SELECT f.original_name AS name, a.title AS album_title, c.name AS community_name
+            FROM community_image_share_links s
+            JOIN community_album_images i ON i.file_id = s.image_id
+            JOIN community_albums a ON a.id = i.album_id
+            JOIN communities c ON c.id = a.community_id
+            JOIN stored_files f ON f.id = i.file_id
+            WHERE s.token = :token AND s.revoked_at IS NULL
+            """).param("token", token).query(PublicImage.class).optional()
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Enlace no disponible"));
+    }
+
+    @Transactional(readOnly = true)
+    public ImageData publicImageData(String token) {
+        return jdbc.sql("""
+            SELECT f.content_type, f.data, f.object_key
+            FROM community_image_share_links s
+            JOIN stored_files f ON f.id = s.image_id
+            WHERE s.token = :token AND s.revoked_at IS NULL
+            """).param("token", token)
+            .query((rs, row) -> new ImageData(rs.getString("content_type"),
+                storage.readBytes(rs.getString("object_key"), rs.getBytes("data"))))
+            .optional().orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Enlace no disponible"));
+    }
+
+    private ShareLink restoreShareLink(Long imageId, Long userId) {
+        String token = UUID.randomUUID().toString().replace("-", "");
+        int updated = jdbc.sql("""
+            UPDATE community_image_share_links
+            SET token = :token, created_at = CURRENT_TIMESTAMP, revoked_at = NULL
+            WHERE image_id = :imageId AND created_by_user_id = :userId
+            """).param("token", token).param("imageId", imageId).param("userId", userId).update();
+        if (updated == 0) {
+            jdbc.sql("""
+                INSERT INTO community_image_share_links (image_id, created_by_user_id, token)
+                VALUES (:imageId, :userId, :token)
+                """).param("imageId", imageId).param("userId", userId).param("token", token).update();
+        }
+        return new ShareLink(token);
     }
 
     private ImageComment findComment(Long imageId, Long commentId, Long userId) {

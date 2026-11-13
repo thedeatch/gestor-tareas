@@ -96,6 +96,12 @@ export const routes: Routes = [
         .then(module => module.AdminAuditPage)
   },
   {
+    path: 'foto-compartida/:token',
+    loadComponent: () =>
+      import('./pages/shared-gallery-image-page/shared-gallery-image-page')
+        .then(module => module.SharedGalleryImagePage)
+  },
+  {
     path: 'login',
     loadComponent: () =>
         import('./pages/login-page/login-page')

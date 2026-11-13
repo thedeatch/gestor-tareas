@@ -24,6 +24,8 @@ import cl.gestortareas.api.service.CommunityAlbumService.Album;
 import cl.gestortareas.api.service.CommunityAlbumService.Image;
 import cl.gestortareas.api.service.CommunityAlbumService.ImageComment;
 import cl.gestortareas.api.service.CommunityAlbumService.ImageLikes;
+import cl.gestortareas.api.service.CommunityAlbumService.ImageLiker;
+import cl.gestortareas.api.service.CommunityAlbumService.ShareLink;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -85,6 +87,25 @@ public class CommunityAlbumController {
     public ImageLikes unlikeImage(@PathVariable Long groupId, @PathVariable Long albumId,
                                   @PathVariable Long imageId, Authentication auth) {
         return albums.setImageLike(groupId, albumId, imageId, auth.getName(), false);
+    }
+
+    @GetMapping("/{albumId}/images/{imageId}/likes")
+    public List<ImageLiker> imageLikers(@PathVariable Long groupId, @PathVariable Long albumId,
+                                        @PathVariable Long imageId, Authentication auth) {
+        return albums.imageLikers(groupId, albumId, imageId, auth.getName());
+    }
+
+    @PostMapping("/{albumId}/images/{imageId}/share")
+    public ShareLink share(@PathVariable Long groupId, @PathVariable Long albumId,
+                           @PathVariable Long imageId, Authentication auth) {
+        return albums.createShareLink(groupId, albumId, imageId, auth.getName());
+    }
+
+    @DeleteMapping("/{albumId}/images/{imageId}/share")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void revokeShare(@PathVariable Long groupId, @PathVariable Long albumId,
+                            @PathVariable Long imageId, Authentication auth) {
+        albums.revokeShareLink(groupId, albumId, imageId, auth.getName());
     }
 
     @GetMapping(COMMENTS)
