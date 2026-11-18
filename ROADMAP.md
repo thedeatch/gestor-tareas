@@ -28,3 +28,11 @@ Cuando los dos puntos pendientes estén completos:
 ## Fuera del núcleo
 
 Chat, rankings, eventos, galerías, Kanban, calendario, publicaciones y comentarios serán módulos de aplicaciones construidas sobre la plantilla; no bloquean el hito `template-v1.0`.
+
+## Próximas funciones de la comunidad
+
+- [x] Encuestas del grupo con opciones, un voto por miembro, resultados y cierre opcional.
+- [ ] Recuerdos con fecha de referencia opcional en opciones avanzadas. Usar la fecha de subida como valor predeterminado y permitir indicar la fecha o el año real en que se tomó la foto. Calcular los aniversarios desde esa referencia, por ejemplo, 2016 a 2027 corresponde a 11 años.
+- [ ] Elementos guardados para recuperar fotos, publicaciones y eventos.
+- [ ] Búsqueda conjunta dentro del grupo.
+- [ ] Objetivos compartidos vinculados con tareas y progreso.

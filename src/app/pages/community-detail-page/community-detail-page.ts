@@ -46,6 +46,7 @@ import {
   CommunityOverviewSection
 } from '../../components/community-overview/community-overview';
 import { AvatarCropDialog } from '../../components/avatar-crop-dialog/avatar-crop-dialog';
+import { CommunityPolls } from '../../components/community-polls/community-polls';
 
 type CommunitySection =
   | 'overview'
@@ -58,14 +59,14 @@ interface CommunitySectionInfo {
 }
 
 const COMMUNITY_SECTIONS: readonly CommunitySection[] = [
-  'overview', 'posts', 'members', 'productivity', 'events', 'channels', 'moderation'
+  'overview', 'posts', 'polls', 'members', 'productivity', 'events', 'channels', 'moderation'
 ];
 
 @Component({
   selector: 'app-community-detail-page',
   imports: [RouterLink, ReactiveFormsModule, DatePipe, MatButtonModule, MatCardModule,
     MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatSnackBarModule, MatDialogModule, PostComments, CommunityReports, ReportButton, CommunityEvents, CommunityGallery, CommunityChannels, CommunityActivity, CommunityRanking, CommunityMetrics, CommunityAchievements, CommunityTasks, CommunityOverview],
+    MatSnackBarModule, MatDialogModule, PostComments, CommunityReports, ReportButton, CommunityEvents, CommunityGallery, CommunityChannels, CommunityActivity, CommunityRanking, CommunityMetrics, CommunityAchievements, CommunityTasks, CommunityOverview, CommunityPolls],
   templateUrl: './community-detail-page.html',
   styleUrl: './community-detail-page.css'
 })
@@ -86,6 +87,10 @@ export class CommunityDetailPage implements OnDestroy {
     posts: {
       icon: 'dynamic_feed', title: 'Publicaciones',
       description: 'Novedades, conversaciones y reacciones de la comunidad.'
+    },
+    polls: {
+      icon: 'poll', title: 'Encuestas del grupo',
+      description: 'Propón ideas, vota y toma decisiones con tu comunidad.'
     },
     members: {
       icon: 'group', title: 'Miembros',

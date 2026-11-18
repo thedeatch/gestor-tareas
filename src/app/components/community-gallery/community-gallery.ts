@@ -9,7 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
-import { catchError, concatMap, finalize, forkJoin, from, Observable, of, switchMap, toArray } from 'rxjs';
+import { catchError, concatMap, finalize, forkJoin, from, map, Observable, of, switchMap, toArray } from 'rxjs';
 
 import { getApiErrorMessage } from '../../models/api-error.model';
 import { GalleryImageDialog, GalleryDialogImage } from './gallery-image-dialog';
@@ -194,7 +194,7 @@ export class CommunityGallery implements OnInit {
   private loadCovers(albums: Album[]): void {
     const requests = albums.filter(item => item.coverImageId).map(item =>
       this.http.get(`${this.imagesUrl(item.id)}/${item.coverImageId}`, { responseType: 'blob' })
-        .pipe(catchError(() => of(null)), switchMap(blob => of({ id: item.id, blob }))));
+        .pipe(catchError(() => of(null)), map(blob => ({ id: item.id, blob }))));
     this.revokeUrls(this.coverUrls());
     this.coverUrls.set({});
     if (!requests.length) return;
@@ -212,7 +212,7 @@ export class CommunityGallery implements OnInit {
     this.imagesLoading.set(true);
     forkJoin(images.map(image => this.http.get(`${this.imagesUrl(album.id)}/${image.id}`,
       { responseType: 'blob' }).pipe(catchError(() => of(null)),
-      switchMap(blob => of({ id: image.id, blob }))))).pipe(
+      map(blob => ({ id: image.id, blob }))))).pipe(
       takeUntilDestroyed(this.destroyRef), finalize(() => this.imagesLoading.set(false))
     ).subscribe(items => {
       const urls: Record<number, string> = {};

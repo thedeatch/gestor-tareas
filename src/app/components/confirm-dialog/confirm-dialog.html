@@ -4,7 +4,7 @@
 
 <mat-dialog-content>
   <p>
-    ¿Deseas eliminar {{ data.itemLabel ?? 'la tarea' }}
+    ¿Deseas {{ data.action ?? 'eliminar' }} {{ data.itemLabel ?? 'la tarea' }}
     <strong>{{ data.itemName ?? data.taskDescription }}</strong>?
   </p>
 

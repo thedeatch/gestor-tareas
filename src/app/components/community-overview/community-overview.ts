@@ -3,6 +3,7 @@ import { MatIconModule } from '@angular/material/icon';
 
 export type CommunityOverviewSection =
   | 'posts'
+  | 'polls'
   | 'members'
   | 'productivity'
   | 'events'
@@ -38,6 +39,12 @@ export class CommunityOverview {
         title: 'Publicaciones',
         description: 'Lee novedades y participa en las conversaciones.',
         value: this.postsLoading() ? 'Cargando' : `${this.postCount()} publicadas`
+      },
+      {
+        section: 'polls',
+        icon: 'poll',
+        title: 'Encuestas',
+        description: 'Propón preguntas, comparte tu voto y consulta los resultados.'
       },
       {
         section: 'members',

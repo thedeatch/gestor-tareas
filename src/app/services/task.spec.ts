@@ -6,7 +6,7 @@ import {
 import { provideHttpClient } from '@angular/common/http';
 
 import { TaskService } from './task';
-import { Task } from '../models/task.model';
+import { Task, TaskDetails } from '../models/task.model';
 
 describe('TaskService', () => {
   let service: TaskService;
@@ -89,18 +89,15 @@ describe('TaskService', () => {
       updatedTask
     ]);
 
-    expect(service.completedTasks()).toEqual([
-      updatedTask
-    ]);
-
-    expect(service.pendingTasks()).toEqual([]);
   });
 
-  it('should update a task description through the API', () => {
+  it('should update task details and preserve the project and category', () => {
     const initialTask: Task = {
       id: 2,
       description: 'Descripción original',
-      completed: false
+      completed: false,
+      projectId: 4,
+      categoryId: 5
     };
 
     const initialRequest =
@@ -108,32 +105,32 @@ describe('TaskService', () => {
 
     initialRequest.flush([initialTask]);
 
-    const updatedTask: Task = {
-      ...initialTask,
-      description: 'Descripción actualizada'
+    const details: TaskDetails = {
+      description: 'Descripción actualizada',
+      status: 'COMPLETED',
+      priority: 'HIGH',
+      dueDate: '2026-11-20',
+      tags: ['revisión']
     };
-
-    service.updateTaskDescription(
-      initialTask.id,
-      'Descripción actualizada'
-    ).subscribe(result => {
+    const updatedTask: Task = { id: initialTask.id, completed: true, ...details };
+    service.updateTaskDetails(initialTask.id, details).subscribe(result => {
       expect(result).toEqual(updatedTask);
     });
 
     const putRequest = httpTesting.expectOne(
-      `${apiUrl}/${initialTask.id}`
+      `${apiUrl}/${initialTask.id}/details`
     );
 
     expect(putRequest.request.method).toBe('PUT');
 
     expect(putRequest.request.body).toEqual(
-      updatedTask
+      details
     );
 
     putRequest.flush(updatedTask);
 
     expect(service.tasks()).toEqual([
-      updatedTask
+      { ...updatedTask, projectId: 4, categoryId: 5 }
     ]);
 
     expect(

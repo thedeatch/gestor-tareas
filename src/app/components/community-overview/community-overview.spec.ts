@@ -24,6 +24,8 @@ describe('CommunityOverview', () => {
 
     buttons[0]!.click();
     expect(emitted).toEqual(['posts']);
+    buttons.find(button => button.textContent?.includes('Encuestas'))!.click();
+    expect(emitted).toEqual(['posts', 'polls']);
   });
 
   it('solo muestra moderación a quienes pueden administrarla', () => {

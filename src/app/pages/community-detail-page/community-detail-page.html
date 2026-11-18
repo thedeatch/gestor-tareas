@@ -62,6 +62,14 @@
         <span><strong>Publicaciones</strong><small>Novedades y conversación del grupo</small></span>
       </button>
       <button type="button" class="group-tool"
+        [class.active]="activeSection() === 'polls'"
+        [attr.aria-pressed]="activeSection() === 'polls'"
+        [attr.aria-current]="activeSection() === 'polls' ? 'page' : null"
+        (click)="openSection('polls')">
+        <span class="tool-icon"><mat-icon>poll</mat-icon></span>
+        <span><strong>Encuestas</strong><small>Vota y decide con tu comunidad</small></span>
+      </button>
+      <button type="button" class="group-tool"
         [class.active]="activeSection() === 'members'"
         [attr.aria-pressed]="activeSection() === 'members'"
         [attr.aria-current]="activeSection() === 'members' ? 'page' : null"
@@ -182,6 +190,10 @@
         (eventCreated)="activity()?.load()" />
       <app-community-gallery [groupId]="item.id" [canManage]="canManage(item.currentUserRole)"
         (albumCreated)="activity()?.load()" />
+    }
+
+    @if (activeSection() === 'polls') {
+      <app-community-polls [groupId]="item.id" />
     }
 
     @if (activeSection() === 'channels') {

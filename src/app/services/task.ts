@@ -1,5 +1,4 @@
 import {
-  computed,
   inject,
   Service,
   signal
@@ -18,13 +17,6 @@ export class TaskService {
   readonly isLoading = signal(false);
   readonly loadError = signal<string | null>(null);
 
-  readonly pendingTasks = computed(() =>
-    this.tasks().filter(task => !task.completed)
-  );
-
-  readonly completedTasks = computed(() =>
-    this.tasks().filter(task => task.completed)
-  );
     constructor() {
       this.loadTasks();
     }
@@ -87,39 +79,6 @@ export class TaskService {
     const updatedTask: Task = {
       ...currentTask,
       completed: !currentTask.completed
-    };
-
-    return this.http.put<Task>(
-      `${this.apiUrl}/${id}`,
-      updatedTask
-    ).pipe(
-      tap(savedTask => {
-        this.tasks.update(tasks =>
-          tasks.map(task =>
-            task.id === id
-              ? { ...savedTask, projectId: task.projectId, categoryId: task.categoryId }
-              : task
-          )
-        );
-      })
-    );
-  }
-  updateTaskDescription(
-    id: number,
-    description: string
-  ): Observable<Task> {
-    const currentTask = this.tasks()
-      .find(task => task.id === id);
-
-    if (!currentTask) {
-      throw new Error(
-        `No se encontró la tarea con id ${id}`
-      );
-    }
-
-    const updatedTask: Task = {
-      ...currentTask,
-      description
     };
 
     return this.http.put<Task>(

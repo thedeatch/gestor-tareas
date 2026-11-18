@@ -11,6 +11,7 @@ export interface ConfirmDialogData {
   itemLabel?: string;
   itemName?: string;
   confirmLabel?: string;
+  action?: string;
 }
 
 @Component({

@@ -20,8 +20,6 @@ export class ModuleConfigurationService {
     audit: true
   });
 
-  readonly availability = this.availabilityState.asReadonly();
-
   load(): Observable<ModuleAvailability> {
     if (this.loaded()) {
       return of(this.availabilityState());

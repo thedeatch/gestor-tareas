@@ -1,0 +1,118 @@
+<section aria-label="Encuestas del grupo">
+  <div class="poll-toolbar">
+    <button mat-flat-button type="button" [disabled]="busy()" (click)="creating.set(!creating())">
+      <mat-icon>{{ creating() ? 'close' : 'add' }}</mat-icon>
+      {{ creating() ? 'Cancelar' : 'Crear encuesta' }}
+    </button>
+    <button mat-button type="button" [disabled]="busy()" (click)="load()">
+      <mat-icon>refresh</mat-icon>Actualizar
+    </button>
+  </div>
+
+  @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+  @if (message()) { <p role="status">{{ message() }}</p> }
+
+  @if (creating()) {
+    <mat-card class="create-card">
+      <mat-card-header><mat-card-title>Nueva encuesta</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <form [formGroup]="form" (ngSubmit)="create()">
+          <mat-form-field appearance="outline">
+            <mat-label>¿Qué quieres preguntar?</mat-label>
+            <textarea matInput rows="2" formControlName="question" maxlength="300" [readonly]="busy()"></textarea>
+            @if (form.controls.question.touched && form.controls.question.invalid) {
+              <mat-error>Escribe una pregunta de hasta 300 caracteres.</mat-error>
+            }
+          </mat-form-field>
+          <div class="option-fields">
+            @for (control of options.controls; track control; let i = $index) {
+              <div class="option-field">
+                <mat-form-field appearance="outline">
+                  <mat-label>Opción {{ i + 1 }}</mat-label>
+                  <input matInput [formControl]="control" maxlength="200" [readonly]="busy()">
+                  @if (control.touched && control.invalid) { <mat-error>Completa esta opción.</mat-error> }
+                </mat-form-field>
+                <button mat-icon-button type="button" [attr.aria-label]="'Eliminar opción ' + (i + 1)"
+                  [disabled]="busy() || options.length <= 2" (click)="removeOption(i)">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            }
+          </div>
+          <button mat-button type="button" [disabled]="busy() || options.length >= 10" (click)="addOption()">
+            <mat-icon>add</mat-icon>Añadir opción
+          </button>
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha de cierre (opcional)</mat-label>
+            <input matInput type="datetime-local" formControlName="closesAt" [readonly]="busy()">
+          </mat-form-field>
+          <div>
+            <button mat-flat-button type="submit" [disabled]="busy() || form.invalid">
+              {{ busy() ? 'Publicando…' : 'Publicar encuesta' }}
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (polls(); as items) {
+    <div class="poll-list">
+      @for (poll of items; track poll.id) {
+        <mat-card class="poll-card" [attr.aria-labelledby]="'poll-question-' + poll.id">
+          <mat-card-content>
+            <div class="poll-meta">
+              <a [routerLink]="['/usuarios', poll.authorId]">{{ poll.authorName }}</a>
+              <time [attr.datetime]="poll.createdAt">{{ poll.createdAt | date:'dd/MM/yyyy HH:mm' }}</time>
+              <span class="poll-state">{{ isClosed(poll) ? 'Cerrada' : 'Abierta' }}</span>
+            </div>
+            <h3 [id]="'poll-question-' + poll.id">{{ poll.question }}</h3>
+            @if (poll.closesAt) {
+              <p class="deadline">Cierre {{ poll.closesAt | date:'dd/MM/yyyy HH:mm' }}</p>
+            }
+            <div class="poll-options" [attr.aria-label]="'Opciones de ' + poll.question">
+              @for (option of poll.options; track option.id) {
+                <button class="poll-option" type="button"
+                  [class.selected]="poll.selectedOptionId === option.id"
+                  [attr.aria-pressed]="poll.selectedOptionId === option.id"
+                  [disabled]="busy() || isClosed(poll) || poll.selectedOptionId === option.id"
+                  (click)="vote(poll, option)">
+                  <span class="result-bar" aria-hidden="true" [style.width.%]="percentage(poll, option)"></span>
+                  <span class="option-content">
+                    <span class="option-label">
+                      @if (poll.selectedOptionId === option.id) {
+                        <mat-icon aria-hidden="true">check_circle</mat-icon>
+                      }
+                      {{ option.label }}
+                      @if (poll.selectedOptionId === option.id) { <small>Tu voto</small> }
+                    </span>
+                    <span class="option-result">{{ option.votes }} {{ option.votes === 1 ? 'voto' : 'votos' }} · {{ percentage(poll, option) }}%</span>
+                  </span>
+                </button>
+              }
+            </div>
+            <div class="poll-footer">
+              <span>{{ poll.totalVotes }} {{ poll.totalVotes === 1 ? 'voto' : 'votos' }} en total</span>
+              @if (poll.canClose && !isClosed(poll)) {
+                <button mat-button type="button" [disabled]="busy()" (click)="close(poll)">Cerrar encuesta</button>
+              }
+            </div>
+            @if (!isClosed(poll)) {
+              <p class="vote-hint">{{ poll.selectedOptionId ? 'Puedes cambiar tu voto eligiendo otra opción.' : 'Elige una opción para votar.' }}</p>
+            }
+          </mat-card-content>
+        </mat-card>
+      } @empty {
+        <div class="empty-state">
+          <mat-icon>poll</mat-icon>
+          <h3>Aún no hay encuestas</h3>
+          <p>Crea una pregunta y decide con tu comunidad.</p>
+        </div>
+      }
+    </div>
+  } @else if (busy()) {
+    <p role="status">Cargando encuestas…</p>
+  } @else {
+    <button mat-button type="button" (click)="load()">Reintentar</button>
+  }
+</section>
