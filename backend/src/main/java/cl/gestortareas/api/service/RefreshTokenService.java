@@ -55,7 +55,7 @@ public class RefreshTokenService {
 
     @Transactional
     public RotatedToken consumeAndRotate(String rawToken) {
-        RefreshToken storedToken = repository.findByTokenHash(hash(rawToken))
+        RefreshToken storedToken = repository.findForUpdateByTokenHash(hash(rawToken))
             .orElseThrow(this::invalidToken);
 
         if (storedToken.getExpiresAt().isBefore(Instant.now())) {

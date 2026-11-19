@@ -6,6 +6,35 @@ import { GalleryImageDialog } from './gallery-image-dialog';
 import { provideRouter } from '@angular/router';
 
 describe('GalleryImageDialog', () => {
+  it('fetches only the selected original and cancels it when switching photos', async () => {
+    await TestBed.configureTestingModule({ imports: [GalleryImageDialog], providers: [
+      provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+      { provide: MatDialogRef, useValue: { close: () => {} } },
+      { provide: MAT_DIALOG_DATA, useValue: {
+        groupId: 2, albumTitle: 'Grande', initialIndex: 0, imagesUrl: '/api/communities/2/albums/1/images',
+        images: [{ id: 3, name: 'Una', likeCount: 0, liked: false }, { id: 4, name: 'Otra', likeCount: 0, liked: false }]
+      } }
+    ] }).compileComponents();
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(GalleryImageDialog);
+    const create = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:original');
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    try {
+      fixture.detectChanges();
+      http.expectOne('/api/communities/2/albums/1/images/3/comments').flush([]);
+      const old = http.expectOne('/api/communities/2/albums/1/images/3');
+      http.expectNone('/api/communities/2/albums/1/images/4');
+      fixture.componentInstance.next(); fixture.detectChanges();
+      expect(old.cancelled).toBe(true);
+      http.expectOne('/api/communities/2/albums/1/images/4/comments').flush([]);
+      http.expectOne('/api/communities/2/albums/1/images/4').flush(new Blob());
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.image-button img').src).toBe('blob:original');
+      fixture.destroy(); expect(revoke).toHaveBeenCalledWith('blob:original');
+      http.verify();
+    } finally { create.mockRestore(); revoke.mockRestore(); }
+  });
+
   it('expands the photo, preserves the comment draft, and loads comments for the next photo', async () => {
     await TestBed.configureTestingModule({
       imports: [GalleryImageDialog],
@@ -15,7 +44,7 @@ describe('GalleryImageDialog', () => {
         {
           provide: MAT_DIALOG_DATA,
           useValue: {
-            albumTitle: 'Encuentro', initialIndex: 0, imagesUrl: '/api/communities/2/albums/1/images',
+            groupId: 2, albumTitle: 'Encuentro', initialIndex: 0, imagesUrl: '/api/communities/2/albums/1/images',
             images: [
               { id: 3, name: 'Primera foto', url: '/primera.png', likeCount: 0, liked: false },
               { id: 4, name: 'Segunda foto', url: '/segunda.png', likeCount: 0, liked: false }

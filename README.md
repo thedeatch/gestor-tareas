@@ -89,6 +89,14 @@ npm test -- --watch=false
 npm run build
 ```
 
+Revisión visual aislada, con Chrome instalado y datos simulados:
+
+```powershell
+npm run test:visual
+```
+
+Consulta el [informe de revisión visual](docs/revision-visual-2026-11-19.md) para conocer el alcance, las capturas y las comprobaciones pendientes contra el backend real.
+
 Backend:
 
 ```powershell

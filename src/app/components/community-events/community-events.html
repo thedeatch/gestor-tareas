@@ -49,7 +49,8 @@
     @if (events(); as items) {
       <div class="event-grid">
         @for (event of items; track event.id) {
-          <article class="event-item" [class.started]="started(event)" [id]="'evento-' + event.id" tabindex="-1">
+          <article class="event-item" [class.started]="started(event)" [id]="'evento-' + event.id" tabindex="-1"
+            [appSearchTarget]="event.id" searchTargetParam="evento">
             <div class="date-block" aria-hidden="true">
               <span>{{ event.startsAt | date:'MMM' }}</span>
               <strong>{{ event.startsAt | date:'dd' }}</strong>
@@ -57,6 +58,7 @@
             <div class="event-body">
               <div class="event-title">
                 <h3>{{ event.title }}</h3>
+                <app-save-item-button [groupId]="groupId()" kind="EVENT" [targetId]="event.id" />
                 @if (started(event)) { <span class="status-chip">Finalizado</span> }
                 @else if (event.registered) { <span class="status-chip registered">Inscrito</span> }
               </div>

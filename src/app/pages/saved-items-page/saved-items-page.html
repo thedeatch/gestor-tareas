@@ -1,0 +1,90 @@
+<main class="saved-page">
+  <header class="page-heading">
+    <div>
+      <h1>Mis guardados</h1>
+      <p>Fotos, publicaciones y eventos que guardaste para volver a ver.</p>
+    </div>
+    <button mat-button type="button" [disabled]="busy() || opening() !== null" (click)="load(result()?.page ?? 0)">
+      <mat-icon>refresh</mat-icon>Actualizar
+    </button>
+  </header>
+  <nav class="filters" aria-label="Filtrar guardados">
+    @for (option of filters; track option.kind) {
+      <button mat-stroked-button type="button" [attr.aria-pressed]="kind() === option.kind"
+        [disabled]="busy() || opening() !== null" (click)="filter(option.kind)">{{ option.label }}</button>
+    }
+  </nav>
+  @if (error()) {
+    <div class="error" role="alert">
+      <span>{{ error() }}</span>
+      <button mat-button type="button" [disabled]="busy()" (click)="load(result()?.page ?? 0)">Reintentar</button>
+    </div>
+  }
+  @if (busy()) { <p role="status">Cargando guardados…</p> }
+  @if (opening() !== null) { <p role="status">Abriendo foto…</p> }
+  @if (result(); as page) {
+    <div class="saved-grid" [attr.aria-busy]="busy()">
+      @for (item of page.items; track item.kind + ':' + item.targetId) {
+        <mat-card>
+          @if (item.kind === 'IMAGE') {
+            <button class="photo-preview" type="button" [disabled]="busy() || opening() !== null"
+              [attr.aria-label]="'Ver foto ' + item.title" (click)="openPhoto(item)">
+              @if (previews()[item.targetId]; as url) {
+                <img [src]="url" [alt]="item.title">
+              } @else {
+                <mat-icon aria-hidden="true">image</mat-icon>
+              }
+            </button>
+          }
+          <mat-card-content>
+            <div class="item-heading">
+              <span class="item-kind"><mat-icon>{{ item.kind === 'IMAGE' ? 'photo' : item.kind === 'EVENT' ? 'event' : 'article' }}</mat-icon>
+                {{ item.kind === 'IMAGE' ? 'Foto' : item.kind === 'EVENT' ? 'Evento' : 'Publicación' }}</span>
+              <app-save-item-button [groupId]="item.groupId" [kind]="item.kind" [targetId]="item.targetId"
+                [disabled]="busy() || opening() !== null"
+                (changed)="savedChanged($event)" />
+            </div>
+            <h2>{{ item.title }}</h2>
+            <p class="excerpt">{{ item.excerpt }}</p>
+            <a [routerLink]="['/grupos', item.groupId]">{{ item.groupName }}</a>
+            <time [attr.datetime]="item.savedAt">Guardado el {{ item.savedAt | date:'dd/MM/yyyy HH:mm' }}</time>
+            <div class="item-actions">
+              @if (item.kind === 'POST') {
+                <a mat-button [routerLink]="['/grupos', item.groupId]"
+                  [queryParams]="{ seccion: 'posts', publicacion: item.targetId }"
+                  [fragment]="'publicacion-' + item.targetId">Ver publicación</a>
+              } @else if (item.kind === 'EVENT') {
+                <a mat-button [routerLink]="['/grupos', item.groupId]"
+                  [queryParams]="{ seccion: 'events', evento: item.targetId }"
+                  [fragment]="'evento-' + item.targetId">Ver evento</a>
+              } @else {
+                <button mat-button type="button" [disabled]="busy() || opening() !== null" (click)="openPhoto(item)">
+                  Ver foto
+                </button>
+              }
+            </div>
+          </mat-card-content>
+        </mat-card>
+      } @empty {
+        @if (!busy() && !error()) {
+          <div class="empty-state">
+            <mat-icon>bookmark_border</mat-icon>
+            <h2>{{ kind() === 'ALL' ? 'Aún no tienes guardados' : 'No tienes guardados de este tipo' }}</h2>
+            <p>Usa el marcador de una foto, publicación o evento para encontrarlo aquí.</p>
+            <a mat-button routerLink="/grupos">Ir a mis grupos</a>
+          </div>
+        }
+      }
+    </div>
+    @if (page.total > page.size) {
+      <nav class="pagination" aria-label="Páginas de guardados">
+        <button mat-button type="button" [disabled]="busy() || opening() !== null || page.page === 0"
+          (click)="load(page.page - 1)">Anterior</button>
+        <span>Página {{ page.page + 1 }} · {{ page.total }} guardados</span>
+        <button mat-button type="button"
+          [disabled]="busy() || opening() !== null || (page.page + 1) * page.size >= page.total"
+          (click)="load(page.page + 1)">Siguiente</button>
+      </nav>
+    }
+  }
+</main>

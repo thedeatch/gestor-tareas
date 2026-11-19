@@ -1,4 +1,4 @@
-import { Observable } from 'rxjs';
+import { Observable, Subject, Subscription, distinctUntilChanged, map, takeUntil } from 'rxjs';
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, OnDestroy, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -47,6 +47,12 @@ import {
 } from '../../components/community-overview/community-overview';
 import { AvatarCropDialog } from '../../components/avatar-crop-dialog/avatar-crop-dialog';
 import { CommunityPolls } from '../../components/community-polls/community-polls';
+import { SaveItemButton } from '../../components/save-item-button/save-item-button';
+import { CommunityMemories } from '../../components/community-memories/community-memories';
+import { CommunitySearch } from '../../components/community-search/community-search';
+import { SearchTarget } from '../../directives/search-target';
+import { CommunityGoals } from '../../components/community-goals/community-goals';
+import { UserAvatar } from '../../components/user-avatar/user-avatar';
 
 type CommunitySection =
   | 'overview'
@@ -59,14 +65,14 @@ interface CommunitySectionInfo {
 }
 
 const COMMUNITY_SECTIONS: readonly CommunitySection[] = [
-  'overview', 'posts', 'polls', 'members', 'productivity', 'events', 'channels', 'moderation'
+  'overview', 'posts', 'polls', 'goals', 'members', 'productivity', 'events', 'memories', 'search', 'channels', 'moderation'
 ];
 
 @Component({
   selector: 'app-community-detail-page',
   imports: [RouterLink, ReactiveFormsModule, DatePipe, MatButtonModule, MatCardModule,
-    MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatSnackBarModule, MatDialogModule, PostComments, CommunityReports, ReportButton, CommunityEvents, CommunityGallery, CommunityChannels, CommunityActivity, CommunityRanking, CommunityMetrics, CommunityAchievements, CommunityTasks, CommunityOverview, CommunityPolls],
+    MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule, CommunityGoals, UserAvatar,
+    MatSnackBarModule, MatDialogModule, PostComments, CommunityReports, ReportButton, CommunityEvents, CommunityGallery, CommunityChannels, CommunityActivity, CommunityRanking, CommunityMetrics, CommunityAchievements, CommunityTasks, CommunityOverview, CommunityPolls, SaveItemButton, CommunityMemories, CommunitySearch, SearchTarget],
   templateUrl: './community-detail-page.html',
   styleUrl: './community-detail-page.css'
 })
@@ -77,6 +83,11 @@ export class CommunityDetailPage implements OnDestroy {
   private readonly service = inject(CommunityService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
+  private readonly navigationChanged = new Subject<void>();
+  private groupRequest?: Subscription;
+  private postsRequest?: Subscription;
+  private joinRequestsRequest?: Subscription;
+  private imageRequest?: Subscription;
   protected readonly community = signal<CommunityDetail | null>(null);
   protected readonly activeSection = signal<CommunitySection>('overview');
   protected readonly sectionInfo = computed<CommunitySectionInfo>(() => ({
@@ -100,6 +111,10 @@ export class CommunityDetailPage implements OnDestroy {
       icon: 'insights', title: 'Progreso de la comunidad',
       description: 'Ranking, logros, estadísticas y tareas compartidas.'
     },
+    goals: {
+      icon: 'flag', title: 'Objetivos compartidos',
+      description: 'Metas del grupo y avance de sus tareas vinculadas.'
+    },
     events: {
       icon: 'event', title: 'Eventos y galería',
       description: 'Actividades, álbumes e imágenes para recordar.'
@@ -107,6 +122,14 @@ export class CommunityDetailPage implements OnDestroy {
     channels: {
       icon: 'forum', title: 'Canales',
       description: 'Espacios disponibles para conversar con el grupo.'
+    },
+    memories: {
+      icon: 'history', title: 'Recuerdos de la comunidad',
+      description: 'Fotos, momentos y aniversarios que forman parte de la historia del grupo.'
+    },
+    search: {
+      icon: 'search', title: 'Buscar en el grupo',
+      description: 'Encuentra publicaciones, tareas, eventos y álbumes en un mismo lugar.'
     },
     moderation: {
       icon: 'shield', title: 'Moderación',
@@ -166,14 +189,19 @@ export class CommunityDetailPage implements OnDestroy {
       const requested = params.get('seccion');
       this.activeSection.set(this.isCommunitySection(requested) ? requested : 'overview');
     });
-    this.load();
+    this.route.paramMap.pipe(
+      map(params => Number(params.get('id'))), distinctUntilChanged(), takeUntilDestroyed()
+    ).subscribe(id => this.load(id));
   }
 
   protected openSection(section: CommunitySection): void {
     this.activeSection.set(section);
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { seccion: section === 'overview' ? null : section },
+      queryParams: {
+        seccion: section === 'overview' ? null : section,
+        publicacion: null, tarea: null, evento: null, album: null
+      },
       queryParamsHandling: 'merge'
     });
   }
@@ -182,15 +210,34 @@ export class CommunityDetailPage implements OnDestroy {
     return value !== null && COMMUNITY_SECTIONS.includes(value as CommunitySection);
   }
 
-  protected load(): void {
-    const id = Number(this.route.snapshot.paramMap.get('id'));
+  protected load(id = Number(this.route.snapshot.paramMap.get('id'))): void {
+    this.navigationChanged.next();
+    this.groupRequest?.unsubscribe();
+    this.postsRequest?.unsubscribe();
+    this.joinRequestsRequest?.unsubscribe();
+    this.imageRequest?.unsubscribe();
+    this.revokeGroupImageUrl();
+    this.error.set(null);
+    this.community.set(null);
+    this.posts.set([]);
+    this.joinRequests.set([]);
+    this.editingGuidelines.set(false);
+    this.cancelEdit();
+    this.postTitle.reset('');
+    this.postContent.reset('');
+    this.savingPost.set(false);
+    this.savingGuidelines.set(false);
+    this.isInviting.set(false);
+    this.imageInProgress.set(false);
+    this.savingRoleFor.set(null);
+    this.reacting.set(new Set());
     if (!Number.isInteger(id) || id < 1) {
       this.error.set('El grupo solicitado no es válido.');
       this.isLoading.set(false);
       return;
     }
     this.isLoading.set(true);
-    this.service.findById(id).subscribe({
+    this.groupRequest = this.service.findById(id).subscribe({
       next: community => {
         this.community.set(community);
         this.loadGroupImage(community);
@@ -209,6 +256,7 @@ export class CommunityDetailPage implements OnDestroy {
   }
 
   protected selectGroupImage(event: Event): void {
+    const groupId = this.community()?.id;
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
@@ -228,7 +276,7 @@ export class CommunityDetailPage implements OnDestroy {
     }).afterClosed().subscribe((croppedFile?: File) => {
       URL.revokeObjectURL(sourceUrl);
       input.value = '';
-      if (croppedFile) this.uploadGroupImage(croppedFile);
+      if (croppedFile && this.community()?.id === groupId) this.uploadGroupImage(croppedFile);
     });
   }
 
@@ -241,10 +289,10 @@ export class CommunityDetailPage implements OnDestroy {
         confirmLabel: 'Eliminar imagen'
       }
     });
-    ref.afterClosed().subscribe(confirmed => {
+    ref.afterClosed().pipe(takeUntil(this.navigationChanged)).subscribe(confirmed => {
       if (!confirmed) return;
       this.imageInProgress.set(true);
-      this.service.removeImage(group.id).subscribe({
+      this.service.removeImage(group.id).pipe(takeUntil(this.navigationChanged)).subscribe({
         next: () => {
           this.revokeGroupImageUrl();
           this.community.update(current => current ? { ...current, hasImage: false } : current);
@@ -264,7 +312,7 @@ export class CommunityDetailPage implements OnDestroy {
     const group = this.community();
     if (!group || this.imageInProgress()) return;
     this.imageInProgress.set(true);
-    this.service.updateImage(group.id, file).subscribe({
+    this.service.updateImage(group.id, file).pipe(takeUntil(this.navigationChanged)).subscribe({
       next: () => {
         this.community.update(current => current ? { ...current, hasImage: true } : current);
         this.loadGroupImage({ ...group, hasImage: true });
@@ -280,9 +328,10 @@ export class CommunityDetailPage implements OnDestroy {
   }
 
   private loadGroupImage(group: CommunityDetail): void {
+    this.imageRequest?.unsubscribe();
     this.revokeGroupImageUrl();
     if (!group.hasImage) return;
-    this.service.getImage(group.id).subscribe({
+    this.imageRequest = this.service.getImage(group.id).pipe(takeUntil(this.navigationChanged)).subscribe({
       next: blob => this.groupImageUrl.set(URL.createObjectURL(blob)),
       error: () => this.groupImageUrl.set(null)
     });
@@ -295,6 +344,12 @@ export class CommunityDetailPage implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.navigationChanged.next();
+    this.navigationChanged.complete();
+    this.groupRequest?.unsubscribe();
+    this.postsRequest?.unsubscribe();
+    this.joinRequestsRequest?.unsubscribe();
+    this.imageRequest?.unsubscribe();
     this.revokeGroupImageUrl();
   }
 
@@ -310,7 +365,7 @@ export class CommunityDetailPage implements OnDestroy {
     if (!group || this.savingGuidelines() || this.extendedDescription.invalid || this.rules.invalid) return;
 
     this.savingGuidelines.set(true);
-    this.service.updateGuidelines(group.id, this.extendedDescription.value, this.rules.value).subscribe({
+    this.service.updateGuidelines(group.id, this.extendedDescription.value, this.rules.value).pipe(takeUntil(this.navigationChanged)).subscribe({
       next: ({ extendedDescription, rules }) => {
         this.community.update(current => current?.id === group.id
           ? { ...current, extendedDescription, rules } : current);
@@ -342,7 +397,7 @@ export class CommunityDetailPage implements OnDestroy {
     this.savingPost.set(true);
     this.service.createPost(group.id,
       needsTitle ? this.postTitle.value : null,
-      this.postContent.value).subscribe({
+      this.postContent.value).pipe(takeUntil(this.navigationChanged)).subscribe({
       next: post => {
         this.posts.update(items => [post, ...items]);
         this.activity()?.load();
@@ -382,7 +437,7 @@ export class CommunityDetailPage implements OnDestroy {
     this.savingPost.set(true);
     this.service.updatePost(group.id, post.id,
       post.title !== null ? this.editTitle.value : null,
-      this.editContent.value).subscribe({
+      this.editContent.value).pipe(takeUntil(this.navigationChanged)).subscribe({
       next: updated => {
         this.posts.update(items => items.map(item =>
           item.id === updated.id ? { ...updated, reactions: item.reactions } : item));
@@ -409,7 +464,7 @@ export class CommunityDetailPage implements OnDestroy {
 
     const selected = post.reactions.some(reaction => reaction.type === type && reaction.selected);
     this.reacting.update(ids => new Set(ids).add(post.id));
-    this.service.setPostReaction(group.id, post.id, type, !selected).subscribe({
+    this.service.setPostReaction(group.id, post.id, type, !selected).pipe(takeUntil(this.navigationChanged)).subscribe({
       next: reactions => {
         this.posts.update(items => items.map(item => item.id === post.id ? { ...item, reactions } : item));
         this.finishReaction(post.id);
@@ -442,10 +497,10 @@ export class CommunityDetailPage implements OnDestroy {
       ? this.dialog.open<ConfirmDialog, ConfirmDialogData, boolean>(
         ConfirmDialog, { data, width: '420px' }).afterClosed()
       : confirmCommunityRemoval(this.dialog, 'publicación', post.authorName);
-    confirmation.subscribe(confirmed => {
+    confirmation.pipe(takeUntil(this.navigationChanged)).subscribe(confirmed => {
       if (!confirmed) return;
       const reason = typeof confirmed === 'string' ? confirmed : undefined;
-      this.service.deletePost(group.id, post.id, reason).subscribe({
+      this.service.deletePost(group.id, post.id, reason).pipe(takeUntil(this.navigationChanged)).subscribe({
         next: () => {
           this.posts.update(items => items.filter(item => item.id !== post.id));
           this.activity()?.load();
@@ -460,8 +515,9 @@ export class CommunityDetailPage implements OnDestroy {
   }
 
   protected loadPosts(groupId: number): void {
+    this.postsRequest?.unsubscribe();
     this.postsLoading.set(true);
-    this.service.findPosts(groupId).subscribe({
+    this.postsRequest = this.service.findPosts(groupId).pipe(takeUntil(this.navigationChanged)).subscribe({
       next: posts => { this.posts.set(posts); this.postsLoading.set(false); },
       error: () => { this.posts.set([]); this.postsLoading.set(false); }
     });
@@ -501,7 +557,7 @@ export class CommunityDetailPage implements OnDestroy {
     const role = this.selectedRoles()[member.userId];
     if (!group || !role || role === member.role || this.savingRoleFor()) return;
     this.savingRoleFor.set(member.userId);
-    this.service.updateMemberRole(group.id, member.userId, role).subscribe({
+    this.service.updateMemberRole(group.id, member.userId, role).pipe(takeUntil(this.navigationChanged)).subscribe({
       next: updated => {
         this.savingRoleFor.set(null);
         this.community.update(current => current ? ({
@@ -533,7 +589,7 @@ export class CommunityDetailPage implements OnDestroy {
       return;
     }
     this.isInviting.set(true);
-    this.service.invite(group.id, email).subscribe({
+    this.service.invite(group.id, email).pipe(takeUntil(this.navigationChanged)).subscribe({
       next: () => {
         this.isInviting.set(false);
         this.invitationEmail.reset('');
@@ -551,7 +607,7 @@ export class CommunityDetailPage implements OnDestroy {
   protected resolveRequest(request: CommunityAccess, approve: boolean): void {
     const group = this.community();
     if (!group) return;
-    this.service.resolveJoinRequest(group.id, request.id, approve).subscribe({
+    this.service.resolveJoinRequest(group.id, request.id, approve).pipe(takeUntil(this.navigationChanged)).subscribe({
       next: () => {
         this.joinRequests.update(items =>
           items.filter(item => item.id !== request.id));
@@ -565,7 +621,8 @@ export class CommunityDetailPage implements OnDestroy {
   }
 
   private loadJoinRequests(groupId: number): void {
-    this.service.findJoinRequests(groupId).subscribe({
+    this.joinRequestsRequest?.unsubscribe();
+    this.joinRequestsRequest = this.service.findJoinRequests(groupId).pipe(takeUntil(this.navigationChanged)).subscribe({
       next: requests => this.joinRequests.set(requests),
       error: () => this.joinRequests.set([])
     });

@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { DeferBlockState, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -27,7 +27,9 @@ describe('App', () => {
 
   it('should render the navbar', async () => {
     const fixture = TestBed.createComponent(App);
-
+    fixture.detectChanges();
+    const blocks = await fixture.getDeferBlocks();
+    await blocks[0].render(DeferBlockState.Complete);
     await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;

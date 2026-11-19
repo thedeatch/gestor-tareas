@@ -213,6 +213,10 @@
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 0.65rem;
 }
+.photo-upload-options { margin-bottom: 1rem; padding: .75rem; border: 1px solid var(--mat-sys-outline-variant); border-radius: 12px; }
+.photo-upload-options summary { color: var(--mat-sys-primary); cursor: pointer; }
+.photo-upload-options p { padding-block: .5rem; }
+.photo-upload-options app-photo-date-fields { max-width: 440px; }
 .image-tile {
   position: relative;
   min-width: 0;
@@ -247,6 +251,11 @@
   position: absolute;
   top: 0.5rem;
   left: 0.5rem;
+}
+.image-save {
+  position: absolute;
+  right: .5rem;
+  bottom: 2.25rem;
 }
 .image-tile:hover img {
   transform: scale(1.04);

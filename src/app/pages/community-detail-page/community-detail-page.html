@@ -46,12 +46,28 @@
 
     <nav class="group-tools" aria-label="Secciones del grupo">
       <button type="button" class="group-tool"
+        [class.active]="activeSection() === 'goals'"
+        [attr.aria-pressed]="activeSection() === 'goals'"
+        [attr.aria-current]="activeSection() === 'goals' ? 'page' : null"
+        (click)="openSection('goals')">
+        <span class="tool-icon"><mat-icon>flag</mat-icon></span>
+        <span><strong>Objetivos</strong><small>Metas compartidas y avance del equipo</small></span>
+      </button>
+      <button type="button" class="group-tool"
         [class.active]="activeSection() === 'overview'"
         [attr.aria-pressed]="activeSection() === 'overview'"
         [attr.aria-current]="activeSection() === 'overview' ? 'page' : null"
         (click)="openSection('overview')">
         <span class="tool-icon"><mat-icon>dashboard</mat-icon></span>
         <span><strong>Resumen</strong><small>Información, actividad y estadísticas</small></span>
+      </button>
+      <button type="button" class="group-tool"
+        [class.active]="activeSection() === 'search'"
+        [attr.aria-pressed]="activeSection() === 'search'"
+        [attr.aria-current]="activeSection() === 'search' ? 'page' : null"
+        (click)="openSection('search')">
+        <span class="tool-icon"><mat-icon>search</mat-icon></span>
+        <span><strong>Buscar</strong><small>Encuentra contenido en el grupo</small></span>
       </button>
       <button type="button" class="group-tool"
         [class.active]="activeSection() === 'posts'"
@@ -92,6 +108,14 @@
         (click)="openSection('events')">
         <span class="tool-icon"><mat-icon>event</mat-icon></span>
         <span><strong>Eventos y galería</strong><small>Actividades, álbumes e imágenes</small></span>
+      </button>
+      <button type="button" class="group-tool"
+        [class.active]="activeSection() === 'memories'"
+        [attr.aria-pressed]="activeSection() === 'memories'"
+        [attr.aria-current]="activeSection() === 'memories' ? 'page' : null"
+        (click)="openSection('memories')">
+        <span class="tool-icon"><mat-icon>history</mat-icon></span>
+        <span><strong>Recuerdos</strong><small>Fotos y aniversarios de la comunidad</small></span>
       </button>
       <button type="button" class="group-tool"
         [class.active]="activeSection() === 'channels'"
@@ -179,25 +203,55 @@
     }
 
     @if (activeSection() === 'productivity') {
+      @defer (on immediate) {
       <app-community-ranking [groupId]="item.id" />
       <app-community-achievements [groupId]="item.id" />
       <app-community-tasks [groupId]="item.id" [members]="item.members"
         [canManage]="canManage(item.currentUserRole)" />
+      } @placeholder { <p role="status">Cargando progreso…</p> }
+      @error { <p role="alert">No se pudo cargar esta sección. Recarga la página para reintentar.</p> }
+    }
+    @if (activeSection() === 'goals') {
+      @defer (on immediate) {
+      <app-community-goals [groupId]="item.id" />
+      } @placeholder { <p role="status">Cargando objetivos…</p> }
+      @error { <p role="alert">No se pudo cargar esta sección. Recarga la página para reintentar.</p> }
     }
 
     @if (activeSection() === 'events') {
+      @defer (on immediate) {
       <app-community-events [groupId]="item.id" [canCreate]="canManage(item.currentUserRole)"
         (eventCreated)="activity()?.load()" />
       <app-community-gallery [groupId]="item.id" [canManage]="canManage(item.currentUserRole)"
         (albumCreated)="activity()?.load()" />
+      } @placeholder { <p role="status">Cargando eventos y galería…</p> }
+      @error { <p role="alert">No se pudo cargar esta sección. Recarga la página para reintentar.</p> }
     }
 
     @if (activeSection() === 'polls') {
+      @defer (on immediate) {
       <app-community-polls [groupId]="item.id" />
+      } @placeholder { <p role="status">Cargando encuestas…</p> }
+      @error { <p role="alert">No se pudo cargar esta sección. Recarga la página para reintentar.</p> }
+    }
+    @if (activeSection() === 'memories') {
+      @defer (on immediate) {
+      <app-community-memories [groupId]="item.id" (openGallery)="openSection('events')" />
+      } @placeholder { <p role="status">Cargando recuerdos…</p> }
+      @error { <p role="alert">No se pudo cargar esta sección. Recarga la página para reintentar.</p> }
+    }
+    @if (activeSection() === 'search') {
+      @defer (on immediate) {
+      <app-community-search [groupId]="item.id" />
+      } @placeholder { <p role="status">Cargando búsqueda…</p> }
+      @error { <p role="alert">No se pudo cargar esta sección. Recarga la página para reintentar.</p> }
     }
 
     @if (activeSection() === 'channels') {
+      @defer (on immediate) {
       <app-community-channels [groupId]="item.id" [canManage]="canManage(item.currentUserRole)" />
+      } @placeholder { <p role="status">Cargando canales…</p> }
+      @error { <p role="alert">No se pudo cargar esta sección. Recarga la página para reintentar.</p> }
     }
 
     @if (activeSection() === 'posts') {
@@ -245,14 +299,11 @@
         } @else {
           <div class="post-list">
             @for (post of posts(); track post.id) {
-              <article class="post-item" [id]="'publicacion-' + post.id" tabindex="-1">
+              <article class="post-item" [id]="'publicacion-' + post.id" tabindex="-1"
+                [appSearchTarget]="post.id" searchTargetParam="publicacion">
                 <a class="post-avatar" [routerLink]="['/usuarios', post.authorId]">
-                  @if (post.authorHasAvatar) {
-                    <img [src]="'/api/users/' + post.authorId + '/avatar'"
-                      [alt]="'Foto de ' + post.authorName">
-                  } @else {
-                    <mat-icon>person</mat-icon>
-                  }
+                  <app-user-avatar [userId]="post.authorId" [hasAvatar]="post.authorHasAvatar"
+                    [label]="'Foto de ' + post.authorName" [size]="44" />
                 </a>
                 <div class="post-body">
                   <div class="post-meta">
@@ -302,7 +353,7 @@
                       </div>
                     }
                   }
-                  <div class="post-actions" role="group" aria-label="Reacciones">
+                  <div class="post-actions" role="group" aria-label="Acciones de la publicación">
                     @for (option of reactionTypes; track option.type) {
                       @let reaction = reactionFor(post, option.type);
                       <button mat-stroked-button type="button"
@@ -312,6 +363,7 @@
                         <mat-icon>{{ option.icon }}</mat-icon>{{ reaction?.count ?? 0 }}
                       </button>
                     }
+                    <app-save-item-button [groupId]="item.id" kind="POST" [targetId]="post.id" />
                   </div>
                   @if (!post.editable) {
                     <app-report-button [groupId]="item.id" [postId]="post.id" [rules]="item.rules" />

@@ -57,7 +57,7 @@
         <app-task-productivity [tasks]="filteredTasks()" [group]="true" />
       } @else {
       @for (task of filteredTasks(); track task.id) {
-        <article>
+        <article [appSearchTarget]="task.id" searchTargetParam="tarea">
           <h3>{{ task.description }}</h3>
           <p>
             {{ statuses[task.status] }} · Prioridad {{ priorities[task.priority] }}

@@ -42,7 +42,8 @@
     }
 
     @if (album(); as selected) {
-      <section class="album-detail" aria-labelledby="selected-album-title">
+      <section class="album-detail" aria-labelledby="selected-album-title"
+        [appSearchTarget]="selected.id" searchTargetParam="album">
         <div class="album-toolbar">
           <button mat-button type="button" (click)="closeAlbum()">
             <mat-icon>arrow_back</mat-icon>Todos los álbumes
@@ -57,6 +58,14 @@
         </div>
 
         @if (canManage()) {
+          <details class="photo-upload-options">
+            <summary>Opciones avanzadas de las fotos</summary>
+            <p>La fecha elegida se aplicará a las imágenes que subas a continuación.</p>
+            <app-photo-date-fields [form]="photoDateForm" />
+          </details>
+          @if (photoDateForm.invalid) {
+            <p class="feedback error" role="alert">Completa la fecha en las opciones avanzadas o elige usar la fecha de subida.</p>
+          }
           <input #imageInput class="visually-hidden" id="community-gallery-upload" type="file"
             accept="image/jpeg,image/png" multiple [disabled]="busy()"
             (change)="upload(imageInput, selected)">
@@ -73,18 +82,13 @@
           </button>
         }
 
-        @if (imagesLoading()) {
-          <div class="loading-state" role="status">
-            <mat-spinner diameter="40"></mat-spinner><span>Cargando imágenes...</span>
-          </div>
-        } @else if (images().length) {
+        @if (images().length) {
           <div class="image-grid" aria-label="Imágenes del álbum">
-            @for (image of images(); track image.id) {
-              @if (imageUrls()[image.id]; as imageUrl) {
+            @for (image of visibleImages(); track image.id) {
                 <div class="image-tile">
                   <button class="image-open" type="button" (click)="view(image)"
                     [attr.aria-label]="'Ver ' + image.name + ', ' + image.commentCount + ' comentarios'">
-                    <img [src]="imageUrl" [alt]="image.name">
+                    <app-lazy-image [src]="thumbnailUrl(selected.id, image.id)" [alt]="image.name" />
                     <span class="comment-count" aria-hidden="true">
                       <mat-icon>chat_bubble_outline</mat-icon>{{ image.commentCount }}
                     </span>
@@ -94,10 +98,14 @@
                     [url]="imageLikeUrl(image.id)" [compact]="true"
                     [likeCount]="image.likeCount" [liked]="image.liked"
                     (likesChanged)="updateLikes($event.imageId, $event.likes)" />
+                  <app-save-item-button class="image-save" [groupId]="groupId()" kind="IMAGE"
+                    [targetId]="image.id" [compact]="true" />
                 </div>
-              }
             }
           </div>
+          @if (visibleImages().length < images().length) {
+            <button mat-button type="button" (click)="imageLimit.update(addImagePage)">Ver más fotos</button>
+          }
         } @else {
           <div class="empty-state">
             <mat-icon>add_photo_alternate</mat-icon>
@@ -109,11 +117,11 @@
     } @else if (albums(); as items) {
       @if (items.length) {
         <div class="album-grid" aria-label="Álbumes">
-          @for (item of items; track item.id) {
+          @for (item of visibleAlbums(); track item.id) {
             <button class="album-tile" type="button" [id]="'album-' + item.id" [disabled]="busy()" (click)="open(item)">
               <div class="album-cover">
-                @if (coverUrls()[item.id]; as coverUrl) {
-                  <img [src]="coverUrl" alt="">
+                @if (item.coverImageId; as coverId) {
+                  <app-lazy-image [src]="thumbnailUrl(item.id, coverId)" />
                 } @else {
                   <mat-icon>photo_library</mat-icon>
                 }
@@ -126,6 +134,9 @@
             </button>
           }
         </div>
+        @if (visibleAlbums().length < items.length) {
+          <button mat-button type="button" (click)="albumLimit.update(addAlbumPage)">Ver más álbumes</button>
+        }
       } @else {
         <div class="empty-state">
           <mat-icon>collections</mat-icon>

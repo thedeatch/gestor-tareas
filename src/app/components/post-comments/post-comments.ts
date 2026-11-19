@@ -1,4 +1,5 @@
 import { DatePipe } from '@angular/common';
+import { UserAvatar } from '../user-avatar/user-avatar';
 import { HttpClient } from '@angular/common/http';
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -29,7 +30,7 @@ interface PostComment {
 @Component({
   selector: 'app-post-comments',
   imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatDialogModule,
-    MatFormFieldModule, MatInputModule, ReportButton],
+    MatFormFieldModule, MatInputModule, ReportButton, UserAvatar],
   templateUrl: './post-comments.html',
   styles: [`
     :host { display: block; }

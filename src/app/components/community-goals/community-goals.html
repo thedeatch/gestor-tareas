@@ -1,0 +1,65 @@
+<div class="toolbar">
+  <p>Vincula tareas a una meta y sigue el avance del equipo.</p>
+  <button mat-button (click)="load()" [disabled]="busy()">Actualizar</button>
+  @if (overview()?.canManage) {
+    <button mat-flat-button (click)="edit()" [disabled]="busy()">Nuevo objetivo</button>
+  }
+</div>
+@if (error()) { <p role="alert">{{ error() }}</p> }
+@if (busy()) { <p role="status">Actualizando objetivos…</p> }
+@if (editorOpen()) {
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <h3>{{ editingId() === null ? 'Nuevo objetivo' : 'Editar objetivo' }}</h3>
+    <label>Título <input formControlName="title" maxlength="150" required /></label>
+    @if (form.controls.title.touched && form.controls.title.invalid) { <p role="alert">Escribe un título de hasta 150 caracteres.</p> }
+    <label>Descripción opcional <textarea formControlName="description" maxlength="2000" rows="3"></textarea></label>
+    <label>Fecha límite opcional <input type="date" formControlName="dueDate" min="0001-01-01" max="9999-12-31" /></label>
+    <fieldset [disabled]="busy()">
+      <legend>Tareas vinculadas</legend>
+      <div class="task-options">
+        @for (task of overview()?.tasks ?? []; track task.id) {
+          <label class="task-option"><input type="checkbox" [checked]="form.controls.taskIds.value.includes(task.id)"
+            (change)="toggleTask(task.id, $event)" />{{ task.description }}</label>
+        }
+      </div>
+    </fieldset>
+    <small>Puedes seleccionar varias tareas. Una tarea puede contribuir a más de un objetivo.</small>
+    @if (!overview()?.tasks?.length) { <p>Crea primero las tareas desde la sección Progreso. También puedes guardar el objetivo sin tareas.</p> }
+    <div class="actions">
+      <button mat-flat-button type="submit" [disabled]="busy()">Guardar objetivo</button>
+      <button mat-button type="button" (click)="cancel()" [disabled]="busy()">Cancelar</button>
+    </div>
+  </form>
+}
+@if (overview(); as data) {
+  @for (goal of data.goals; track goal.id) {
+    <article>
+      <div class="toolbar">
+        <h3>{{ goal.title }}</h3>
+        @if (data.canManage) {
+          <button mat-button (click)="edit(goal)" [disabled]="busy()">Editar</button>
+          <button mat-button (click)="remove(goal)" [disabled]="busy()">Eliminar</button>
+        }
+      </div>
+      @if (goal.description) { <p class="description">{{ goal.description }}</p> }
+      <small>Creado por {{ goal.authorName || 'Miembro anterior' }} · {{ goal.createdAt | date:'dd/MM/yyyy' }}</small>
+      @if (goal.dueDate) { <p>Fecha límite: {{ goal.dueDate | date:'dd/MM/yyyy' }}</p> }
+      <p>{{ goal.completedTasks }} de {{ goal.totalTasks }} tareas completadas · {{ goal.progress }} %</p>
+      <progress [value]="goal.completedTasks" [max]="goal.totalTasks || 1" [attr.aria-label]="'Avance de ' + goal.title"></progress>
+      @if (goal.totalTasks > 0 && goal.completedTasks === goal.totalTasks) { <p class="completed">¡Objetivo completado!</p> }
+      @for (task of linkedTasks(goal); track task.id) {
+        <div class="task">
+          <div>
+            <a [routerLink]="['/grupos', groupId()]" [queryParams]="{ seccion: 'productivity', tarea: task.id }">{{ task.description }}</a>
+            <small>{{ task.assigneeName || 'Sin asignar' }}</small>
+          </div>
+          @if (task.canChangeStatus) {
+            <select [value]="task.status" (change)="changeStatus(task, $event)" [disabled]="busy()" [attr.aria-label]="'Estado de ' + task.description">
+              @for (status of statuses; track status[0]) { <option [value]="status[0]">{{ status[1] }}</option> }
+            </select>
+          } @else { <span>{{ statusLabels[task.status] }}</span> }
+        </div>
+      } @empty { <p>Sin tareas vinculadas. El avance se calculará cuando añadas tareas.</p> }
+    </article>
+  } @empty { <p>Aún no hay objetivos compartidos.</p> }
+}

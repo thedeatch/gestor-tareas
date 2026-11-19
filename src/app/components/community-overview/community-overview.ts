@@ -4,6 +4,9 @@ import { MatIconModule } from '@angular/material/icon';
 export type CommunityOverviewSection =
   | 'posts'
   | 'polls'
+  | 'goals'
+  | 'memories'
+  | 'search'
   | 'members'
   | 'productivity'
   | 'events'
@@ -60,10 +63,26 @@ export class CommunityOverview {
         description: 'Descubre actividades, álbumes y recuerdos del grupo.'
       },
       {
+        section: 'memories',
+        icon: 'history',
+        title: 'Recuerdos',
+        description: 'Vuelve a ver fotos y aniversarios de la comunidad.'
+      },
+      {
         section: 'productivity',
         icon: 'workspace_premium',
         title: 'Progreso',
         description: 'Consulta tareas, logros, estadísticas y ranking.'
+      },
+      {
+        section: 'goals', icon: 'flag', title: 'Objetivos',
+        description: 'Define metas compartidas y sigue el avance de las tareas vinculadas.'
+      },
+      {
+        section: 'search',
+        icon: 'search',
+        title: 'Buscar en el grupo',
+        description: 'Encuentra publicaciones, tareas, eventos y álbumes.'
       },
       {
         section: 'channels',

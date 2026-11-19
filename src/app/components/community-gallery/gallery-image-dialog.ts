@@ -1,4 +1,5 @@
-import { Component, ElementRef, computed, inject, output, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, computed, effect, inject, output, signal, viewChild } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,9 +10,18 @@ import { filter, fromEvent } from 'rxjs';
 import { GalleryImageLike, GalleryImageLikes, GalleryImageLikeChange } from './gallery-image-like';
 import { GalleryImageLikesDialog } from './gallery-image-likes-dialog';
 import { GalleryImageShareDialog } from './gallery-image-share-dialog';
+import { SaveItemButton } from '../save-item-button/save-item-button';
+import { PhotoDatePanel } from '../photo-date-panel/photo-date-panel';
+import { PhotoDateChange, PhotoDateInfo } from '../../models/photo-date.model';
 
-export interface GalleryDialogImage extends GalleryImageLikes { id: number; name: string; url: string; }
+export interface GalleryDialogImage extends GalleryImageLikes {
+  id: number;
+  name: string;
+  url?: string;
+  date?: PhotoDateInfo;
+}
 export interface GalleryImageDialogData {
+  groupId: number;
   albumTitle: string;
   images: GalleryDialogImage[];
   initialIndex: number;
@@ -20,7 +30,7 @@ export interface GalleryImageDialogData {
 
 @Component({
   selector: 'app-gallery-image-dialog',
-  imports: [MatDialogModule, MatButtonModule, MatIconModule, GalleryImageComments, GalleryImageLike],
+  imports: [MatDialogModule, MatButtonModule, MatIconModule, GalleryImageComments, GalleryImageLike, SaveItemButton, PhotoDatePanel],
   template: `
     <header mat-dialog-title>
       <div class="metadata">
@@ -29,6 +39,7 @@ export interface GalleryImageDialogData {
         <span class="filename"><mat-icon>image</mat-icon>{{ current().name }}</span>
       </div>
       <div class="actions">
+        <app-save-item-button [groupId]="data.groupId" kind="IMAGE" [targetId]="current().id" />
         <button mat-icon-button type="button" aria-label="Compartir fotografía" title="Compartir fotografía"
           (click)="openShare()"><mat-icon>share</mat-icon></button>
         <button mat-button type="button" (click)="commentsVisible.update(toggle)"
@@ -51,8 +62,12 @@ export interface GalleryImageDialogData {
             [attr.aria-label]="commentsVisible() ? 'Ampliar foto' : 'Ver foto con comentarios'"
             [attr.title]="commentsVisible() ? 'Ampliar foto' : 'Ver comentarios'"
             aria-controls="image-comments" [attr.aria-expanded]="commentsVisible()">
-            <img [src]="current().url" [alt]="current().name">
+            @if (displayUrl(); as source) { <img [src]="source" [alt]="current().name"> }
+            @else { <span role="status">{{ imageError() ? 'Imagen no disponible' : 'Cargando foto…' }}</span> }
           </button>
+          @if (imageError()) {
+            <button mat-button type="button" (click)="reload.update(increment)">Reintentar imagen</button>
+          }
           <button class="nav-button next" mat-icon-button type="button" aria-label="Imagen siguiente"
             [disabled]="data.images.length < 2" (click)="next()"><mat-icon>chevron_right</mat-icon></button>
           <button class="fullscreen-button" mat-icon-button type="button"
@@ -79,6 +94,12 @@ export interface GalleryImageDialogData {
             <strong>{{ index() + 1 }}</strong><span>de</span><strong>{{ data.images.length }}</strong>
           </p>
         </div>
+        @for (image of [current()]; track image.id) {
+          @if (image.date; as date) {
+            <app-photo-date-panel [date]="date" [imageId]="image.id" [imagesUrl]="data.imagesUrl"
+              (changed)="updateDate($event)" />
+          }
+        }
       </div>
       @for (image of [current()]; track image.id) {
         <app-gallery-image-comments id="image-comments" [hidden]="!commentsVisible()"
@@ -93,6 +114,11 @@ export interface GalleryImageDialogData {
     .metadata .eyebrow { grid-column: 1 / -1; color: var(--mat-sys-primary); font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
     .metadata strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .metadata .filename { display: inline-flex; min-width: 0; align-items: center; gap: .25rem; padding: .2rem .5rem; border-radius: 999px; background: var(--mat-sys-surface-container-high); font-size: .75rem; }
+    @media (max-width: 850px) {
+      .metadata { grid-template-columns: minmax(0, 1fr); row-gap: .2rem; width: 100%; }
+      .metadata .filename { display: block; width: fit-content; max-width: 100%; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .filename mat-icon { margin-right: .25rem; }
+    }
     .filename mat-icon { width: 15px; height: 15px; flex: none; font-size: 15px; }
     .actions { display: flex; align-items: center; flex-shrink: 0; gap: .25rem; }
     mat-dialog-content {
@@ -150,6 +176,7 @@ export interface GalleryImageDialogData {
 export class GalleryImageDialog {
   readonly commentCountChanged = output<{ imageId: number; count: number }>();
   readonly likesChanged = output<GalleryImageLikeChange>();
+  readonly dateChanged = output<PhotoDateChange>();
   readonly data = inject<GalleryImageDialogData>(MAT_DIALOG_DATA);
   readonly dialogRef = inject(MatDialogRef<GalleryImageDialog>);
   readonly index = signal(this.data.initialIndex);
@@ -157,10 +184,38 @@ export class GalleryImageDialog {
   readonly toggle = (value: boolean): boolean => !value;
   readonly images = signal(this.data.images);
   readonly current = computed(() => this.images()[this.index()]);
+  private readonly currentId = computed(() => this.current().id);
+  private readonly suppliedUrl = computed(() => this.current().url);
+  protected readonly displayUrl = signal<string | null>(null);
+  protected readonly imageError = signal(false);
+  protected readonly reload = signal(0);
+  protected readonly increment = (value: number) => value + 1;
+  private readonly http = inject(HttpClient);
+  protected updateDate(change: PhotoDateChange): void {
+    this.images.update(images => images.map(image => image.id === change.imageId ? { ...image, date: change.date } : image));
+    this.dateChanged.emit(change);
+  }
   readonly fullscreen = signal(false);
   private readonly photoStage = viewChild<ElementRef<HTMLElement>>('photoStage');
   private readonly dialog = inject(MatDialog);
   constructor() {
+    effect(onCleanup => {
+      const id = this.currentId();
+      const supplied = this.suppliedUrl();
+      this.reload();
+      this.imageError.set(false);
+      this.displayUrl.set(supplied ?? null);
+      if (supplied) return;
+      let objectUrl: string | undefined;
+      const request = this.http.get(`${this.data.imagesUrl}/${id}`, { responseType: 'blob' }).subscribe({
+        next: blob => { objectUrl = URL.createObjectURL(blob); this.displayUrl.set(objectUrl); },
+        error: () => this.imageError.set(true)
+      });
+      onCleanup(() => {
+        request.unsubscribe();
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+      });
+    });
     inject(Router).events.pipe(
       filter(event => event instanceof NavigationEnd),
       takeUntilDestroyed()

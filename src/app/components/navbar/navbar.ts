@@ -81,6 +81,9 @@ export class Navbar {
   protected readonly messagingEnabled = computed(() =>
     this.moduleConfiguration.isEnabled('messaging')
   );
+  protected readonly savedItemsEnabled = computed(() =>
+    this.moduleConfiguration.isEnabled('communities')
+  );
 
   constructor() {
     this.moduleConfiguration.load().subscribe({ error: () => undefined });

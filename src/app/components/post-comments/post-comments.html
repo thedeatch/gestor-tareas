@@ -14,9 +14,8 @@
     @for (comment of comments(); track comment.id) {
       <article>
         <header>
-          @if (comment.authorHasAvatar) {
-            <img [src]="'/api/users/' + comment.authorId + '/avatar'" alt="">
-          }
+          <app-user-avatar [userId]="comment.authorId" [hasAvatar]="comment.authorHasAvatar"
+            [label]="'Foto de ' + comment.authorName" />
           <strong>{{ comment.authorName }}</strong>
           <time [attr.datetime]="comment.createdAt">{{ comment.createdAt | date:'dd/MM/yyyy HH:mm' }}</time>
           @if (comment.updatedAt !== comment.createdAt) { <span>Editado</span> }

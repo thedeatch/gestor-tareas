@@ -1,0 +1,67 @@
+<section aria-label="Recuerdos de la comunidad">
+  <div class="toolbar">
+    <div class="filters" role="group" aria-label="Filtrar recuerdos">
+      <button mat-stroked-button type="button" [attr.aria-pressed]="!anniversariesOnly()"
+        [disabled]="busy() || opening() !== null" (click)="filter(false)">Todos los recuerdos</button>
+      <button mat-stroked-button type="button" [attr.aria-pressed]="anniversariesOnly()"
+        [disabled]="busy() || opening() !== null" (click)="filter(true)">Un día como hoy</button>
+    </div>
+    <button mat-button type="button" [disabled]="busy() || opening() !== null" (click)="load(result()?.page ?? 0)">
+      <mat-icon>refresh</mat-icon>Actualizar
+    </button>
+  </div>
+  @if (error()) {
+    <div class="error" role="alert"><span>{{ error() }}</span>
+      <button mat-button type="button" [disabled]="busy()" (click)="load(result()?.page ?? 0)">Reintentar</button>
+    </div>
+  }
+  @if (busy()) { <p role="status">Cargando recuerdos…</p> }
+  @if (opening() !== null) { <p role="status">Abriendo recuerdo…</p> }
+  @if (result(); as page) {
+    <div class="memory-grid" [attr.aria-busy]="busy()">
+      @for (memory of page.items; track memory.imageId) {
+        <mat-card>
+          <button class="photo" type="button" [disabled]="busy() || opening() !== null"
+            [attr.aria-label]="'Ver recuerdo ' + memory.name" (click)="view(memory)">
+            @if (previews()[memory.imageId]; as source) { <img [src]="source" [alt]="memory.name"> }
+            @else { <mat-icon aria-hidden="true">photo</mat-icon> }
+          </button>
+          <mat-card-content>
+            <div class="memory-heading">
+              <h3>Recuerdo de {{ memory.date.years }} {{ memory.date.years === 1 ? 'año' : 'años' }}</h3>
+              <app-save-item-button [groupId]="groupId()" kind="IMAGE" [targetId]="memory.imageId"
+                [disabled]="busy() || opening() !== null" />
+            </div>
+            @if (memory.date.anniversary) { <p class="anniversary">Un día como hoy</p> }
+            <p>
+              @if (memory.date.takenOn) { Tomada el {{ memory.date.takenOn | date:'dd/MM/yyyy' }} }
+              @else if (memory.date.takenYear !== null) { Tomada en {{ memory.date.takenYear }} }
+              @else { Subida el {{ memory.date.uploadedOn | date:'dd/MM/yyyy' }} }
+            </p>
+            <p class="album">{{ memory.albumTitle }}</p>
+            <p class="filename">{{ memory.name }}</p>
+          </mat-card-content>
+        </mat-card>
+      } @empty {
+        @if (!busy() && !error()) {
+          <div class="empty-state">
+            <mat-icon>history</mat-icon>
+            <h3>{{ anniversariesOnly() ? 'Hoy no hay aniversarios de fotos' : 'Tus recuerdos aparecerán aquí' }}</h3>
+            <p>Se muestran las fotos con al menos un año. Puedes indicar su fecha real en las opciones avanzadas de la galería.</p>
+            <button mat-button type="button" (click)="openGallery.emit()">Ir a la galería</button>
+          </div>
+        }
+      }
+    </div>
+    @if (page.total > page.size) {
+      <nav class="pagination" aria-label="Páginas de recuerdos">
+        <button mat-button type="button" [disabled]="busy() || opening() !== null || page.page === 0"
+          (click)="load(page.page - 1)">Anterior</button>
+        <span>Página {{ page.page + 1 }} · {{ page.total }} recuerdos</span>
+        <button mat-button type="button"
+          [disabled]="busy() || opening() !== null || (page.page + 1) * page.size >= page.total"
+          (click)="load(page.page + 1)">Siguiente</button>
+      </nav>
+    }
+  }
+</section>

@@ -56,6 +56,22 @@ class TaskControllerIntegrationTests {
     }
 
     @Test
+    void shouldIgnoreClientIdentifiersWhenCreatingTasks() throws Exception {
+        var otherUser = userRepository.save(new AppUser("Otra cuenta", "task-victim@test.cl", "hash"));
+        var victim = new cl.gestortareas.api.model.Task("Tarea privada original", false);
+        victim.setOwner(otherUser);
+        victim = taskRepository.saveAndFlush(victim);
+        Long originalId = victim.getId();
+        mockMvc.perform(post("/api/tasks").with(jwt().jwt(token -> token.subject(USER_EMAIL)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"id\":" + originalId + ",\"description\":\"Nueva tarea\",\"completed\":false}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.id").value(org.hamcrest.Matchers.not(originalId.intValue())));
+        assertEquals("Tarea privada original", taskRepository.findById(originalId).orElseThrow().getDescription());
+        assertEquals(1, taskRepository.findAllByOwnerEmailOrderByIdAsc(otherUser.getEmail()).size());
+    }
+
+    @Test
     void shouldChangeOnlyTheStatusOfAnOwnedTask() throws Exception {
         var owner = jwt().jwt(token -> token.subject(USER_EMAIL));
         String otherEmail = "kanban-other@gestor.cl";

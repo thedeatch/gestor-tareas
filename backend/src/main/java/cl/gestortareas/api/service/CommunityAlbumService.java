@@ -2,6 +2,7 @@ package cl.gestortareas.api.service;
 
 import java.io.IOException;
 import java.time.OffsetDateTime;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -16,6 +17,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import cl.gestortareas.api.model.FilePurpose;
+import cl.gestortareas.api.model.CommunityRole;
+import cl.gestortareas.api.service.CommunityMemoryService.PhotoDate;
 
 @Service
 @Transactional
@@ -36,7 +39,7 @@ public class CommunityAlbumService {
         """;
 
     public record Album(Long id, String title, String description, long imageCount, Long coverImageId) {}
-    public record Image(Long id, String name, long commentCount, long likeCount, boolean liked) {}
+    public record Image(Long id, String name, long commentCount, long likeCount, boolean liked, PhotoDate date) {}
     public record ImageLikes(long likeCount, boolean liked) {}
     public record ImageLiker(Long userId, String name, boolean hasAvatar) {}
     public record ImageData(String contentType, byte[] data) {}
@@ -48,11 +51,16 @@ public class CommunityAlbumService {
     private final JdbcClient jdbc;
     private final CommunityService communities;
     private final FileStorageService storage;
+    private final CommunityMemoryService memories;
+    private final GalleryThumbnailService thumbnails;
 
-    public CommunityAlbumService(JdbcClient jdbc, CommunityService communities, FileStorageService storage) {
+    public CommunityAlbumService(JdbcClient jdbc, CommunityService communities, FileStorageService storage,
+                                 CommunityMemoryService memories, GalleryThumbnailService thumbnails) {
         this.jdbc = jdbc;
         this.communities = communities;
         this.storage = storage;
+        this.memories = memories;
+        this.thumbnails = thumbnails;
     }
 
     @Transactional(readOnly = true)
@@ -78,30 +86,71 @@ public class CommunityAlbumService {
             .param("description", description.strip()).update();
     }
 
+    public ImageData thumbnail(Long groupId, Long albumId, Long imageId, String email) {
+        requireImageMember(groupId, albumId, imageId, email);
+        return new ImageData("image/jpeg", thumbnails.readOrCreate(imageId,
+            () -> read(groupId, albumId, imageId, email).data()));
+    }
+
     @Transactional(readOnly = true)
     public List<Image> images(Long groupId, Long albumId, String email) {
-        Long userId = communities.requireMembership(groupId, email).getUser().getId();
+        var member = communities.requireMembership(groupId, email);
         requireAlbum(groupId, albumId);
+        return imageDetails(albumId, member.getUser().getId(), member.getRole() != CommunityRole.MEMBER, null);
+    }
+
+    private List<Image> imageDetails(Long albumId, Long userId, boolean manager, Long imageId) {
         return jdbc.sql("""
-            SELECT f.id, f.original_name AS name,
+            SELECT f.id, f.original_name AS name, f.created_at, f.owner_id, i.taken_on, i.taken_year,
                    (SELECT COUNT(*) FROM community_image_comments c WHERE c.image_id = f.id) AS comment_count,
                    (SELECT COUNT(*) FROM community_image_likes r WHERE r.image_id = f.id) AS like_count,
                    EXISTS (SELECT 1 FROM community_image_likes r
                            WHERE r.image_id = f.id AND r.user_id = :userId) AS liked
             FROM community_album_images i JOIN stored_files f ON f.id = i.file_id
-            WHERE i.album_id = :albumId ORDER BY f.id DESC
-            """).param("albumId", albumId).param("userId", userId).query(Image.class).list();
+            WHERE i.album_id = :albumId
+            """ + (imageId == null ? "" : " AND f.id = :imageId") + " ORDER BY f.id DESC")
+            .param("albumId", albumId).param("userId", userId).param("imageId", imageId)
+            .query((rs, row) -> new Image(rs.getLong("id"), rs.getString("name"), rs.getLong("comment_count"),
+                rs.getLong("like_count"), rs.getBoolean("liked"),
+                memories.describe(rs.getObject("created_at", OffsetDateTime.class).toInstant(),
+                    rs.getObject("taken_on", LocalDate.class), rs.getObject("taken_year", Integer.class),
+                    manager || rs.getLong("owner_id") == userId))).list();
     }
 
-    public Image upload(Long groupId, Long albumId, String email, MultipartFile file) {
+    public Image upload(Long groupId, Long albumId, String email, MultipartFile file,
+                        LocalDate takenOn, Integer takenYear) {
         communities.requireManager(groupId, email);
         requireAlbum(groupId, albumId);
+        memories.validate(takenOn, takenYear);
         validateHeader(file);
         var saved = storage.store(email, file, FilePurpose.COMMUNITY_IMAGE, MAX_IMAGE_SIZE, IMAGE_TYPES);
         jdbc.sql("""
-            INSERT INTO community_album_images (album_id, file_id) VALUES (:albumId, :fileId)
-            """).param("albumId", albumId).param("fileId", saved.getId()).update();
-        return new Image(saved.getId(), saved.getOriginalName(), 0, 0, false);
+            INSERT INTO community_album_images (album_id, file_id, taken_on, taken_year)
+            VALUES (:albumId, :fileId, :takenOn, :takenYear)
+            """).param("albumId", albumId).param("fileId", saved.getId())
+            .param("takenOn", takenOn).param("takenYear", takenYear).update();
+        return new Image(saved.getId(), saved.getOriginalName(), 0, 0, false,
+            memories.describe(saved.getCreatedAt(), takenOn, takenYear, true));
+    }
+
+    public Image updateDate(Long groupId, Long albumId, Long imageId, String email,
+                            LocalDate takenOn, Integer takenYear) {
+        var member = communities.requireMembership(groupId, email);
+        Long ownerId = jdbc.sql("""
+            SELECT f.owner_id FROM community_album_images i JOIN stored_files f ON f.id = i.file_id
+            JOIN community_albums a ON a.id = i.album_id
+            WHERE a.community_id = :groupId AND a.id = :albumId AND i.file_id = :imageId FOR UPDATE
+            """).param("groupId", groupId).param("albumId", albumId).param("imageId", imageId)
+            .query(Long.class).optional()
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Imagen no encontrada"));
+        boolean manager = member.getRole() != CommunityRole.MEMBER;
+        if (!manager && !ownerId.equals(member.getUser().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo quien subió la foto o el equipo del grupo puede cambiar su fecha");
+        }
+        memories.validate(takenOn, takenYear);
+        jdbc.sql("UPDATE community_album_images SET taken_on = :takenOn, taken_year = :takenYear WHERE file_id = :imageId")
+            .param("takenOn", takenOn).param("takenYear", takenYear).param("imageId", imageId).update();
+        return imageDetails(albumId, member.getUser().getId(), manager, imageId).get(0);
     }
 
     @Transactional(readOnly = true)

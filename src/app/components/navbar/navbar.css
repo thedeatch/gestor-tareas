@@ -271,6 +271,13 @@
   line-height: 1;
 }
 
+.user-name {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .navbar-avatar {
   width: 30px;
   height: 30px;
@@ -294,7 +301,7 @@
   margin: 0 !important;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1360px) {
   .navbar {
     padding: 0 16px;
   }

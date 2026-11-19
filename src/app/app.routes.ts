@@ -30,6 +30,13 @@ export const routes: Routes = [
         .then(module => module.CommunitiesPage)
   },
   {
+    path: 'guardados',
+    canActivate: [authGuard, moduleGuard('communities')],
+    loadComponent: () =>
+      import('./pages/saved-items-page/saved-items-page')
+        .then(module => module.SavedItemsPageComponent)
+  },
+  {
     path: 'grupos/:id',
     canActivate: [authGuard, moduleGuard('communities')],
     loadComponent: () =>

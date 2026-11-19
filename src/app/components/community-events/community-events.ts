@@ -10,6 +10,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { Observable, finalize, tap } from 'rxjs';
 
 import { getApiErrorMessage } from '../../models/api-error.model';
+import { SearchTarget } from '../../directives/search-target';
+import { SaveItemButton } from '../save-item-button/save-item-button';
 
 interface CommunityEvent {
   id: number;
@@ -23,7 +25,7 @@ interface CommunityEvent {
 @Component({
   selector: 'app-community-events',
   imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatCardModule,
-    MatFormFieldModule, MatInputModule, MatIconModule],
+    MatFormFieldModule, MatInputModule, MatIconModule, SearchTarget, SaveItemButton],
   templateUrl: './community-events.html',
   styleUrl: './community-events.css'
 })

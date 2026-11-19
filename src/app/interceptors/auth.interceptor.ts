@@ -62,6 +62,12 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
     failedRequest: typeof request,
     handler: HttpHandlerFn
   ) => refreshOnce(authService).pipe(
+    catchError(error => {
+      if (error instanceof HttpErrorResponse && [401, 403].includes(error.status)) {
+        redirectToExpiredSession();
+      }
+      return throwError(() => error);
+    }),
     switchMap(() => {
       const refreshedToken = authService.getToken();
       if (!refreshedToken) {
@@ -69,11 +75,12 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
       }
       return handler(failedRequest.clone({
         setHeaders: { Authorization: `Bearer ${refreshedToken}` }
+      })).pipe(catchError(error => {
+        if (error instanceof HttpErrorResponse && error.status === 401) {
+          redirectToExpiredSession();
+        }
+        return throwError(() => error);
       }));
-    }),
-    catchError(error => {
-      redirectToExpiredSession();
-      return throwError(() => error);
     })
   );
 

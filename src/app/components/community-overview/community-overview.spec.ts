@@ -26,6 +26,10 @@ describe('CommunityOverview', () => {
     expect(emitted).toEqual(['posts']);
     buttons.find(button => button.textContent?.includes('Encuestas'))!.click();
     expect(emitted).toEqual(['posts', 'polls']);
+    buttons.find(button => button.textContent?.includes('Recuerdos'))!.click();
+    expect(emitted).toEqual(['posts', 'polls', 'memories']);
+    buttons.find(button => button.textContent?.includes('Buscar en el grupo'))!.click();
+    expect(emitted).toEqual(['posts', 'polls', 'memories', 'search']);
   });
 
   it('solo muestra moderación a quienes pueden administrarla', () => {

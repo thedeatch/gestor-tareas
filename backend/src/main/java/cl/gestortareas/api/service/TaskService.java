@@ -45,9 +45,9 @@ public class TaskService {
 
     public Task create(Task task, String email) {
         AppUser owner = findUser(email);
-        task.setOwner(owner);
-        task.setCompleted(task.isCompleted());
-        return taskRepository.save(task);
+        Task created = new Task(task.getDescription().strip(), task.isCompleted());
+        created.setOwner(owner);
+        return taskRepository.save(created);
     }
 
     @Transactional

@@ -11,6 +11,14 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.server.ResponseStatusException;
 
 class ModuleAvailabilityInterceptorTests {
+    @Test
+    void shouldHideSavedItemsWhenCommunitiesAreDisabled() {
+        var interceptor = new ModuleAvailabilityInterceptor(new ModuleProperties(true, false, true, true, true));
+        var error = assertThrows(ResponseStatusException.class, () -> interceptor.preHandle(
+            new MockHttpServletRequest("GET", "/api/saved-items"),
+            new MockHttpServletResponse(), new Object()));
+        assertEquals(HttpStatus.NOT_FOUND, error.getStatusCode());
+    }
 
     @Test
     void shouldHidePrivateChatWhenMessagingIsDisabled() {

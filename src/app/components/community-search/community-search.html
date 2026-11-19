@@ -1,0 +1,54 @@
+<section aria-label="Búsqueda dentro del grupo">
+  <form class="search-form" [formGroup]="form" (ngSubmit)="search()">
+    <mat-form-field appearance="outline" class="query-field">
+      <mat-label>Buscar en este grupo</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput formControlName="query" maxlength="200" placeholder="Título, contenido o responsable">
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Tipo de contenido</mat-label>
+      <mat-select formControlName="kind" (selectionChange)="search()">
+        @for (filter of filters; track filter.kind) {
+          <mat-option [value]="filter.kind">{{ filter.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <button mat-flat-button type="submit" [disabled]="busy() || form.invalid || !form.controls.query.value.trim()">
+      {{ busy() ? 'Buscando…' : 'Buscar' }}
+    </button>
+  </form>
+  @if (error()) {
+    <div class="error" role="alert"><span>{{ error() }}</span>
+      <button mat-button type="button" [disabled]="busy()" (click)="search(result()?.page ?? 0)">Reintentar</button>
+    </div>
+  }
+  @if (busy()) { <p role="status">Buscando en el grupo…</p> }
+  @if (result(); as page) {
+    <p role="status">{{ page.total }} {{ page.total === 1 ? 'resultado' : 'resultados' }} para «{{ page.query }}»</p>
+    <div class="search-results" [attr.aria-busy]="busy()">
+      @for (item of page.items; track item.kind + ':' + item.id) {
+        <mat-card>
+          <mat-card-content>
+            <span class="result-type"><mat-icon>{{ types[item.kind].icon }}</mat-icon>{{ types[item.kind].label }}</span>
+            <h3><a [routerLink]="['/grupos', groupId()]" [queryParams]="targetParams(item)"
+              queryParamsHandling="merge">{{ item.title }}</a></h3>
+            @if (item.excerpt) { <p class="excerpt">{{ item.excerpt }}</p> }
+          </mat-card-content>
+        </mat-card>
+      } @empty {
+        @if (!busy()) { <p>No encontramos coincidencias. Prueba con otras palabras o cambia el tipo de contenido.</p> }
+      }
+    </div>
+    @if (page.total > page.size) {
+      <nav class="pagination" aria-label="Páginas de resultados">
+        <button mat-button type="button" [disabled]="busy() || page.page === 0"
+          (click)="search(page.page - 1)">Anterior</button>
+        <span>Página {{ page.page + 1 }}</span>
+        <button mat-button type="button" [disabled]="busy() || (page.page + 1) * page.size >= page.total"
+          (click)="search(page.page + 1)">Siguiente</button>
+      </nav>
+    }
+  } @else if (!busy() && !error()) {
+    <p class="search-hint">Encuentra publicaciones, tareas, eventos y álbumes de esta comunidad.</p>
+  }
+</section>

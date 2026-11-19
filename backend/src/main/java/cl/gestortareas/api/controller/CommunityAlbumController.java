@@ -1,6 +1,7 @@
 package cl.gestortareas.api.controller;
 
 import java.util.List;
+import java.time.LocalDate;
 
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
@@ -10,11 +11,14 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -39,6 +43,7 @@ public class CommunityAlbumController {
     public record CreateAlbum(@NotBlank @Size(max = 120) String title,
                               @NotNull @Size(max = 500) String description) {}
     public record CreateComment(@NotBlank @Size(max = 2000) String content) {}
+    public record PhotoDateRequest(LocalDate takenOn, Integer takenYear) {}
 
     private final CommunityAlbumService albums;
 
@@ -65,8 +70,17 @@ public class CommunityAlbumController {
     @PostMapping(value = "/{albumId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public Image upload(@PathVariable Long groupId, @PathVariable Long albumId,
-                        @RequestPart("file") MultipartFile file, Authentication auth) {
-        return albums.upload(groupId, albumId, auth.getName(), file);
+                        @RequestPart("file") MultipartFile file,
+                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate takenOn,
+                        @RequestParam(required = false) Integer takenYear, Authentication auth) {
+        return albums.upload(groupId, albumId, auth.getName(), file, takenOn, takenYear);
+    }
+
+    @PatchMapping("/{albumId}/images/{imageId}/date")
+    public Image updateDate(@PathVariable Long groupId, @PathVariable Long albumId,
+                            @PathVariable Long imageId, @RequestBody PhotoDateRequest request,
+                            Authentication auth) {
+        return albums.updateDate(groupId, albumId, imageId, auth.getName(), request.takenOn(), request.takenYear());
     }
 
     @GetMapping("/{albumId}/images/{imageId}")
@@ -74,6 +88,14 @@ public class CommunityAlbumController {
                                       @PathVariable Long imageId, Authentication auth) {
         var image = albums.read(groupId, albumId, imageId, auth.getName());
         return ResponseEntity.ok().contentType(MediaType.parseMediaType(image.contentType()))
+            .cacheControl(CacheControl.noStore()).body(image.data());
+    }
+
+    @GetMapping("/{albumId}/images/{imageId}/thumbnail")
+    public ResponseEntity<byte[]> thumbnail(@PathVariable Long groupId, @PathVariable Long albumId,
+                                           @PathVariable Long imageId, Authentication auth) {
+        var image = albums.thumbnail(groupId, albumId, imageId, auth.getName());
+        return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG)
             .cacheControl(CacheControl.noStore()).body(image.data());
     }
 

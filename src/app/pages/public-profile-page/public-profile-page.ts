@@ -1,4 +1,5 @@
 import { Component, OnDestroy, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,7 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 
 import { PublicUserProfile } from '../../models/auth.model';
 import { CommunityRole } from '../../models/community.model';
-import { finalize } from 'rxjs';
+import { Subscription, distinctUntilChanged, finalize, map } from 'rxjs';
 import { BlockStatus, UserBlocksService } from '../../services/user-blocks';
 import { getApiErrorMessage } from '../../models/api-error.model';
 import { AuthService } from '../../services/auth';
@@ -25,6 +26,7 @@ export class PublicProfilePage implements OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly blocks = inject(UserBlocksService);
   private readonly moduleConfiguration = inject(ModuleConfigurationService);
+  private requests = new Subscription();
   protected readonly messagingEnabled = signal(false);
   protected readonly block = signal<BlockStatus | null>(null);
   protected readonly blockBusy = signal(false);
@@ -35,31 +37,45 @@ export class PublicProfilePage implements OnDestroy {
   protected readonly error = signal<string | null>(null);
 
   constructor() {
-    this.moduleConfiguration.load().subscribe({
+    this.moduleConfiguration.load().pipe(takeUntilDestroyed()).subscribe({
       next: availability => this.messagingEnabled.set(availability.messaging),
       error: () => this.messagingEnabled.set(false)
     });
-    const id = Number(this.route.snapshot.paramMap.get('id'));
+    this.route.paramMap.pipe(
+      map(params => Number(params.get('id'))), distinctUntilChanged(), takeUntilDestroyed()
+    ).subscribe(id => this.load(id));
+  }
+
+  private load(id: number): void {
+    this.requests.unsubscribe();
+    this.requests = new Subscription();
+    this.clearAvatar();
+    this.profile.set(null);
+    this.block.set(null);
+    this.error.set(null);
+    this.blockError.set('');
+    this.blockBusy.set(false);
+    this.isLoading.set(true);
     if (!Number.isInteger(id) || id < 1) {
       this.error.set('El perfil solicitado no es válido.');
       this.isLoading.set(false);
       return;
     }
-    this.auth.getPublicProfile(id).subscribe({
+    this.requests.add(this.auth.getPublicProfile(id).subscribe({
       next: profile => {
         this.profile.set(profile);
         this.isLoading.set(false);
-        this.blocks.status(id).subscribe({
+        this.requests.add(this.blocks.status(id).subscribe({
           next: status => this.block.set(status),
           error: () => this.blockError.set('No se pudo consultar el estado del bloqueo.')
-        });
+        }));
         if (profile.hasAvatar) this.loadAvatar(id);
       },
       error: () => {
         this.error.set('Este perfil no está disponible o es privado.');
         this.isLoading.set(false);
       }
-    });
+    }));
   }
 
   protected toggleBlock(id: number): void {
@@ -68,10 +84,10 @@ export class PublicProfilePage implements OnDestroy {
     this.blockBusy.set(true);
     this.blockError.set('');
     const blocked = !status.blocked;
-    this.blocks.set(id, blocked).pipe(finalize(() => this.blockBusy.set(false))).subscribe({
+    this.requests.add(this.blocks.set(id, blocked).pipe(finalize(() => this.blockBusy.set(false))).subscribe({
       next: () => this.block.set({ ...status, blocked }),
       error: error => this.blockError.set(getApiErrorMessage(error, 'No se pudo actualizar el bloqueo.'))
-    });
+    }));
   }
 
   protected roleLabel(role: CommunityRole): string {
@@ -80,13 +96,20 @@ export class PublicProfilePage implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.requests.unsubscribe();
+    this.clearAvatar();
+  }
+
+  private clearAvatar(): void {
     const url = this.avatarUrl();
     if (url) URL.revokeObjectURL(url);
+    this.avatarUrl.set(null);
   }
 
   private loadAvatar(id: number): void {
-    this.auth.getPublicAvatar(id).subscribe(blob =>
-      this.avatarUrl.set(URL.createObjectURL(blob))
-    );
+    this.requests.add(this.auth.getPublicAvatar(id).subscribe({
+      next: blob => this.avatarUrl.set(URL.createObjectURL(blob)),
+      error: () => this.clearAvatar()
+    }));
   }
 }

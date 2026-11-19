@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, DestroyRef, inject, input, OnInit, output, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, input, OnInit, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,11 +9,17 @@ import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
-import { catchError, concatMap, finalize, forkJoin, from, map, Observable, of, switchMap, toArray } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { concatMap, finalize, from, map, Observable, of, switchMap, tap, toArray } from 'rxjs';
 
 import { getApiErrorMessage } from '../../models/api-error.model';
 import { GalleryImageDialog, GalleryDialogImage } from './gallery-image-dialog';
 import { GalleryImageLike, GalleryImageLikes } from './gallery-image-like';
+import { SaveItemButton } from '../save-item-button/save-item-button';
+import { PhotoDateFields } from '../photo-date-fields/photo-date-fields';
+import { PhotoDateInfo, createPhotoDateForm, photoDateInput } from '../../models/photo-date.model';
+import { SearchTarget } from '../../directives/search-target';
+import { LazyImage } from '../lazy-image/lazy-image';
 
 interface Album {
   id: number;
@@ -27,12 +33,13 @@ interface AlbumImage extends GalleryImageLikes {
   id: number;
   name: string;
   commentCount: number;
+  date?: PhotoDateInfo;
 }
 
 @Component({
   selector: 'app-community-gallery',
   imports: [ReactiveFormsModule, MatButtonModule, MatCardModule, MatFormFieldModule,
-    MatInputModule, MatIconModule, MatProgressSpinnerModule, GalleryImageLike],
+    MatInputModule, MatIconModule, MatProgressSpinnerModule, GalleryImageLike, SaveItemButton, PhotoDateFields, SearchTarget, LazyImage],
   templateUrl: './community-gallery.html',
   styleUrl: './community-gallery.css'
 })
@@ -43,17 +50,23 @@ export class CommunityGallery implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
   private readonly dialog = inject(MatDialog);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   protected readonly albums = signal<Album[] | null>(null);
   protected readonly album = signal<Album | null>(null);
   protected readonly images = signal<AlbumImage[]>([]);
-  protected readonly coverUrls = signal<Record<number, string>>({});
-  protected readonly imageUrls = signal<Record<number, string>>({});
-  protected readonly imagesLoading = signal(false);
+  protected readonly imageLimit = signal(24);
+  protected readonly albumLimit = signal(12);
+  protected readonly visibleImages = computed(() => this.images().slice(0, this.imageLimit()));
+  protected readonly visibleAlbums = computed(() => (this.albums() ?? []).slice(0, this.albumLimit()));
+  protected readonly addImagePage = (value: number) => value + 24;
+  protected readonly addAlbumPage = (value: number) => value + 12;
   protected readonly busy = signal(false);
   protected readonly draggingImages = signal(false);
   protected readonly creating = signal(false);
   protected readonly error = signal('');
   protected readonly message = signal('');
+  protected readonly photoDateForm = createPhotoDateForm();
   protected readonly form = new FormGroup({
     title: new FormControl('', {
       nonNullable: true, validators: [Validators.required, Validators.maxLength(120)]
@@ -63,20 +76,27 @@ export class CommunityGallery implements OnInit {
     })
   });
 
-  constructor() {
-    this.destroyRef.onDestroy(() => {
-      this.revokeUrls(this.coverUrls());
-      this.revokeUrls(this.imageUrls());
-    });
-  }
-
   ngOnInit(): void {
     this.load();
   }
 
   protected load(): void {
-    this.run(this.http.get<Album[]>(this.url()), 'No se pudieron cargar los álbumes.',
-      albums => this.setAlbums(albums));
+    this.run(this.http.get<Album[]>(this.url()).pipe(
+      tap(albums => this.setAlbums(albums)),
+      switchMap(albums => {
+        const requested = Number(this.route.snapshot.queryParamMap.get('album'));
+        const album = albums.find(album => album.id === requested);
+        if (!album) {
+          if (requested > 0) this.error.set('El álbum seleccionado ya no está disponible.');
+          return of(null);
+        }
+        return this.http.get<AlbumImage[]>(this.imagesUrl(album.id)).pipe(map(images => ({ album, images })));
+      })
+    ), 'No se pudieron cargar los álbumes.', selected => {
+      if (!selected) return;
+      this.album.set(selected.album);
+      this.setImages(selected.images);
+    });
   }
 
   protected create(): void {
@@ -93,8 +113,7 @@ export class CommunityGallery implements OnInit {
   protected open(album: Album): void {
     this.run(this.http.get<AlbumImage[]>(this.imagesUrl(album.id)), 'No se pudo abrir el álbum.', images => {
       this.album.set(album);
-      this.images.set(images);
-      this.loadImageUrls(album, images);
+      this.setImages(images);
     });
   }
 
@@ -123,27 +142,35 @@ export class CommunityGallery implements OnInit {
 
   private uploadFiles(files: File[], album: Album): void {
     if (!files.length || this.busy()) return;
+    if (this.photoDateForm.invalid) {
+      this.error.set('Revisa la fecha de la foto en las opciones avanzadas.');
+      return;
+    }
+    const date = photoDateInput(this.photoDateForm.getRawValue());
     const invalid = files.find(file => !['image/jpeg', 'image/png'].includes(file.type)
       || file.size > 2 * 1024 * 1024 || file.size === 0);
     if (invalid) {
       this.error.set('Todas las imágenes deben ser JPEG o PNG y pesar hasta 2 MB cada una.');
       return;
     }
+    this.photoDateForm.disable();
     const uploads = files.map(file => {
       const body = new FormData();
       body.append('file', file);
+      if (date.takenOn) body.append('takenOn', date.takenOn);
+      if (date.takenYear !== null) body.append('takenYear', String(date.takenYear));
       return body;
     });
     this.run(from(uploads).pipe(
       concatMap(body => this.http.post<AlbumImage>(this.imagesUrl(album.id), body)),
       toArray(),
-      switchMap(() => this.http.get<AlbumImage[]>(this.imagesUrl(album.id)))),
+      switchMap(() => this.http.get<AlbumImage[]>(this.imagesUrl(album.id))),
+      finalize(() => this.photoDateForm.enable())),
     files.length === 1 ? 'No se pudo subir la imagen.' : 'No se pudieron subir las imágenes.', images => {
-      this.images.set(images);
-      this.loadImageUrls(album, images);
+      this.setImages(images);
+      this.photoDateForm.reset();
       this.albums.update(items => items?.map(item => item.id === album.id
         ? { ...item, imageCount: images.length, coverImageId: images[0]?.id ?? null } : item) ?? null);
-      if (this.albums()) this.loadCovers(this.albums()!);
       this.message.set(files.length === 1
         ? 'Imagen añadida al álbum.'
         : `${files.length} imágenes añadidas al álbum.`);
@@ -151,21 +178,25 @@ export class CommunityGallery implements OnInit {
   }
 
   protected closeAlbum(): void {
+
+    this.photoDateForm.reset();
     this.album.set(null);
     this.images.set([]);
-    this.revokeUrls(this.imageUrls());
-    this.imageUrls.set({});
+    if (this.route.snapshot.queryParamMap.has('album')) {
+      void this.router.navigate([], {
+        relativeTo: this.route, replaceUrl: true, queryParams: { album: null }, queryParamsHandling: 'merge'
+      });
+    }
   }
 
   protected view(image: AlbumImage): void {
     const selected = this.album();
-    const available: GalleryDialogImage[] = this.images().filter(item => this.imageUrls()[item.id])
-      .map(item => ({ ...item, url: this.imageUrls()[item.id] }));
+    const available: GalleryDialogImage[] = this.images().map(item => ({ ...item }));
     const index = available.findIndex(item => item.id === image.id);
     if (!selected || index < 0) return;
     const dialogRef = this.dialog.open(GalleryImageDialog, {
       data: {
-        albumTitle: selected.title, images: available, initialIndex: index,
+        groupId: this.groupId(), albumTitle: selected.title, images: available, initialIndex: index,
         imagesUrl: this.imagesUrl(selected.id)
       },
       width: 'min(1440px, 98vw)', maxWidth: '98vw', maxHeight: '96dvh'
@@ -178,6 +209,10 @@ export class CommunityGallery implements OnInit {
     dialogRef.componentInstance.likesChanged.subscribe(({ imageId, likes }) => {
       if (this.album()?.id === selected.id) this.updateLikes(imageId, likes);
     });
+    dialogRef.componentInstance.dateChanged.subscribe(({ imageId, date }) => {
+      if (this.album()?.id !== selected.id) return;
+      this.images.update(images => images.map(image => image.id === imageId ? { ...image, date } : image));
+    });
   }
 
   protected imageLikeUrl(imageId: number): string {
@@ -189,40 +224,12 @@ export class CommunityGallery implements OnInit {
       image.id === imageId ? { ...image, ...likes } : image));
   }
 
-  private setAlbums(albums: Album[]): void { this.albums.set(albums); this.loadCovers(albums); }
+  private setAlbums(albums: Album[]): void { this.albums.set(albums); this.albumLimit.set(12); }
 
-  private loadCovers(albums: Album[]): void {
-    const requests = albums.filter(item => item.coverImageId).map(item =>
-      this.http.get(`${this.imagesUrl(item.id)}/${item.coverImageId}`, { responseType: 'blob' })
-        .pipe(catchError(() => of(null)), map(blob => ({ id: item.id, blob }))));
-    this.revokeUrls(this.coverUrls());
-    this.coverUrls.set({});
-    if (!requests.length) return;
-    forkJoin(requests).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(items => {
-      const urls: Record<number, string> = {};
-      for (const item of items) if (item.blob) urls[item.id] = URL.createObjectURL(item.blob);
-      this.coverUrls.set(urls);
-    });
-  }
+  private setImages(images: AlbumImage[]): void { this.images.set(images); this.imageLimit.set(24); }
 
-  private loadImageUrls(album: Album, images: AlbumImage[]): void {
-    this.revokeUrls(this.imageUrls());
-    this.imageUrls.set({});
-    if (!images.length) return;
-    this.imagesLoading.set(true);
-    forkJoin(images.map(image => this.http.get(`${this.imagesUrl(album.id)}/${image.id}`,
-      { responseType: 'blob' }).pipe(catchError(() => of(null)),
-      map(blob => ({ id: image.id, blob }))))).pipe(
-      takeUntilDestroyed(this.destroyRef), finalize(() => this.imagesLoading.set(false))
-    ).subscribe(items => {
-      const urls: Record<number, string> = {};
-      for (const item of items) if (item.blob) urls[item.id] = URL.createObjectURL(item.blob);
-      this.imageUrls.set(urls);
-    });
-  }
-
-  private revokeUrls(urls: Record<number, string>): void {
-    Object.values(urls).forEach(url => URL.revokeObjectURL(url));
+  protected thumbnailUrl(albumId: number, imageId: number): string {
+    return this.imagesUrl(albumId) + '/' + imageId + '/thumbnail';
   }
 
   private url(): string {

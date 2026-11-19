@@ -5,13 +5,19 @@ import java.util.Optional;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 
 import cl.gestortareas.api.model.RefreshToken;
 import cl.gestortareas.api.model.AppUser;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
 
-    Optional<RefreshToken> findByTokenHash(String tokenHash);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select token from RefreshToken token where token.tokenHash = :hash")
+    Optional<RefreshToken> findForUpdateByTokenHash(@Param("hash") String hash);
 
     void deleteByTokenHash(String tokenHash);
 

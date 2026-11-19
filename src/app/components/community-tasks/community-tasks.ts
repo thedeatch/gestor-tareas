@@ -18,21 +18,13 @@ import { TaskProductivity } from '../task-productivity/task-productivity';
 import { EMPTY_TASK_FILTER, TaskFilter, filterTasks } from '../../models/task-filter.model';
 import { TaskSubtasks } from '../task-subtasks/task-subtasks';
 import { TaskDateService } from '../../services/task-date';
+import { SearchTarget } from '../../directives/search-target';
 
-interface GroupTask {
-  id: number;
-  description: string;
-  priority: TaskPriority;
-  status: TaskStatus;
-  dueDate: string | null;
-  assigneeId: number | null;
-  assigneeName: string | null;
-  canChangeStatus: boolean;
-}
+import { CommunityTask as GroupTask } from '../../models/community-goal.model';
 
 @Component({
   selector: 'app-community-tasks',
-  imports: [DatePipe, FormsModule, MatButtonModule, MatCardModule, TaskSubtasks, TaskFilters, TaskKanban, TaskCalendar, TaskProductivity],
+  imports: [DatePipe, FormsModule, MatButtonModule, MatCardModule, TaskSubtasks, TaskFilters, TaskKanban, TaskCalendar, TaskProductivity, SearchTarget],
   templateUrl: './community-tasks.html',
   styles: [`
     :host { display: block; margin-bottom: 1rem; }
