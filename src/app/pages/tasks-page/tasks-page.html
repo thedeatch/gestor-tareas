@@ -15,7 +15,8 @@
         <p class="status-message">
           Cargando tareas...
         </p>
-    } @else if (loadError()) {
+    }
+    @if (loadError()) {
       <div class="error-message">
         <span>{{ loadError() }}</span>
 
@@ -27,9 +28,9 @@
           Reintentar
         </button>
       </div>
-      } @else {
+      }
       <app-task-form
-        [isSubmitting]="isCreating()"
+        [isSubmitting]="isCreating() || isLoading()"
         (taskAdded)="addTask($event)"
       ></app-task-form>
 
@@ -37,7 +38,12 @@
 
       <app-task-filters [personal]="true" [projects]="organization.projects()" [categories]="organization.categories()"
         (changed)="filters.set($event)" />
-      <p role="status">{{ filteredTasks().length }} de {{ totalTasks() }} tareas</p>
+      <p role="status">{{ filteredCount() }} de {{ totalTasks() }} tareas</p>
+      @if (view() === 'LIST' && page(); as result) {
+        <app-list-pager [total]="result.total" [page]="result.page" [size]="result.size" [busy]="isLoading()"
+          label="Páginas de tareas personales" (changed)="changePage($event)" />
+        @if (result.total > result.size) { <p>Las listas de pendientes y completadas muestran los elementos de esta página.</p> }
+      }
 
       <div class="view-switcher" role="group" aria-label="Vista de tareas">
         <button mat-button type="button" aria-label="Vista Lista" [disabled]="isMoving()" [attr.aria-pressed]="view() === 'LIST'"
@@ -105,7 +111,6 @@
           </div>
           </section>
         </div>
-      }
       }
     </mat-card-content>
   </mat-card>

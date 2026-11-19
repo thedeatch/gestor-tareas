@@ -83,6 +83,7 @@
           <div class="empty-state"><mat-icon>event_note</mat-icon><strong>Aún no hay eventos</strong><span>Las próximas actividades aparecerán aquí.</span></div>
         }
       </div>
+      <app-list-pager [total]="total()" [page]="page()" [busy]="busy()" label="Páginas de eventos" (changed)="load($event)" />
     } @else if (busy()) {
       <p class="loading" role="status"><mat-icon>hourglass_top</mat-icon>Cargando eventos...</p>
     }

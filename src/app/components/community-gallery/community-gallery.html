@@ -37,7 +37,7 @@
     @if (error()) {
       <div class="feedback error" role="alert">
         <span>{{ error() }}</span>
-        <button mat-button type="button" [disabled]="busy()" (click)="load()">Reintentar</button>
+        <button mat-button type="button" [disabled]="busy()" (click)="load(albumPage(), true)">Reintentar</button>
       </div>
     }
 
@@ -54,7 +54,7 @@
             <h3 id="selected-album-title">{{ selected.title }}</h3>
             @if (selected.description) { <p>{{ selected.description }}</p> }
           </div>
-          <span class="image-count"><mat-icon>photo</mat-icon>{{ images().length }}</span>
+          <span class="image-count"><mat-icon>photo</mat-icon>{{ imageTotal() }}</span>
         </div>
 
         @if (canManage()) {
@@ -103,8 +103,8 @@
                 </div>
             }
           </div>
-          @if (visibleImages().length < images().length) {
-            <button mat-button type="button" (click)="imageLimit.update(addImagePage)">Ver más fotos</button>
+          @if (images().length < imageTotal()) {
+            <button mat-button type="button" [disabled]="busy()" (click)="moreImages()">Ver más fotos</button>
           }
         } @else {
           <div class="empty-state">
@@ -134,9 +134,8 @@
             </button>
           }
         </div>
-        @if (visibleAlbums().length < items.length) {
-          <button mat-button type="button" (click)="albumLimit.update(addAlbumPage)">Ver más álbumes</button>
-        }
+        <app-list-pager [total]="albumTotal()" [page]="albumPage()" [size]="12" [busy]="busy()"
+          label="Páginas de álbumes" (changed)="load($event)" />
       } @else {
         <div class="empty-state">
           <mat-icon>collections</mat-icon>

@@ -185,6 +185,7 @@ describe('TaskService', () => {
     });
 
     service = TestBed.inject(TaskService);
+    service.loadTasks();
     httpTesting = TestBed.inject(
       HttpTestingController
     );
@@ -235,5 +236,24 @@ describe('TaskService', () => {
     expect(service.tasks()).toEqual([]);
     expect(service.isLoading()).toBe(false);
     expect(service.loadError()).not.toBeNull();
+  });
+
+  it('cancels an old page, sends global filters and refreshes the current page after deleting', () => {
+    httpTesting.expectOne(apiUrl).flush([]);
+    const filter = { query: 'antigua', status: '' as const, priority: '' as const, due: '' as const,
+      project: '' as const, category: '' as const, assignee: '' as const };
+    service.loadPage(filter, 0);
+    const old = httpTesting.expectOne(r => r.url === apiUrl + '/page');
+    service.loadPage(filter, 2);
+    expect(old.cancelled).toBe(true);
+    const page = httpTesting.expectOne(r => r.url === apiUrl + '/page');
+    expect(page.request.params.get('q')).toBe('antigua'); expect(page.request.params.get('page')).toBe('2');
+    page.flush({ items: [{ id: 1, description: 'Antigua', completed: false }], total: 41, allTotal: 60, page: 2, size: 20 });
+    service.deleteTask(1).subscribe();
+    httpTesting.expectOne(apiUrl + '/1').flush(null);
+    const refreshed = httpTesting.expectOne(r => r.url === apiUrl + '/page');
+    expect(refreshed.request.params.get('page')).toBe('2');
+    refreshed.flush({ items: [], total: 40, allTotal: 59, page: 1, size: 20 });
+    expect(service.page()?.page).toBe(1);
   });
 });

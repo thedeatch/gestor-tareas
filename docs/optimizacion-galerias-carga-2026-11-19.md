@@ -1,5 +1,7 @@
 # Optimización de galerías y arranque — 19 de noviembre de 2026
 
+Actualización posterior: se completaron la paginación de metadatos del álbum, el cálculo de Recuerdos en la base de datos y las miniaturas de Guardados y Recuerdos. Consulta el [informe de la siguiente etapa](paginacion-galeria-recuerdos-2026-11-19.md). Los límites descritos al final de este documento corresponden al estado anterior a esa etapa.
+
 ## Cambios aplicados
 
 ### Galería del grupo

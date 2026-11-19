@@ -14,12 +14,14 @@ describe('CommunityGallery upload dates', () => {
     const http = TestBed.inject(HttpTestingController);
     fixture.componentRef.setInput('groupId', 2); fixture.detectChanges();
     const album = { id: 1, title: 'Álbum grande', description: '', imageCount: 100, coverImageId: null };
-    http.expectOne('/api/communities/2/albums').flush([album]);
+    http.expectOne('/api/communities/2/albums/page?page=0').flush({ items: [album], total: 1, page: 0, size: 12, allTotal: 1 });
     fixture.componentInstance['open'](album);
-    http.expectOne('/api/communities/2/albums/1/images').flush(Array.from({ length: 100 }, (_, i) =>
-      ({ id: i + 1, name: 'Foto ' + i, commentCount: 0, likeCount: 0, liked: false })));
+    const photos = Array.from({ length: 100 }, (_, i) =>
+      ({ id: i + 1, name: 'Foto ' + i, commentCount: 0, likeCount: 0, liked: false }));
+    http.expectOne('/api/communities/2/albums/1/images/page').flush({ items: photos.slice(0, 24), total: 100, page: 0, size: 24 });
     expect(fixture.componentInstance['visibleImages']().length).toBe(24);
-    fixture.componentInstance['imageLimit'].update(fixture.componentInstance['addImagePage']);
+    fixture.componentInstance['moreImages']();
+    http.expectOne('/api/communities/2/albums/1/images/page?page=1').flush({ items: photos.slice(24, 48), total: 100, page: 1, size: 24 });
     expect(fixture.componentInstance['visibleImages']().length).toBe(48);
     http.expectNone(request => /images\/\d+$/.test(request.url));
     fixture.componentInstance['closeAlbum']();
@@ -41,10 +43,10 @@ describe('CommunityGallery upload dates', () => {
       const http = TestBed.inject(HttpTestingController);
       fixture.componentRef.setInput('groupId', 2);
       fixture.detectChanges();
-      http.expectOne('/api/communities/2/albums').flush([
+      http.expectOne(r => r.url === '/api/communities/2/albums/page').flush({ items: [
         { id: 1, title: 'Álbum encontrado', description: '', imageCount: 0, coverImageId: null }
-      ]);
-      http.expectOne('/api/communities/2/albums/1/images').flush([]);
+      ], total: 1, page: 0, size: 12, allTotal: 1 });
+      http.expectOne('/api/communities/2/albums/1/images/page').flush({ items: [], total: 0, page: 0, size: 24 });
       fixture.detectChanges();
       expect(fixture.nativeElement.querySelector('.album-detail').textContent).toContain('Álbum encontrado');
       http.verify();
@@ -64,12 +66,12 @@ describe('CommunityGallery upload dates', () => {
     fixture.componentRef.setInput('groupId', 2);
     fixture.componentRef.setInput('canManage', true);
     fixture.detectChanges();
-    http.expectOne('/api/communities/2/albums').flush([
+    http.expectOne(r => r.url === '/api/communities/2/albums/page').flush({ items: [
       { id: 1, title: 'Encuentro', description: '', imageCount: 0, coverImageId: null }
-    ]);
+    ], total: 1, page: 0, size: 12, allTotal: 1 });
     fixture.detectChanges();
     fixture.nativeElement.querySelector('.album-tile').click();
-    http.expectOne('/api/communities/2/albums/1/images').flush([]);
+    http.expectOne('/api/communities/2/albums/1/images/page').flush({ items: [], total: 0, page: 0, size: 24 });
     fixture.detectChanges();
     if (historical) {
       fixture.nativeElement.querySelector('.photo-upload-options').open = true;
@@ -93,7 +95,7 @@ describe('CommunityGallery upload dates', () => {
     expect(body.get('takenYear')).toBe(historical ? '2016' : null);
     expect(body.get('takenOn')).toBeNull();
     request.flush({ id: 3, name: 'foto.png', commentCount: 0, likeCount: 0, liked: false });
-    http.expectOne('/api/communities/2/albums/1/images').flush([]);
+    http.expectOne('/api/communities/2/albums/1/images/page').flush({ items: [], total: 0, page: 0, size: 24 });
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Imagen añadida al álbum.');
     http.verify();

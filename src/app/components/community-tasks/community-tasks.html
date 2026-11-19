@@ -35,8 +35,12 @@
     @if (message()) { <p role="status">{{ message() }}</p> }
     @if (error()) { <p role="alert">{{ error() }}</p> }
     @if (tasks(); as items) {
-      <app-task-filters [assignees]="assignees()" (changed)="filters.set($event)" />
-      <p role="status">{{ filteredTasks().length }} de {{ items.length }} tareas</p>
+      <app-task-filters [assignees]="assignees()" (changed)="filterChanged($event)" />
+      <p role="status">{{ page()?.total ?? filteredTasks().length }} de {{ page()?.allTotal ?? items.length }} tareas</p>
+      @if (page(); as result) {
+        <app-list-pager [total]="result.total" [page]="result.page" [size]="result.size" [busy]="busy()"
+          label="Páginas de tareas del grupo" (changed)="changePage($event)" />
+      }
       <div role="group" aria-label="Vista de tareas del grupo">
         <button mat-button type="button" [disabled]="busy()" [attr.aria-pressed]="view() === 'LIST'"
           (click)="view.set('LIST')">Lista</button>

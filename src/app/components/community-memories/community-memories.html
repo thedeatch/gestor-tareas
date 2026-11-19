@@ -23,8 +23,7 @@
         <mat-card>
           <button class="photo" type="button" [disabled]="busy() || opening() !== null"
             [attr.aria-label]="'Ver recuerdo ' + memory.name" (click)="view(memory)">
-            @if (previews()[memory.imageId]; as source) { <img [src]="source" [alt]="memory.name"> }
-            @else { <mat-icon aria-hidden="true">photo</mat-icon> }
+            <app-lazy-image [src]="thumbnailUrl(memory)" [alt]="memory.name" />
           </button>
           <mat-card-content>
             <div class="memory-heading">

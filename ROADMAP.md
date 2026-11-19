@@ -47,7 +47,9 @@ Chat, rankings, eventos, galerías, Kanban, calendario, publicaciones y comentar
 - [ ] Completar los recorridos con una sesión conectada al backend real y dispositivos físicos; ampliar a Safari y Firefox.
 - [x] Optimizar la galería del grupo con miniaturas reutilizables, cargas por proximidad, cola de cuatro solicitudes y bloques de fotos; descargar originales solo al abrirlos.
 - [x] Reducir el paquete inicial mediante carga diferida de la barra: de 573,18 kB a 354,58 kB. Informe: [optimización](docs/optimizacion-galerias-carga-2026-11-19.md).
-- [ ] Paginar los metadatos de imágenes y los listados grandes en el servidor; optimizar recuerdos y previews de Guardados.
+- [x] Paginar metadatos de imágenes en el servidor y mantener la navegación entre páginas en el visor.
+- [x] Filtrar, ordenar y paginar Recuerdos en la base de datos; usar miniaturas en Recuerdos y Guardados. Informe: [paginación y vistas previas](docs/paginacion-galeria-recuerdos-2026-11-19.md).
+- [x] Paginar publicaciones, eventos, tareas y el listado de álbumes en el servidor, preservando filtros, estadísticas y enlaces directos. Informe: [paginación de listados](docs/paginacion-listados-2026-11-19.md). Kanban, calendario y estadísticas todavía consultan la colección completa al abrirse.
 - [ ] Actualizar el informe general de funciones.
 - [ ] Evaluar tareas recurrentes.
 - [ ] Evaluar menciones a usuarios en comentarios.

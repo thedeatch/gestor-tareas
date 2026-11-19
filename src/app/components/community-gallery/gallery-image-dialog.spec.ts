@@ -6,6 +6,39 @@ import { GalleryImageDialog } from './gallery-image-dialog';
 import { provideRouter } from '@angular/router';
 
 describe('GalleryImageDialog', () => {
+  it('loads metadata at page boundaries, wraps to the first photo and preserves the current page on failure', async () => {
+    const first = [{ id: 3, name: 'Una', url: '/3.png', likeCount: 0, liked: false }, { id: 4, name: 'Otra', url: '/4.png', likeCount: 0, liked: false }];
+    await TestBed.configureTestingModule({ imports: [GalleryImageDialog], providers: [
+      provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+      { provide: MatDialogRef, useValue: { close: () => {} } },
+      { provide: MAT_DIALOG_DATA, useValue: {
+        groupId: 2, albumTitle: 'Paginado', initialIndex: 1, imagesUrl: '/api/communities/2/albums/1/images',
+        images: first, page: 0, pageSize: 2, total: 3
+      } }
+    ] }).compileComponents();
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(GalleryImageDialog);
+    fixture.detectChanges();
+    http.expectOne('/api/communities/2/albums/1/images/4/comments').flush([]);
+    fixture.componentInstance.next();
+    http.expectOne('/api/communities/2/albums/1/images/page?page=1').flush({
+      items: [{ id: 5, name: 'Última', url: '/5.png', likeCount: 0, liked: false }], total: 3, page: 1, size: 2
+    });
+    fixture.detectChanges(); http.expectOne('/api/communities/2/albums/1/images/5/comments').flush([]);
+    expect(fixture.componentInstance.position()).toBe(3);
+    fixture.componentInstance.next();
+    http.expectOne('/api/communities/2/albums/1/images/page?page=0').flush({}, { status: 503, statusText: 'Error' });
+    expect(fixture.componentInstance.position()).toBe(3);
+    fixture.componentInstance.next();
+    http.expectOne('/api/communities/2/albums/1/images/page?page=0').flush({ items: first, total: 3, page: 0, size: 2 });
+    fixture.detectChanges(); http.expectOne('/api/communities/2/albums/1/images/3/comments').flush([]);
+    expect(fixture.componentInstance.position()).toBe(1);
+    fixture.componentInstance.previous();
+    const pending = http.expectOne('/api/communities/2/albums/1/images/page?page=1');
+    fixture.destroy(); expect(pending.cancelled).toBe(true);
+    http.verify();
+  });
+
   it('fetches only the selected original and cancels it when switching photos', async () => {
     await TestBed.configureTestingModule({ imports: [GalleryImageDialog], providers: [
       provideHttpClient(), provideHttpClientTesting(), provideRouter([]),

@@ -16,7 +16,7 @@ describe('CommunityDetailPage navigation', () => {
       provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
       { provide: ActivatedRoute, useValue: {
         paramMap: params, queryParamMap: of(convertToParamMap({})),
-        snapshot: { paramMap: convertToParamMap({ id: '2' }) }
+        snapshot: { paramMap: convertToParamMap({ id: '2' }), queryParamMap: convertToParamMap({}), fragment: null }
       } },
       { provide: MatDialog, useValue: {} }, { provide: MatSnackBar, useValue: { open: vi.fn() } }
     ] }).overrideComponent(CommunityDetailPage, { set: { template: '', imports: [] } }).compileComponents();
@@ -31,7 +31,7 @@ describe('CommunityDetailPage navigation', () => {
     params.next(convertToParamMap({ id: '3' }));
     expect(old.cancelled).toBe(true);
     http.expectOne('/api/communities/3').flush(group(3));
-    http.expectOne('/api/communities/3/posts').flush([]);
+    http.expectOne('/api/communities/3/posts/page?page=0').flush({ items: [], total: 0, page: 0, size: 20, allTotal: 0 });
     expect(fixture.componentInstance['community']()?.id).toBe(3);
   });
   it('clears a failed load on retry and cancels outstanding image requests on exit', () => {
@@ -40,7 +40,7 @@ describe('CommunityDetailPage navigation', () => {
     expect(fixture.componentInstance['error']()).toBeTruthy();
     fixture.componentInstance['load']();
     http.expectOne('/api/communities/2').flush({ ...group(2), hasImage: true });
-    http.expectOne('/api/communities/2/posts').flush([]);
+    http.expectOne('/api/communities/2/posts/page?page=0').flush({ items: [], total: 0, page: 0, size: 20, allTotal: 0 });
     const avatar = http.expectOne('/api/communities/2/image');
     expect(fixture.componentInstance['error']()).toBeNull();
     fixture.destroy(); expect(avatar.cancelled).toBe(true);
@@ -49,7 +49,7 @@ describe('CommunityDetailPage navigation', () => {
   it('does not apply an old publication response to a newly opened group', () => {
     const fixture = TestBed.createComponent(CommunityDetailPage);
     http.expectOne('/api/communities/2').flush(group(2));
-    http.expectOne('/api/communities/2/posts').flush([]);
+    http.expectOne('/api/communities/2/posts/page?page=0').flush({ items: [], total: 0, page: 0, size: 20, allTotal: 0 });
     fixture.componentInstance['postTitle'].setValue('Novedad');
     fixture.componentInstance['postContent'].setValue('Contenido');
     fixture.componentInstance['publish']();
@@ -57,8 +57,18 @@ describe('CommunityDetailPage navigation', () => {
     params.next(convertToParamMap({ id: '3' }));
     expect(publication.cancelled).toBe(true);
     http.expectOne('/api/communities/3').flush(group(3));
-    http.expectOne('/api/communities/3/posts').flush([]);
+    http.expectOne('/api/communities/3/posts/page?page=0').flush({ items: [], total: 0, page: 0, size: 20, allTotal: 0 });
     expect(fixture.componentInstance['posts']()).toEqual([]);
     expect(fixture.componentInstance['savingPost']()).toBe(false);
+  });
+
+  it('opens an old notification link on the page containing its publication', () => {
+    TestBed.inject(ActivatedRoute).snapshot.fragment = 'publicacion-7';
+    const fixture = TestBed.createComponent(CommunityDetailPage);
+    http.expectOne('/api/communities/2').flush(group(2));
+    http.expectOne('/api/communities/2/posts/page?page=0&target=7').flush({ items: [], total: 45, page: 2, size: 20, allTotal: 45 });
+    expect(fixture.componentInstance['activeSection']()).toBe('posts');
+    expect(fixture.componentInstance['postPage']()).toBe(2);
+    expect(fixture.componentInstance['postTotal']()).toBe(45);
   });
 });

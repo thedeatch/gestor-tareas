@@ -1,4 +1,4 @@
-import { Component, ElementRef, computed, effect, inject, output, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, computed, effect, inject, output, signal, viewChild } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,7 +6,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { GalleryImageComments } from './gallery-image-comments';
 import { NavigationEnd, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { filter, fromEvent } from 'rxjs';
+import { filter, finalize, fromEvent } from 'rxjs';
+import { GalleryPhotoPage } from '../../models/gallery-page.model';
 import { GalleryImageLike, GalleryImageLikes, GalleryImageLikeChange } from './gallery-image-like';
 import { GalleryImageLikesDialog } from './gallery-image-likes-dialog';
 import { GalleryImageShareDialog } from './gallery-image-share-dialog';
@@ -26,6 +27,9 @@ export interface GalleryImageDialogData {
   images: GalleryDialogImage[];
   initialIndex: number;
   imagesUrl: string;
+  page?: number;
+  total?: number;
+  pageSize?: number;
 }
 
 @Component({
@@ -57,7 +61,7 @@ export interface GalleryImageDialogData {
         <div #photoStage class="photo-stage">
           <div class="photo">
           <button class="nav-button previous" mat-icon-button type="button" aria-label="Imagen anterior"
-            [disabled]="data.images.length < 2" (click)="previous()"><mat-icon>chevron_left</mat-icon></button>
+            [disabled]="total() < 2 || loadingPage()" (click)="previous()"><mat-icon>chevron_left</mat-icon></button>
           <button class="image-button" type="button" (click)="commentsVisible.update(toggle)"
             [attr.aria-label]="commentsVisible() ? 'Ampliar foto' : 'Ver foto con comentarios'"
             [attr.title]="commentsVisible() ? 'Ampliar foto' : 'Ver comentarios'"
@@ -69,7 +73,7 @@ export interface GalleryImageDialogData {
             <button mat-button type="button" (click)="reload.update(increment)">Reintentar imagen</button>
           }
           <button class="nav-button next" mat-icon-button type="button" aria-label="Imagen siguiente"
-            [disabled]="data.images.length < 2" (click)="next()"><mat-icon>chevron_right</mat-icon></button>
+            [disabled]="total() < 2 || loadingPage()" (click)="next()"><mat-icon>chevron_right</mat-icon></button>
           <button class="fullscreen-button" mat-icon-button type="button"
             [attr.aria-label]="fullscreen() ? 'Salir de pantalla completa' : 'Ver imagen en pantalla completa'"
             [attr.title]="fullscreen() ? 'Salir de pantalla completa' : 'Pantalla completa'"
@@ -91,9 +95,11 @@ export interface GalleryImageDialogData {
           </div>
           <p class="position" aria-live="polite">
             <mat-icon>photo_library</mat-icon>
-            <strong>{{ index() + 1 }}</strong><span>de</span><strong>{{ data.images.length }}</strong>
+            <strong>{{ position() }}</strong><span>de</span><strong>{{ total() }}</strong>
           </p>
         </div>
+        @if (loadingPage()) { <p role="status">Cargando fotos…</p> }
+        @if (pageError()) { <p role="alert">{{ pageError() }}</p> }
         @for (image of [current()]; track image.id) {
           @if (image.date; as date) {
             <app-photo-date-panel [date]="date" [imageId]="image.id" [imagesUrl]="data.imagesUrl"
@@ -180,6 +186,12 @@ export class GalleryImageDialog {
   readonly data = inject<GalleryImageDialogData>(MAT_DIALOG_DATA);
   readonly dialogRef = inject(MatDialogRef<GalleryImageDialog>);
   readonly index = signal(this.data.initialIndex);
+  readonly page = signal(this.data.page ?? 0);
+  readonly total = signal(this.data.total ?? this.data.images.length);
+  readonly position = computed(() => this.page() * (this.data.pageSize ?? 24) + this.index() + 1);
+  protected readonly loadingPage = signal(false);
+  protected readonly pageError = signal('');
+  private readonly destroyRef = inject(DestroyRef);
   readonly commentsVisible = signal(true);
   readonly toggle = (value: boolean): boolean => !value;
   readonly images = signal(this.data.images);
@@ -254,6 +266,35 @@ export class GalleryImageDialog {
     }
     await this.photoStage()?.nativeElement.requestFullscreen();
   }
-  previous(): void { this.index.update(value => (value - 1 + this.data.images.length) % this.data.images.length); }
-  next(): void { this.index.update(value => (value + 1) % this.data.images.length); }
+  previous(): void { this.move(-1); }
+  next(): void { this.move(1); }
+
+  private move(delta: number): void {
+    if (this.loadingPage() || this.total() < 2) return;
+    const target = (this.position() - 1 + delta + this.total()) % this.total();
+    this.pageError.set('');
+    if (this.data.page === undefined) {
+      this.index.set(target);
+      return;
+    }
+    const size = this.data.pageSize ?? 24;
+    const page = Math.floor(target / size);
+    if (page === this.page()) { this.index.set(target % size); return; }
+    this.loadingPage.set(true);
+    this.http.get<GalleryPhotoPage>(this.data.imagesUrl + '/page', { params: { page } }).pipe(
+      takeUntilDestroyed(this.destroyRef), finalize(() => this.loadingPage.set(false))
+    ).subscribe({
+      next: result => {
+        if (!result.items[target % size]) {
+          this.pageError.set('El álbum cambió. Cierra el visor y vuelve a abrirlo para actualizar las fotos.');
+          return;
+        }
+        this.images.set(result.items);
+        this.total.set(result.total);
+        this.page.set(result.page);
+        this.index.set(target % size);
+      },
+      error: () => this.pageError.set('No se pudieron cargar las fotos. Usa las flechas para reintentar.')
+    });
+  }
 }

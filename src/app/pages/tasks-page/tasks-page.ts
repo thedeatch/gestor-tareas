@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatCardModule } from '@angular/material/card';
 
@@ -6,7 +6,8 @@ import { TaskFilters } from '../../components/task-filters/task-filters';
 import { TaskKanban, TaskMove } from '../../components/task-kanban/task-kanban';
 import { TaskCalendar } from '../../components/task-calendar/task-calendar';
 import { TaskProductivity } from '../../components/task-productivity/task-productivity';
-import { EMPTY_TASK_FILTER, TaskFilter, filterTasks } from '../../models/task-filter.model';
+import { EMPTY_TASK_FILTER, TaskFilter, filterTasks, localDate } from '../../models/task-filter.model';
+import { ListPager } from '../../components/list-pager/list-pager';
 import { TaskForm } from '../../components/task-form/task-form';
 import { TaskSubtasks } from '../../components/task-subtasks/task-subtasks';
 import { TaskOrganization } from '../../components/task-organization/task-organization';
@@ -46,7 +47,7 @@ import { finalize } from 'rxjs';
     TaskFilters,
     TaskKanban,
     TaskCalendar,
-    TaskProductivity
+    TaskProductivity, ListPager
   ],
   templateUrl: './tasks-page.html',
   styleUrl: './tasks-page.css'
@@ -61,13 +62,31 @@ export class TasksPage {
   protected readonly view = signal<'LIST' | 'KANBAN' | 'CALENDAR' | 'STATS'>('LIST');
   protected readonly isMoving = signal(false);
   protected readonly filters = signal<TaskFilter>({ ...EMPTY_TASK_FILTER });
-  protected readonly filteredTasks = computed(() => filterTasks(this.taskService.tasks(), this.filters(), this.taskDate.now()));
-  protected readonly totalTasks = computed(() => this.taskService.tasks().length);
+  protected readonly filteredTasks = computed(() => this.view() === 'LIST' ? this.taskService.tasks() : filterTasks(this.taskService.tasks(), this.filters(), this.taskDate.now()));
+  protected readonly totalTasks = computed(() => this.taskService.page()?.allTotal ?? this.taskService.tasks().length);
+  protected readonly page = this.taskService.page;
+  protected readonly filteredCount = computed(() => this.view() === 'LIST' ? this.page()?.total ?? 0 : this.filteredTasks().length);
   protected readonly pendingTasks = computed(() => this.filteredTasks().filter(task => !task.completed));
   protected readonly completedTasks = computed(() => this.filteredTasks().filter(task => task.completed));
   protected readonly isLoading =  this.taskService.isLoading;
   protected readonly loadError =  this.taskService.loadError;
   protected readonly isCreating = signal(false);
+  private readonly today = computed(() => localDate(this.taskDate.now()));
+  private previousView = 'LIST';
+
+  constructor() {
+    effect(() => {
+      const view = this.view(), filter = this.filters(); this.today();
+      untracked(() => {
+        if (view === 'LIST') this.taskService.loadPage(filter, 0, this.taskDate.now());
+        else if (this.previousView === 'LIST') this.taskService.loadTasks();
+        this.previousView = view;
+      });
+    });
+    this.destroyRef.onDestroy(() => this.taskService.cancelLoad());
+  }
+
+  protected changePage(page: number): void { this.taskService.loadPage(this.filters(), page, this.taskDate.now()); }
   
   protected moveTask(move: TaskMove): void {
     if (this.isMoving()) return;
@@ -219,6 +238,6 @@ export class TasksPage {
       );
     }
     protected retryLoad(): void {
-    this.taskService.loadTasks();
+    if (this.view() === 'LIST') this.changePage(this.page()?.page ?? 0); else this.taskService.loadTasks();
   }
 }

@@ -95,4 +95,40 @@ class GalleryThumbnailControllerIntegrationTests {
             .with(jwt().jwt(t -> t.subject(OWNER)))).andExpect(status().isCreated());
         return jdbc.sql("SELECT MAX(file_id) FROM community_album_images").query(Long.class).single();
     }
+
+    @Test
+    void pagesMetadataAndReadsASingleImageWithoutExposingOtherGroups() throws Exception {
+        Long owner = users.findByEmailIgnoreCase(OWNER).orElseThrow().getId();
+        Long firstId = null;
+        for (int i = 0; i < 50; i++) {
+            var key = new org.springframework.jdbc.support.GeneratedKeyHolder();
+            jdbc.sql("""
+                INSERT INTO stored_files (owner_id, original_name, content_type, size_bytes, purpose, data)
+                VALUES (:owner, :name, 'image/png', 1, 'COMMUNITY_IMAGE', :bytes)
+                """).param("owner", owner).param("name", "Foto " + i).param("bytes", new byte[] { 1 }).update(key, "id");
+            Long id = key.getKeyAs(Long.class);
+            if (firstId == null) firstId = id;
+            jdbc.sql("INSERT INTO community_album_images (album_id, file_id) VALUES (:album, :file)")
+                .param("album", albumId).param("file", id).update();
+        }
+        mvc.perform(get(images + "/page").with(jwt().jwt(t -> t.subject(OWNER))))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(50))
+            .andExpect(jsonPath("$.size").value(24)).andExpect(jsonPath("$.items.length()").value(24))
+            .andExpect(jsonPath("$.items[0].name").value("Foto 49"));
+        mvc.perform(get(images + "/page").param("page", "1").with(jwt().jwt(t -> t.subject(OWNER))))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.items.length()").value(24))
+            .andExpect(jsonPath("$.items[0].name").value("Foto 25"));
+        mvc.perform(get(images + "/page").param("page", "2").with(jwt().jwt(t -> t.subject(OWNER))))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.items.length()").value(2));
+        mvc.perform(get(images + "/" + firstId + "/details").with(jwt().jwt(t -> t.subject(OWNER))))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Foto 0"));
+        mvc.perform(get(images + "/page").param("page", "-1").with(jwt().jwt(t -> t.subject(OWNER))))
+            .andExpect(status().isBadRequest());
+        mvc.perform(get(images + "/page").with(jwt().jwt(t -> t.subject(OUTSIDER))))
+            .andExpect(status().isNotFound());
+        mvc.perform(get(images + "/" + firstId + "/details").with(jwt().jwt(t -> t.subject(OUTSIDER))))
+            .andExpect(status().isNotFound());
+        mvc.perform(get(images).with(jwt().jwt(t -> t.subject(OWNER))))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(50));
+    }
 }

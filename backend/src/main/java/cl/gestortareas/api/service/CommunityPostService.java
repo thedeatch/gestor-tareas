@@ -159,7 +159,7 @@ public class CommunityPostService {
         return title.trim();
     }
 
-    private CommunityPostResponse toResponse(CommunityPost post,
+    CommunityPostResponse toResponse(CommunityPost post,
                                              CommunityMembership viewer,
                                              List<CommunityPostReaction> summary) {
         boolean author = post.getAuthor().getId().equals(viewer.getUser().getId());

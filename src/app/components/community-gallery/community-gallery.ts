@@ -20,6 +20,9 @@ import { PhotoDateFields } from '../photo-date-fields/photo-date-fields';
 import { PhotoDateInfo, createPhotoDateForm, photoDateInput } from '../../models/photo-date.model';
 import { SearchTarget } from '../../directives/search-target';
 import { LazyImage } from '../lazy-image/lazy-image';
+import { GalleryPhotoPage } from '../../models/gallery-page.model';
+import { ListPage } from '../../models/list-page.model';
+import { ListPager } from '../list-pager/list-pager';
 
 interface Album {
   id: number;
@@ -39,7 +42,7 @@ interface AlbumImage extends GalleryImageLikes {
 @Component({
   selector: 'app-community-gallery',
   imports: [ReactiveFormsModule, MatButtonModule, MatCardModule, MatFormFieldModule,
-    MatInputModule, MatIconModule, MatProgressSpinnerModule, GalleryImageLike, SaveItemButton, PhotoDateFields, SearchTarget, LazyImage],
+    MatInputModule, MatIconModule, MatProgressSpinnerModule, GalleryImageLike, SaveItemButton, PhotoDateFields, SearchTarget, LazyImage, ListPager],
   templateUrl: './community-gallery.html',
   styleUrl: './community-gallery.css'
 })
@@ -55,12 +58,12 @@ export class CommunityGallery implements OnInit {
   protected readonly albums = signal<Album[] | null>(null);
   protected readonly album = signal<Album | null>(null);
   protected readonly images = signal<AlbumImage[]>([]);
-  protected readonly imageLimit = signal(24);
-  protected readonly albumLimit = signal(12);
-  protected readonly visibleImages = computed(() => this.images().slice(0, this.imageLimit()));
-  protected readonly visibleAlbums = computed(() => (this.albums() ?? []).slice(0, this.albumLimit()));
-  protected readonly addImagePage = (value: number) => value + 24;
-  protected readonly addAlbumPage = (value: number) => value + 12;
+  protected readonly imageTotal = signal(0);
+  private imagePage = 0;
+  protected readonly albumTotal = signal(0);
+  protected readonly albumPage = signal(0);
+  protected readonly visibleImages = this.images.asReadonly();
+  protected readonly visibleAlbums = computed(() => this.albums() ?? []);
   protected readonly busy = signal(false);
   protected readonly draggingImages = signal(false);
   protected readonly creating = signal(false);
@@ -77,20 +80,21 @@ export class CommunityGallery implements OnInit {
   });
 
   ngOnInit(): void {
-    this.load();
+    this.load(0, true);
   }
 
-  protected load(): void {
-    this.run(this.http.get<Album[]>(this.url()).pipe(
+  protected load(page = 0, locate = false): void {
+    const requested = Number(this.route.snapshot.queryParamMap.get('album'));
+    const params: Record<string, number> = { page };
+    if (locate && Number.isSafeInteger(requested) && requested > 0) params['target'] = requested;
+    this.run(this.http.get<ListPage<Album>>(this.url() + '/page', { params }).pipe(
       tap(albums => this.setAlbums(albums)),
       switchMap(albums => {
-        const requested = Number(this.route.snapshot.queryParamMap.get('album'));
-        const album = albums.find(album => album.id === requested);
+        const album = locate ? albums.items.find(album => album.id === requested) : undefined;
         if (!album) {
-          if (requested > 0) this.error.set('El álbum seleccionado ya no está disponible.');
           return of(null);
         }
-        return this.http.get<AlbumImage[]>(this.imagesUrl(album.id)).pipe(map(images => ({ album, images })));
+        return this.http.get<GalleryPhotoPage>(this.imagesUrl(album.id) + '/page').pipe(map(images => ({ album, images })));
       })
     ), 'No se pudieron cargar los álbumes.', selected => {
       if (!selected) return;
@@ -106,15 +110,30 @@ export class CommunityGallery implements OnInit {
       this.creating.set(false);
       this.message.set('Álbum creado.');
       this.albumCreated.emit();
-      return this.http.get<Album[]>(this.url());
+      return this.http.get<ListPage<Album>>(this.url() + '/page');
     })), 'No se pudo completar la actualización de los álbumes.', albums => this.setAlbums(albums));
   }
 
   protected open(album: Album): void {
-    this.run(this.http.get<AlbumImage[]>(this.imagesUrl(album.id)), 'No se pudo abrir el álbum.', images => {
+    this.run(this.http.get<GalleryPhotoPage>(this.imagesUrl(album.id) + '/page'), 'No se pudo abrir el álbum.', images => {
       this.album.set(album);
       this.setImages(images);
     });
+  }
+
+  protected moreImages(): void {
+    const album = this.album();
+    if (!album || this.busy() || this.images().length >= this.imageTotal()) return;
+    this.run(this.http.get<GalleryPhotoPage>(this.imagesUrl(album.id) + '/page', { params: { page: this.imagePage + 1 } }),
+      'No se pudieron cargar más fotos.', page => {
+        if (this.album()?.id !== album.id) return;
+        this.imagePage = page.page;
+        this.imageTotal.set(page.total);
+        this.images.update(current => {
+          const known = new Set(current.map(image => image.id));
+          return [...current, ...page.items.filter(image => !known.has(image.id))];
+        });
+      });
   }
 
   protected upload(input: HTMLInputElement, album: Album): void {
@@ -164,13 +183,13 @@ export class CommunityGallery implements OnInit {
     this.run(from(uploads).pipe(
       concatMap(body => this.http.post<AlbumImage>(this.imagesUrl(album.id), body)),
       toArray(),
-      switchMap(() => this.http.get<AlbumImage[]>(this.imagesUrl(album.id))),
+      switchMap(() => this.http.get<GalleryPhotoPage>(this.imagesUrl(album.id) + '/page')),
       finalize(() => this.photoDateForm.enable())),
     files.length === 1 ? 'No se pudo subir la imagen.' : 'No se pudieron subir las imágenes.', images => {
       this.setImages(images);
       this.photoDateForm.reset();
       this.albums.update(items => items?.map(item => item.id === album.id
-        ? { ...item, imageCount: images.length, coverImageId: images[0]?.id ?? null } : item) ?? null);
+        ? { ...item, imageCount: images.total, coverImageId: images.items[0]?.id ?? null } : item) ?? null);
       this.message.set(files.length === 1
         ? 'Imagen añadida al álbum.'
         : `${files.length} imágenes añadidas al álbum.`);
@@ -182,6 +201,7 @@ export class CommunityGallery implements OnInit {
     this.photoDateForm.reset();
     this.album.set(null);
     this.images.set([]);
+    this.imageTotal.set(0);
     if (this.route.snapshot.queryParamMap.has('album')) {
       void this.router.navigate([], {
         relativeTo: this.route, replaceUrl: true, queryParams: { album: null }, queryParamsHandling: 'merge'
@@ -191,12 +211,14 @@ export class CommunityGallery implements OnInit {
 
   protected view(image: AlbumImage): void {
     const selected = this.album();
-    const available: GalleryDialogImage[] = this.images().map(item => ({ ...item }));
-    const index = available.findIndex(item => item.id === image.id);
-    if (!selected || index < 0) return;
+    const globalIndex = this.images().findIndex(item => item.id === image.id);
+    if (!selected || globalIndex < 0) return;
+    const page = Math.floor(globalIndex / 24);
+    const available: GalleryDialogImage[] = this.images().slice(page * 24, (page + 1) * 24).map(item => ({ ...item }));
     const dialogRef = this.dialog.open(GalleryImageDialog, {
       data: {
-        groupId: this.groupId(), albumTitle: selected.title, images: available, initialIndex: index,
+        groupId: this.groupId(), albumTitle: selected.title, images: available, initialIndex: globalIndex % 24,
+        page, total: this.imageTotal(), pageSize: 24,
         imagesUrl: this.imagesUrl(selected.id)
       },
       width: 'min(1440px, 98vw)', maxWidth: '98vw', maxHeight: '96dvh'
@@ -224,9 +246,13 @@ export class CommunityGallery implements OnInit {
       image.id === imageId ? { ...image, ...likes } : image));
   }
 
-  private setAlbums(albums: Album[]): void { this.albums.set(albums); this.albumLimit.set(12); }
+  private setAlbums(albums: ListPage<Album>): void {
+    this.albums.set(albums.items); this.albumTotal.set(albums.total); this.albumPage.set(albums.page);
+  }
 
-  private setImages(images: AlbumImage[]): void { this.images.set(images); this.imageLimit.set(24); }
+  private setImages(page: GalleryPhotoPage): void {
+    this.images.set(page.items); this.imageTotal.set(page.total); this.imagePage = page.page;
+  }
 
   protected thumbnailUrl(albumId: number, imageId: number): string {
     return this.imagesUrl(albumId) + '/' + imageId + '/thumbnail';

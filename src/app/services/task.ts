@@ -6,7 +6,10 @@ import {
 
 import { HttpClient } from '@angular/common/http';
 import { Task, TaskDetails, TaskStatus } from '../models/task.model';
-import { Observable, finalize, tap } from 'rxjs';
+import { Observable, Subscription, finalize, tap } from 'rxjs';
+import { TaskFilter } from '../models/task-filter.model';
+import { taskPageParams } from '../models/task-page-params';
+import { ListPage } from '../models/list-page.model';
 @Service()
 export class TaskService {
   private readonly http = inject(HttpClient);
@@ -16,16 +19,33 @@ export class TaskService {
   readonly tasks = signal<Task[]>([]);
   readonly isLoading = signal(false);
   readonly loadError = signal<string | null>(null);
+  readonly page = signal<ListPage<Task> | null>(null);
+  private request?: Subscription;
+  private selection?: { filter: TaskFilter; now: Date };
 
-    constructor() {
-      this.loadTasks();
-    }
+  cancelLoad(): void { this.request?.unsubscribe(); }
 
-    loadTasks(): void {
+  loadPage(filter: TaskFilter, page = 0, now = new Date()): void {
+    this.request?.unsubscribe();
+    this.selection = { filter: { ...filter }, now };
+    this.isLoading.set(true); this.loadError.set(null);
+    this.request = this.http.get<ListPage<Task>>(this.apiUrl + '/page', { params: taskPageParams(filter, page, now) })
+      .pipe(finalize(() => this.isLoading.set(false))).subscribe({
+        next: result => { this.tasks.set(result.items); this.page.set(result); },
+        error: () => this.loadError.set('No se pudieron cargar las tareas. Vuelve a intentarlo.')
+      });
+  }
+
+  private refreshPage(): void {
+    if (this.selection) this.loadPage(this.selection.filter, this.page()?.page ?? 0, this.selection.now);
+  }
+
+  loadTasks(): void {
+    this.request?.unsubscribe(); this.selection = undefined; this.page.set(null);
     this.isLoading.set(true);
     this.loadError.set(null);
 
-    this.http.get<Task[]>(this.apiUrl)
+    this.request = this.http.get<Task[]>(this.apiUrl)
       .pipe(
         finalize(() => {
           this.isLoading.set(false);
@@ -58,6 +78,7 @@ export class TaskService {
       newTask
     ).pipe(
       tap(createdTask => {
+        if (this.selection) { this.loadPage(this.selection.filter, 0, this.selection.now); return; }
         this.tasks.update(tasks => [
           ...tasks,
           createdTask
@@ -86,6 +107,7 @@ export class TaskService {
       updatedTask
     ).pipe(
       tap(savedTask => {
+        if (this.selection) { this.refreshPage(); return; }
         this.tasks.update(tasks =>
           tasks.map(task =>
             task.id === id
@@ -98,26 +120,27 @@ export class TaskService {
   }
   changeStatus(id: number, status: TaskStatus): Observable<Task> {
     return this.http.patch<Task>(`${this.apiUrl}/${id}/status`, { status }).pipe(
-      tap(saved => this.tasks.update(tasks => tasks.map(task => task.id === id
-        ? { ...task, status: saved.status, completed: saved.completed } : task)))
+      tap(saved => { if (this.selection) this.refreshPage(); else this.tasks.update(tasks => tasks.map(task => task.id === id
+        ? { ...task, status: saved.status, completed: saved.completed } : task)); })
     );
   }
 
   updateTaskDetails(id: number, details: TaskDetails): Observable<Task> {
     return this.http.put<Task>(`${this.apiUrl}/${id}/details`, details).pipe(
-      tap(saved => this.tasks.update(tasks => tasks.map(task => task.id === id
-        ? { ...saved, projectId: task.projectId, categoryId: task.categoryId } : task)))
+      tap(saved => { if (this.selection) this.refreshPage(); else this.tasks.update(tasks => tasks.map(task => task.id === id
+        ? { ...saved, projectId: task.projectId, categoryId: task.categoryId } : task)); })
     );
   }
 
   classifyTask(id: number, projectId: number | null, categoryId: number | null): Observable<Task> {
     return this.http.put<Task>(`${this.apiUrl}/${id}/classification`, { projectId, categoryId }).pipe(
-      tap(saved => this.tasks.update(tasks => tasks.map(task => task.id === id
-        ? { ...task, projectId: saved.projectId, categoryId: saved.categoryId } : task)))
+      tap(saved => { if (this.selection) this.refreshPage(); else this.tasks.update(tasks => tasks.map(task => task.id === id
+        ? { ...task, projectId: saved.projectId, categoryId: saved.categoryId } : task)); })
     );
   }
 
   removeClassification(id: number): void {
+    if (this.selection) { this.refreshPage(); return; }
     this.tasks.update(tasks => tasks.map(task => ({
       ...task,
       projectId: task.projectId === id ? null : task.projectId,
@@ -130,6 +153,7 @@ export class TaskService {
       `${this.apiUrl}/${id}`
     ).pipe(
       tap(() => {
+        if (this.selection) { this.refreshPage(); return; }
         this.tasks.update(tasks =>
           tasks.filter(task => task.id !== id)
         );

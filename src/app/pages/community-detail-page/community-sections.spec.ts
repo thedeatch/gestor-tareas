@@ -23,7 +23,7 @@ describe('Community sections deferred loading', () => {
       id: 2, name: 'Comunidad', members: [], currentUserRole: 'MEMBER', visibility: 'PRIVATE',
       hasImage: false, description: '', extendedDescription: '', rules: ''
     });
-    http.expectOne('/api/communities/2/posts').flush([]);
+    http.expectOne('/api/communities/2/posts/page?page=0').flush({ items: [], total: 0, page: 0, size: 20, allTotal: 0 });
     fixture.detectChanges();
     http.expectNone('/api/communities/2/goals');
     expect(fixture.nativeElement.textContent).toContain('Cargando objetivos');

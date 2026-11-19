@@ -35,6 +35,7 @@
       </ul>
       @if (tasks().length) {
         <h3>Clasificar una tarea</h3>
+        <p>Puedes seleccionar una de las tareas visibles. Usa los filtros o cambia de página para encontrar otra.</p>
         <form (ngSubmit)="classify()">
           <label>Tarea
             <select name="task" [ngModel]="selected()" (ngModelChange)="selectTask($event)" [disabled]="busy()">

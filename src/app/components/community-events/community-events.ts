@@ -1,13 +1,17 @@
 import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, computed, inject, input, OnInit, output, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, input, OnInit, output, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
-import { Observable, finalize, tap } from 'rxjs';
+import { Observable, Subscription, finalize, tap } from 'rxjs';
+import { ListPage } from '../../models/list-page.model';
+import { ListPager } from '../list-pager/list-pager';
 
 import { getApiErrorMessage } from '../../models/api-error.model';
 import { SearchTarget } from '../../directives/search-target';
@@ -25,7 +29,7 @@ interface CommunityEvent {
 @Component({
   selector: 'app-community-events',
   imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatCardModule,
-    MatFormFieldModule, MatInputModule, MatIconModule, SearchTarget, SaveItemButton],
+    MatFormFieldModule, MatInputModule, MatIconModule, SearchTarget, SaveItemButton, ListPager],
   templateUrl: './community-events.html',
   styleUrl: './community-events.css'
 })
@@ -34,8 +38,13 @@ export class CommunityEvents implements OnInit {
   readonly canCreate = input(false);
   readonly eventCreated = output<void>();
   private readonly http = inject(HttpClient);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
+  private request?: Subscription;
   private readonly url = computed(() => `/api/communities/${this.groupId()}/events`);
   protected readonly events = signal<CommunityEvent[] | null>(null);
+  protected readonly page = signal(0);
+  protected readonly total = signal(0);
   protected readonly busy = signal(false);
   protected readonly creating = signal(false);
   protected readonly error = signal('');
@@ -51,12 +60,14 @@ export class CommunityEvents implements OnInit {
   });
 
   ngOnInit(): void {
-    this.load();
+    const target = Number(this.route.snapshot.queryParamMap.get('evento'));
+    this.load(0, Number.isSafeInteger(target) && target > 0 ? target : undefined);
   }
 
-  protected load(): void {
-    this.run(this.http.get<CommunityEvent[]>(this.url()).pipe(
-      tap(events => this.events.set(events))
+  protected load(page = this.page(), target?: number): void {
+    this.request?.unsubscribe();
+    this.run(this.http.get<ListPage<CommunityEvent>>(this.url() + '/page', { params: target ? { page, target } : { page } }).pipe(
+      tap(result => { this.events.set(result.items); this.page.set(result.page); this.total.set(result.total); })
     ), 'No se pudieron cargar los eventos.');
   }
 
@@ -76,7 +87,7 @@ export class CommunityEvents implements OnInit {
       this.creating.set(false);
       this.message.set('Evento creado.');
       this.eventCreated.emit();
-      this.load();
+      this.load(0);
     });
   }
 
@@ -99,7 +110,7 @@ export class CommunityEvents implements OnInit {
     if (success) this.message.set('');
     this.busy.set(true);
     let completed = false;
-    request.pipe(finalize(() => {
+    this.request = request.pipe(takeUntilDestroyed(this.destroyRef), finalize(() => {
       this.busy.set(false);
       if (completed) success?.();
     })).subscribe({

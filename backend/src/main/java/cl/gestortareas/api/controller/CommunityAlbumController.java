@@ -26,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 import cl.gestortareas.api.service.CommunityAlbumService;
 import cl.gestortareas.api.service.CommunityAlbumService.Album;
 import cl.gestortareas.api.service.CommunityAlbumService.Image;
+import cl.gestortareas.api.service.CommunityAlbumService.ImagePage;
 import cl.gestortareas.api.service.CommunityAlbumService.ImageComment;
 import cl.gestortareas.api.service.CommunityAlbumService.ImageLikes;
 import cl.gestortareas.api.service.CommunityAlbumService.ImageLiker;
@@ -74,6 +75,18 @@ public class CommunityAlbumController {
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate takenOn,
                         @RequestParam(required = false) Integer takenYear, Authentication auth) {
         return albums.upload(groupId, albumId, auth.getName(), file, takenOn, takenYear);
+    }
+
+    @GetMapping("/{albumId}/images/page")
+    public ImagePage imagePage(@PathVariable Long groupId, @PathVariable Long albumId,
+                               @RequestParam(defaultValue = "0") int page, Authentication auth) {
+        return albums.imagePage(groupId, albumId, auth.getName(), page);
+    }
+
+    @GetMapping("/{albumId}/images/{imageId}/details")
+    public Image image(@PathVariable Long groupId, @PathVariable Long albumId, @PathVariable Long imageId,
+                       Authentication auth) {
+        return albums.image(groupId, albumId, imageId, auth.getName());
     }
 
     @PatchMapping("/{albumId}/images/{imageId}/date")

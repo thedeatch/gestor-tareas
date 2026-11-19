@@ -45,7 +45,7 @@ try {
 
 async function setup(viewport, member = false, authenticated = true, role = 'USER') {
   const context = await browser.newContext({ viewport, locale: 'es-CL', timezoneId: 'America/Santiago' });
-  const state = { tasks: [{ ...task }], comments: [{ id: 9, authorId: 2, authorName: 'Carlos de la Comunidad', authorHasAvatar: false, content: '¡Qué buen recuerdo de ese encuentro!', createdAt: now, likeCount: 1, liked: false }], saved: true, failGoals: false, theme: 'DARK', imageCount: 1, originals: 0, thumbnails: 0 };
+  const state = { tasks: [{ ...task }], comments: [{ id: 9, authorId: 2, authorName: 'Carlos de la Comunidad', authorHasAvatar: false, content: '¡Qué buen recuerdo de ese encuentro!', createdAt: now, likeCount: 1, liked: false }], saved: true, savedKind: 'EVENT', withMemories: false, failGoals: false, theme: 'DARK', imageCount: 1, originals: 0, thumbnails: 0 };
   if (authenticated) await context.addInitScript(role => {
     sessionStorage.setItem('gestor-tareas.token', 'test.' + btoa(JSON.stringify({ exp: 4102444800 })) + '.fixture');
     sessionStorage.setItem('gestor-tareas.email', 'visual@example.test');
@@ -67,14 +67,36 @@ async function setup(viewport, member = false, authenticated = true, role = 'USE
       if (url.searchParams.has('latestId')) return; // Keep the long poll pending until navigation/context close.
       return json({ latestId: 0, count: 0 });
     }
+    if (/\/(posts|events|albums|tasks)\/page$/.test(path)) {
+      const kind = path.split('/').at(-2);
+      const size = kind === 'albums' ? 12 : 20;
+      let items = kind === 'posts' ? [] : kind === 'tasks' ? [...state.tasks].reverse() : kind === 'events'
+        ? [{ id: 4, title: 'Encuentro anual de la comunidad', description: 'Una actividad para volver a encontrarnos y compartir los recuerdos.', startsAt: future, participantCount: 12, registered: false }]
+        : [{ id: 1, title: 'Encuentro de 2016', description: 'Nuestros recuerdos', imageCount: 1, coverImageId: 3 }];
+      if (state.largeLists) {
+        const seed = kind === 'posts' ? { authorId: 1, authorName: 'Ana María', authorHasAvatar: false, content: 'Publicación de prueba', createdAt: now, updatedAt: now, title: null, editable: true, deletable: true, reactions: [] } : items[0];
+        items = Array.from({ length: 45 }, (_, index) => ({ ...seed, id: 100 + index,
+          ...(kind === 'tasks' ? { description: 'Tarea paginada ' + index } : kind === 'posts' ? { content: 'Publicación paginada ' + index } : { title: 'Elemento paginado ' + index }) }));
+      }
+      const allTotal = items.length;
+      const q = url.searchParams.get('q');
+      if (q) items = items.filter(item => item.description.toLowerCase().includes(q.toLowerCase()));
+      const target = Number(url.searchParams.get('target'));
+      const targetIndex = items.findIndex(item => item.id === target);
+      const page = targetIndex >= 0 ? Math.floor(targetIndex / size) : Number(url.searchParams.get('page') ?? 0);
+      return json({ items: items.slice(page * size, (page + 1) * size), total: items.length, page, size, allTotal });
+    }
+    if (/\/posts\/\d+\/comments$/.test(path)) return json([]);
+    if (path.endsWith('/tasks/assignees')) return json([{ id: 1, name: 'Ana María de la Comunidad' }]);
+    if (path.endsWith('/ranking')) return json({ season: '2026-11', firstSeason: '2026-11', currentSeason: '2026-11', leaders: [], viewer: null });
     if (path === '/api/tasks') {
       if (method === 'POST') { const created = { ...task, id: 8, description: request.postDataJSON().description }; state.tasks.push(created); return json(created); }
       return json(state.tasks);
     }
     if (path === '/api/task-organization') return json([]);
-    if (path === '/api/saved-items/state') return json({ postIds: [], imageIds: [], eventIds: state.saved ? [4] : [] });
+    if (path === '/api/saved-items/state') return json({ postIds: [], imageIds: state.saved && state.savedKind === 'IMAGE' ? [3] : [], eventIds: state.saved && state.savedKind === 'EVENT' ? [4] : [] });
     if (/^\/api\/saved-items\/EVENT\//.test(path)) { state.saved = method === 'PUT'; return empty(); }
-    if (path === '/api/saved-items') return json({ items: state.saved ? [{ kind: 'EVENT', targetId: 4, groupId: 2, groupName: name, albumId: null, title: 'Encuentro anual de la comunidad', excerpt: 'Organizamos una actividad para compartir nuestros recuerdos.', savedAt: now }] : [], total: state.saved ? 1 : 0, page: 0, size: 20 });
+    if (path === '/api/saved-items') return json({ items: state.saved ? [{ kind: state.savedKind, targetId: state.savedKind === 'IMAGE' ? 3 : 4, groupId: 2, groupName: name, albumId: state.savedKind === 'IMAGE' ? 1 : null, title: state.savedKind === 'IMAGE' ? image.name : 'Encuentro anual de la comunidad', excerpt: 'Organizamos una actividad para compartir nuestros recuerdos.', savedAt: now }] : [], total: state.saved ? 1 : 0, page: 0, size: 20 });
     if (/\/api\/communities\/\d+$/.test(path)) return json({ id: 2, name, description: 'Un espacio para compartir, organizar tareas y recordar nuestros encuentros.', slug: 'comunidad', visibility: 'PRIVATE', currentUserRole: member ? 'MEMBER' : 'OWNER', members: [{ userId: 1, name: 'Ana María de la Comunidad', email: 'visual@example.test', role: 'OWNER', joinedAt: now }, { userId: 2, name: 'Carlos de la Comunidad', email: 'carlos@example.test', role: 'MEMBER', joinedAt: now }], hasImage: false, extendedDescription: '', rules: 'Comparte con respeto y cuida los recuerdos del grupo.', createdAt: now });
     if (path === '/api/communities') return json([{ id: 2, name, description: 'Comunidad de prueba', slug: 'comunidad', visibility: 'PRIVATE', currentUserRole: 'OWNER', memberCount: 2, hasImage: false, createdAt: now }]);
     if (/\/(invitations|discover|join-requests|activity|channels|posts|polls)$/.test(path)) return json([]);
@@ -84,13 +106,19 @@ async function setup(viewport, member = false, authenticated = true, role = 'USE
       return json({ canManage: !member, tasks: [{ ...task, canChangeStatus: !member }], goals: [{ id: 1, title: 'Preparar el próximo encuentro de la comunidad', description: 'Coordinar las actividades y reunir nuestros mejores recuerdos.', taskIds: [7], dueDate: '2027-06-10', createdAt: now, authorName: 'Ana María', totalTasks: 1, completedTasks: 0, progress: 0 }] });
     }
     if (path.endsWith('/events')) return json([{ id: 4, title: 'Encuentro anual de la comunidad', description: 'Una actividad para volver a encontrarnos y compartir los recuerdos.', startsAt: future, participantCount: 12, registered: false }]);
-    if (path.endsWith('/memories')) return json({ items: [], total: 0, page: 0, size: 20 });
+    if (path.endsWith('/memories')) return json({ items: state.withMemories ? [{ imageId: 3, name: image.name, albumId: 1, albumTitle: 'Encuentro de 2016', date: { uploadedOn: '2026-11-19', takenOn: null, takenYear: 2016, years: 10, anniversary: false, canEdit: true } }] : [], total: state.withMemories ? 1 : 0, page: 0, size: 20 });
     if (path.endsWith('/search')) return json({ items: [{ kind: 'TASK', id: 7, title: task.description, excerpt: 'Asignada a Ana María' }], total: 1, page: 0, size: 20, query: url.searchParams.get('q') });
     if (path.endsWith('/albums')) return json([{ id: 1, title: 'Encuentro de 2016', description: 'Nuestros recuerdos', imageCount: 1, coverImageId: 3 }]);
+    if (path.endsWith('/images/page')) {
+      const page = Number(url.searchParams.get('page') ?? 0);
+      const items = Array.from({ length: state.imageCount }, (_, index) => ({ ...image, id: index + 3 }));
+      return json({ items: items.slice(page * 24, (page + 1) * 24), total: state.imageCount, page, size: 24 });
+    }
+    if (/\/images\/\d+\/details$/.test(path)) return json(image);
     if (path.endsWith('/images')) return json(Array.from({ length: state.imageCount }, (_, index) => ({ ...image, id: index + 3 })));
     if (/\/images\/\d+\/thumbnail$/.test(path)) { state.thumbnails++; return route.fulfill({ contentType: 'image/svg+xml', body: photo }); }
     if (/\/images\/\d+$/.test(path)) { state.originals++; return route.fulfill({ contentType: 'image/svg+xml', body: photo }); }
-    if (path.endsWith('/images/3/comments')) {
+    if (/\/images\/\d+\/comments$/.test(path)) {
       if (method === 'POST') { const comment = { ...state.comments[0], id: 10, authorId: 1, authorName: 'Ana María', content: request.postDataJSON().content }; state.comments.push(comment); return json(comment); }
       return json(state.comments);
     }
@@ -242,7 +270,65 @@ try {
   assert.equal(await large.page.locator('.image-tile').count(), 48);
   await capture(large.page, '390-album-120-fotos');
   checks.push('390: álbum de 120 fotos muestra bloques de 24 sin descargar originales');
+  await large.page.locator('.image-open').first().scrollIntoViewIfNeeded();
+  await large.page.locator('.image-tile img').first().waitFor();
+  await large.page.locator('.image-open').first().click();
+  await large.page.locator('.image-button img').waitFor();
+  await large.page.getByRole('button', { name: 'Imagen anterior', exact: true }).click();
+  await large.page.locator('.position').filter({ hasText: '120' }).waitFor();
+  await large.page.locator('.image-button img').waitFor();
+  await capture(large.page, '390-ultima-foto-paginada');
+  await large.page.getByRole('button', { name: 'Imagen siguiente', exact: true }).click();
+  await large.page.waitForFunction(() => document.querySelector('.position strong')?.textContent?.trim() === '1');
+  checks.push('390: visor pasa de primera a última página y vuelve a la primera');
   await large.context.close();
+  const photoCards = await setup({ width: 390, height: 844 });
+  photoCards.state.savedKind = 'IMAGE';
+  photoCards.state.withMemories = true;
+  for (const [path, selector, label] of [['/guardados', '.photo-preview', 'guardados-fotos'], ['/grupos/2?seccion=memories', 'button.photo', 'recuerdos-fotos']]) {
+    const originals = photoCards.state.originals;
+    await photoCards.page.goto(base + path);
+    await photoCards.page.locator(selector + ' img').waitFor();
+    assert.equal(photoCards.state.originals, originals);
+    await capture(photoCards.page, '390-' + label);
+    await photoCards.page.locator(selector).click();
+    await photoCards.page.locator('.image-button img').waitFor();
+    assert.equal(photoCards.state.originals, originals + 1);
+    await photoCards.page.getByRole('button', { name: 'Cerrar visor' }).click();
+    await photoCards.page.locator('mat-dialog-container').waitFor({ state: 'hidden' });
+    checks.push('390: ' + label + ' usa miniaturas y descarga el original al abrirlo');
+  }
+  await photoCards.context.close();
+  for (const width of [1440, 390, 320]) {
+    const paged = await setup({ width, height: 900 });
+    paged.state.largeLists = true;
+    for (const [label, path, navLabel, selector, size] of [
+      ['publicaciones', '/grupos/2?seccion=posts', 'Páginas de publicaciones', '.post-item', 20],
+      ['eventos', '/grupos/2?seccion=events', 'Páginas de eventos', '.event-item', 20],
+      ['albumes', '/grupos/2?seccion=events', 'Páginas de álbumes', '.album-tile', 12],
+      ['tareas', '/tareas', 'Páginas de tareas personales', 'app-task-item', 20],
+      ['tareas-grupo', '/grupos/2?seccion=productivity', 'Páginas de tareas del grupo', 'app-community-tasks article', 20]
+    ]) {
+      await paged.page.goto(base + path);
+      const nav = paged.page.getByRole('navigation', { name: navLabel, exact: true });
+      await nav.waitFor();
+      assert.equal(await paged.page.locator(selector).count(), size);
+      await nav.getByRole('button', { name: 'Siguiente', exact: true }).click();
+      await nav.getByText('Página 2 · 45 resultados', { exact: true }).waitFor();
+      assert.equal(await paged.page.locator(selector).count(), size);
+      await capture(paged.page, `${width}-pagina-2-${label}`);
+      await nav.getByRole('button', { name: 'Anterior', exact: true }).click();
+      await nav.getByText('Página 1 · 45 resultados', { exact: true }).waitFor();
+      checks.push(`${width}: avanzar y retroceder páginas de ${label}`);
+    }
+    await paged.page.goto(base + '/tareas');
+    const search = paged.page.locator('input[type=search]');
+    await search.fill('Tarea paginada 44');
+    await paged.page.getByText('Tarea paginada 44', { exact: true }).waitFor();
+    assert.equal(await paged.page.locator('app-task-item').count(), 1);
+    checks.push(`${width}: buscar tarea situada fuera de la primera página`);
+    await paged.context.close();
+  }
   for (const width of [1440, 1280]) {
     const admin = await setup({ width, height: 900 }, false, true, 'ADMIN');
     await admin.page.goto(base + '/inicio');

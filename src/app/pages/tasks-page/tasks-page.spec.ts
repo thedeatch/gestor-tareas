@@ -37,8 +37,9 @@ describe('TasksPage', () => {
     fixture = TestBed.createComponent(TasksPage);
     component = fixture.componentInstance;
 
-    const request = httpTesting.expectOne(apiUrl);
-    request.flush([]);
+    fixture.detectChanges();
+    const request = httpTesting.expectOne(r => r.url === apiUrl + "/page");
+    request.flush({ items: [], total: 0, page: 0, size: 20, allTotal: 0 });
 
     fixture.detectChanges();
     await fixture.whenStable();
@@ -61,6 +62,8 @@ describe('TasksPage', () => {
     search.value = 'documentacion';
     search.dispatchEvent(new Event('input'));
     fixture.detectChanges();
+    const filtered = TestBed.inject(TaskService).tasks().filter(t => t.description.toLowerCase().includes(search.value === 'documentacion' ? 'documentaci' : search.value));
+    httpTesting.expectOne(r => r.url === apiUrl + '/page').flush({ items: filtered, total: filtered.length, page: 0, size: 20, allTotal: 3 });
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -71,6 +74,10 @@ describe('TasksPage', () => {
       .find((button: any) => button.textContent.includes('Limpiar filtros')) as HTMLButtonElement;
     clear.click();
     fixture.detectChanges();
+    httpTesting.expectOne(r => r.url === apiUrl + '/page').flush({ items: [
+      { id: 1, description: 'Preparar documentación', completed: false },
+      { id: 2, description: 'Revisar diseño', completed: false }
+    ], total: 2, page: 0, size: 20, allTotal: 2 });
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -89,8 +96,10 @@ describe('TasksPage', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     const buttons = [...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[];
+    const allTasks = [...TestBed.inject(TaskService).tasks()];
     buttons.find(button => button.getAttribute('aria-label') === 'Vista Kanban')!.click();
     fixture.detectChanges();
+    httpTesting.expectOne(apiUrl).flush(allTasks);
     await fixture.whenStable();
     const kanban = fixture.debugElement.query(By.directive(TaskKanban))
       .componentInstance as TaskKanban;
@@ -121,10 +130,14 @@ describe('TasksPage', () => {
     search.value = 'backend';
     search.dispatchEvent(new Event('input'));
     fixture.detectChanges();
+    const filtered = TestBed.inject(TaskService).tasks().filter(t => t.description.toLowerCase().includes(search.value === 'documentacion' ? 'documentaci' : search.value));
+    httpTesting.expectOne(r => r.url === apiUrl + '/page').flush({ items: filtered, total: filtered.length, page: 0, size: 20, allTotal: 3 });
     await fixture.whenStable();
     const buttons = [...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[];
+    const allTasks = [...TestBed.inject(TaskService).tasks()];
     buttons.find(button => button.getAttribute('aria-label') === 'Vista Calendario')!.click();
     fixture.detectChanges();
+    httpTesting.expectOne(apiUrl).flush(allTasks);
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -147,10 +160,14 @@ describe('TasksPage', () => {
     search.value = 'backend';
     search.dispatchEvent(new Event('input'));
     fixture.detectChanges();
+    const filtered = TestBed.inject(TaskService).tasks().filter(t => t.description.toLowerCase().includes(search.value === 'documentacion' ? 'documentaci' : search.value));
+    httpTesting.expectOne(r => r.url === apiUrl + '/page').flush({ items: filtered, total: filtered.length, page: 0, size: 20, allTotal: 3 });
     await fixture.whenStable();
     const buttons = [...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[];
+    const allTasks = [...TestBed.inject(TaskService).tasks()];
     buttons.find(button => button.getAttribute('aria-label') === 'Vista Estadísticas')!.click();
     fixture.detectChanges();
+    httpTesting.expectOne(apiUrl).flush(allTasks);
     await fixture.whenStable();
     fixture.detectChanges();
     const metric = (label: string) => {

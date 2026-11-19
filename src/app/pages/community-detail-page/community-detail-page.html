@@ -151,7 +151,7 @@
     @if (activeSection() === 'overview') {
       <app-community-overview
         [memberCount]="item.members.length"
-        [postCount]="posts().length"
+        [postCount]="postTotal()"
         [postsLoading]="postsLoading()"
         [canManage]="canManage(item.currentUserRole)"
         (sectionSelected)="openSection($event)" />
@@ -263,7 +263,7 @@
       <mat-card-content>
         <form class="post-form" (submit)="publish($event)">
           <div class="post-fields">
-            @if (!postsLoading() && !posts().length) {
+            @if (!postsLoading() && !postTotal()) {
               <mat-form-field appearance="outline" subscriptSizing="dynamic">
                 <mat-label>Título de la publicación principal</mat-label>
                 <input matInput [formControl]="postTitle">
@@ -283,12 +283,18 @@
             </mat-form-field>
           </div>
           <button mat-flat-button type="submit"
-            [disabled]="savingPost()">
+            [disabled]="savingPost() || postsLoading() || !!postError()">
             <mat-icon>send</mat-icon>
             {{ savingPost() ? 'Publicando...' : 'Publicar' }}
           </button>
         </form>
 
+        @if (postError()) {
+          <p role="alert">{{ postError() }}</p>
+          <button mat-button type="button" (click)="loadPosts(item.id, postPage())">Reintentar publicaciones</button>
+        }
+        <app-list-pager [total]="postTotal()" [page]="postPage()" [busy]="postsLoading()"
+          label="Páginas de publicaciones" (changed)="loadPosts(item.id, $event)" />
         @if (postsLoading()) {
           <p class="posts-empty">Cargando publicaciones...</p>
         } @else if (!posts().length) {

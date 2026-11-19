@@ -29,11 +29,7 @@
           @if (item.kind === 'IMAGE') {
             <button class="photo-preview" type="button" [disabled]="busy() || opening() !== null"
               [attr.aria-label]="'Ver foto ' + item.title" (click)="openPhoto(item)">
-              @if (previews()[item.targetId]; as url) {
-                <img [src]="url" [alt]="item.title">
-              } @else {
-                <mat-icon aria-hidden="true">image</mat-icon>
-              }
+              <app-lazy-image [src]="thumbnailUrl(item)" [alt]="item.title" />
             </button>
           }
           <mat-card-content>

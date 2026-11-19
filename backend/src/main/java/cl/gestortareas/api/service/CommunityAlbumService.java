@@ -40,6 +40,7 @@ public class CommunityAlbumService {
 
     public record Album(Long id, String title, String description, long imageCount, Long coverImageId) {}
     public record Image(Long id, String name, long commentCount, long likeCount, boolean liked, PhotoDate date) {}
+    public record ImagePage(List<Image> items, long total, int page, int size) {}
     public record ImageLikes(long likeCount, boolean liked) {}
     public record ImageLiker(Long userId, String name, boolean hasAvatar) {}
     public record ImageData(String contentType, byte[] data) {}
@@ -99,7 +100,31 @@ public class CommunityAlbumService {
         return imageDetails(albumId, member.getUser().getId(), member.getRole() != CommunityRole.MEMBER, null);
     }
 
+    @Transactional(readOnly = true)
+    public ImagePage imagePage(Long groupId, Long albumId, String email, int page) {
+        var member = communities.requireMembership(groupId, email);
+        requireAlbum(groupId, albumId);
+        if (page < 0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La página no es válida");
+        long total = jdbc.sql("SELECT COUNT(*) FROM community_album_images WHERE album_id = :id")
+            .param("id", albumId).query(Long.class).single();
+        if ((long) page * 24 >= total) return new ImagePage(List.of(), total, page, 24);
+        return new ImagePage(imageDetails(albumId, member.getUser().getId(),
+            member.getRole() != CommunityRole.MEMBER, null, 24, (long) page * 24), total, page, 24);
+    }
+
+    @Transactional(readOnly = true)
+    public Image image(Long groupId, Long albumId, Long imageId, String email) {
+        var member = communities.requireMembership(groupId, email);
+        requireAlbum(groupId, albumId);
+        return imageDetails(albumId, member.getUser().getId(), member.getRole() != CommunityRole.MEMBER, imageId)
+            .stream().findFirst().orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Imagen no encontrada"));
+    }
+
     private List<Image> imageDetails(Long albumId, Long userId, boolean manager, Long imageId) {
+        return imageDetails(albumId, userId, manager, imageId, null, 0);
+    }
+
+    private List<Image> imageDetails(Long albumId, Long userId, boolean manager, Long imageId, Integer limit, long offset) {
         return jdbc.sql("""
             SELECT f.id, f.original_name AS name, f.created_at, f.owner_id, i.taken_on, i.taken_year,
                    (SELECT COUNT(*) FROM community_image_comments c WHERE c.image_id = f.id) AS comment_count,
@@ -108,8 +133,10 @@ public class CommunityAlbumService {
                            WHERE r.image_id = f.id AND r.user_id = :userId) AS liked
             FROM community_album_images i JOIN stored_files f ON f.id = i.file_id
             WHERE i.album_id = :albumId
-            """ + (imageId == null ? "" : " AND f.id = :imageId") + " ORDER BY f.id DESC")
+            """ + (imageId == null ? "" : " AND f.id = :imageId") + " ORDER BY i.file_id DESC"
+                + (limit == null ? "" : " LIMIT :limit OFFSET :offset"))
             .param("albumId", albumId).param("userId", userId).param("imageId", imageId)
+            .param("limit", limit).param("offset", offset)
             .query((rs, row) -> new Image(rs.getLong("id"), rs.getString("name"), rs.getLong("comment_count"),
                 rs.getLong("like_count"), rs.getBoolean("liked"),
                 memories.describe(rs.getObject("created_at", OffsetDateTime.class).toInstant(),

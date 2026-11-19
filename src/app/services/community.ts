@@ -1,6 +1,7 @@
 import { inject, Service } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { ListPage } from '../models/list-page.model';
 
 import {
   CommunityDetail,
@@ -116,6 +117,12 @@ export class CommunityService {
     return this.http.get<CommunityPost[]>(
       `${this.apiUrl}/${groupId}/posts`
     );
+  }
+
+  postPage(groupId: number, page: number, target?: number) {
+    return this.http.get<ListPage<CommunityPost>>(`${this.apiUrl}/${groupId}/posts/page`, {
+      params: target ? { page, target } : { page }
+    });
   }
 
   createPost(

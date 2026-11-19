@@ -1,4 +1,4 @@
-import { Observable, Subject, Subscription, distinctUntilChanged, map, takeUntil } from 'rxjs';
+import { Observable, Subject, Subscription, combineLatest, distinctUntilChanged, map, of, takeUntil } from 'rxjs';
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, OnDestroy, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -53,6 +53,7 @@ import { CommunitySearch } from '../../components/community-search/community-sea
 import { SearchTarget } from '../../directives/search-target';
 import { CommunityGoals } from '../../components/community-goals/community-goals';
 import { UserAvatar } from '../../components/user-avatar/user-avatar';
+import { ListPager } from '../../components/list-pager/list-pager';
 
 type CommunitySection =
   | 'overview'
@@ -71,7 +72,7 @@ const COMMUNITY_SECTIONS: readonly CommunitySection[] = [
 @Component({
   selector: 'app-community-detail-page',
   imports: [RouterLink, ReactiveFormsModule, DatePipe, MatButtonModule, MatCardModule,
-    MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule, CommunityGoals, UserAvatar,
+    MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule, CommunityGoals, UserAvatar, ListPager,
     MatSnackBarModule, MatDialogModule, PostComments, CommunityReports, ReportButton, CommunityEvents, CommunityGallery, CommunityChannels, CommunityActivity, CommunityRanking, CommunityMetrics, CommunityAchievements, CommunityTasks, CommunityOverview, CommunityPolls, SaveItemButton, CommunityMemories, CommunitySearch, SearchTarget],
   templateUrl: './community-detail-page.html',
   styleUrl: './community-detail-page.css'
@@ -138,6 +139,9 @@ export class CommunityDetailPage implements OnDestroy {
   })[this.activeSection()]);
   protected readonly joinRequests = signal<CommunityAccess[]>([]);
   protected readonly posts = signal<CommunityPost[]>([]);
+  protected readonly postTotal = signal(0);
+  protected readonly postPage = signal(0);
+  protected readonly postError = signal('');
   protected readonly reactionTypes: { type: CommunityPostReactionType; icon: string; label: string }[] = [
     { type: 'LIKE', icon: 'thumb_up', label: 'Me gusta' },
     { type: 'LOVE', icon: 'favorite', label: 'Me encanta' },
@@ -185,9 +189,13 @@ export class CommunityDetailPage implements OnDestroy {
   });
 
   constructor() {
-    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe(params => {
+    combineLatest([this.route.queryParamMap, this.route.fragment ?? of(null)]).pipe(takeUntilDestroyed()).subscribe(([params, fragment]) => {
       const requested = params.get('seccion');
-      this.activeSection.set(this.isCommunitySection(requested) ? requested : 'overview');
+      this.activeSection.set(this.isCommunitySection(requested) ? requested : (params.has('publicacion') || /^publicacion-\d+$/.test(fragment ?? this.route.snapshot.fragment ?? '') ? 'posts' : 'overview'));
+      const id = this.community()?.id;
+      if (id && (params.has('publicacion') || requested === 'posts' || /^publicacion-\d+$/.test(fragment ?? ''))) {
+        this.loadPosts(id, 0, this.postTarget());
+      }
     });
     this.route.paramMap.pipe(
       map(params => Number(params.get('id'))), distinctUntilChanged(), takeUntilDestroyed()
@@ -220,6 +228,7 @@ export class CommunityDetailPage implements OnDestroy {
     this.error.set(null);
     this.community.set(null);
     this.posts.set([]);
+    this.postTotal.set(0); this.postPage.set(0); this.postError.set('');
     this.joinRequests.set([]);
     this.editingGuidelines.set(false);
     this.cancelEdit();
@@ -248,7 +257,7 @@ export class CommunityDetailPage implements OnDestroy {
           community.members.map(member => [member.userId, member.role])
         ));
         this.isLoading.set(false);
-        this.loadPosts(id);
+        this.loadPosts(id, 0, this.postTarget());
         if (this.canManage(community.currentUserRole)) this.loadJoinRequests(id);
       },
       error: () => { this.error.set('No fue posible abrir el grupo.'); this.isLoading.set(false); }
@@ -384,12 +393,12 @@ export class CommunityDetailPage implements OnDestroy {
   protected publish(event?: Event): void {
     event?.preventDefault();
     const group = this.community();
-    const needsTitle = this.posts().length === 0;
+    const needsTitle = this.postTotal() === 0;
     if (needsTitle && !this.postTitle.value.trim()) {
       this.postTitle.setErrors({ required: true });
     }
     if (!group || this.postTitle.invalid || this.postContent.invalid
-        || this.savingPost()) {
+        || this.savingPost() || this.postsLoading() || !!this.postError()) {
       this.postTitle.markAsTouched();
       this.postContent.markAsTouched();
       return;
@@ -398,8 +407,8 @@ export class CommunityDetailPage implements OnDestroy {
     this.service.createPost(group.id,
       needsTitle ? this.postTitle.value : null,
       this.postContent.value).pipe(takeUntil(this.navigationChanged)).subscribe({
-      next: post => {
-        this.posts.update(items => [post, ...items]);
+      next: () => {
+        this.loadPosts(group.id);
         this.activity()?.load();
         this.postTitle.reset('');
         this.postContent.reset('');
@@ -502,7 +511,7 @@ export class CommunityDetailPage implements OnDestroy {
       const reason = typeof confirmed === 'string' ? confirmed : undefined;
       this.service.deletePost(group.id, post.id, reason).pipe(takeUntil(this.navigationChanged)).subscribe({
         next: () => {
-          this.posts.update(items => items.filter(item => item.id !== post.id));
+          this.loadPosts(group.id, this.postPage());
           this.activity()?.load();
           this.snackBar.open('Publicación eliminada.', 'Cerrar',
             { duration: 2500 });
@@ -514,12 +523,19 @@ export class CommunityDetailPage implements OnDestroy {
     });
   }
 
-  protected loadPosts(groupId: number): void {
+  private postTarget(): number | undefined {
+    const params = this.route.snapshot.queryParamMap;
+    const raw = params?.get('publicacion') ?? this.route.snapshot.fragment?.match(/^publicacion-(\d+)$/)?.[1];
+    const id = Number(raw); return Number.isSafeInteger(id) && id > 0 ? id : undefined;
+  }
+
+  protected loadPosts(groupId: number, page = 0, target?: number): void {
     this.postsRequest?.unsubscribe();
     this.postsLoading.set(true);
-    this.postsRequest = this.service.findPosts(groupId).pipe(takeUntil(this.navigationChanged)).subscribe({
-      next: posts => { this.posts.set(posts); this.postsLoading.set(false); },
-      error: () => { this.posts.set([]); this.postsLoading.set(false); }
+    this.postError.set('');
+    this.postsRequest = this.service.postPage(groupId, page, target).pipe(takeUntil(this.navigationChanged)).subscribe({
+      next: result => { this.posts.set(result.items); this.postTotal.set(result.total); this.postPage.set(result.page); this.postsLoading.set(false); },
+      error: () => { this.postError.set('No se pudieron cargar las publicaciones.'); this.postsLoading.set(false); }
     });
   }
 

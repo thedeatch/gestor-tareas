@@ -100,15 +100,16 @@ describe('SavedItemsPageComponent', () => {
     });
     const image: SavedItem = { ...post, kind: 'IMAGE', albumId: 5, title: 'Foto.png', excerpt: 'Encuentro' };
     const fixture = start([image]);
-    http.expectOne('/api/communities/2/albums/5/images/3').flush(new Blob(['photo']));
+    http.expectOne('/api/communities/2/albums/5/images/3/thumbnail').flush(new Blob(['photo']));
     fixture.detectChanges();
     fixture.nativeElement.querySelector('.photo-preview').click();
-    http.expectOne('/api/communities/2/albums/5/images').flush([
+    http.expectNone('/api/communities/2/albums/5/images/3');
+    http.expectOne('/api/communities/2/albums/5/images/3/details').flush(
       { id: 3, name: 'Foto.png', likeCount: 2, liked: false, commentCount: 1 }
-    ]);
+    );
     expect(dialog.open.mock.calls[0][1].data).toMatchObject({
       groupId: 2, initialIndex: 0, albumTitle: 'Encuentro',
-      images: [{ id: 3, url: 'blob:saved-photo', likeCount: 2 }]
+      images: [{ id: 3, likeCount: 2 }]
     });
     closed.next();
     http.expectOne('/api/saved-items?kind=ALL&page=0').flush({ items: [], total: 0, page: 0, size: 20 });
